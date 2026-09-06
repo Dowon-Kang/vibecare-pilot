@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecare.local/contracts/vital-measurement.schema.json",
+  "title": "Vital Measurement",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "participantId", "kind", "measuredAt", "values", "units"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "participantId": { "type": "string", "minLength": 1 },
+    "kind": {
+      "enum": ["bloodPressure", "heartRate", "stress", "stressV2", "bodyTemperature"]
+    },
+    "measuredAt": { "type": "string", "format": "date-time" },
+    "values": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "number" }
+    },
+    "units": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    }
+  }
+}

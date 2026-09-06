@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vibecare-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-03",
+  "vars": {
+    "ENVIRONMENT": "development",
+    "DEVICE_MODE": "mock",
+    "REAL_DEVICE_ENABLED": "false",
+    "FITRUS_API_BASE_URL": "https://api.thefitrus.com/fitrus-ml/measure"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vibecare-dev",
+      "database_id": "REPLACE_AFTER_D1_CREATE",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

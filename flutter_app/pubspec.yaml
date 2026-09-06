@@ -1,0 +1,25 @@
+name: vibecare_pilot
+description: VibeCare participant pilot app.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  dio: ^5.11.0
+  flutter_riverpod: ^3.4.2
+  # 9.2.4 supports Android SDK 36 and avoids the 10.x native-assets test crash on Windows.
+  flutter_secure_storage: 9.2.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

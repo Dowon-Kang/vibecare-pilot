@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "provider": "FITRUS",
+  "baseUrl": "https://api.thefitrus.com/fitrus-ml/measure",
+  "method": "POST",
+  "authentication": {
+    "location": "header",
+    "headerName": "x-api-key",
+    "storage": "server-secret-only"
+  },
+  "endpoints": {
+    "bloodPressure": "/bp",
+    "heartRate": "/hr",
+    "stress": "/stress",
+    "bodyTemperature": "/bodytemp",
+    "bodyFat": "/bodyfat",
+    "stressV2": "/stress2"
+  },
+  "requestSchemas": "PENDING_VENDOR_SPECIFICATION",
+  "responseSchemas": "PENDING_VENDOR_SPECIFICATION"
+}
