@@ -24,7 +24,7 @@ import {
   type BodyCompositionMeasurement,
   type Profile,
   type SafetyAnswers,
-} from '@/lib/vibration-algorithm';
+} from '@/app/lib/vibration-algorithm';
 
 const mockMeasurements: BodyCompositionMeasurement[] = [
   { id: 'M-001', userId: 'USER-001', measuredAt: '2026-08-22T23:20:00+09:00', deviceId: 'FITRUS-PLUS-01', qualityPassed: true, weightKg: 42, bmi: 18.7, bodyFatPct: 18.8, fatMassKg: 7.9, skeletalMuscleMassKg: 18.1, basalMetabolicRateKcal: 1106.1, bodyWaterPct: 59.7, proteinKg: 6.7, mineralKg: 2.4, ecwRatio: 0.38, waistCm: 61.8, visceralFatLevel: 8.51 },
@@ -43,8 +43,8 @@ const safetyQuestions: { key: SafetyKey; title: string; hint: string }[] = [
   { key: 'clinicianHold', title: '담당자가 사용을 미루라고 했습니까?', hint: '의료진·연구 담당자 안내' },
 ];
 
-const formatNumber = (value: number | undefined) =>
-  value === undefined ? '—' : new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 1 }).format(value);
+const formatNumber = (value: number | null | undefined) =>
+  value == null ? '—' : new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 1 }).format(value);
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
@@ -75,12 +75,12 @@ export default function Home() {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined);
   }, []);
 
-  const preview = calculation.recommendation;
+  const preview = execution.status === 'BLOCKED' ? null : calculation.recommendation;
   const adjustments = calculation.adjustments;
   const ageFactor = adjustments.find((item) => item.id === 'AGE_70_PILOT')?.factor ?? 1;
   const sexFactor = adjustments.find((item) => item.id === 'SEX_RESPONSE_PILOT')?.factor ?? 1;
   const bodyFatFactor = adjustments.find((item) => item.id === 'BODY_FAT_RANGE_PILOT')?.factor ?? 1;
-  const status = !safetyComplete ? 'REVIEW' : execution.status;
+  const status = execution.status === 'BLOCKED' ? 'BLOCKED' : !safetyComplete ? 'REVIEW' : execution.status;
   const canCreateCommand = safetyComplete && execution.status === 'READY' && Boolean(execution.recommendation);
   const unansweredCount = Object.values(safetyDraft).filter((value) => value === null).length;
 

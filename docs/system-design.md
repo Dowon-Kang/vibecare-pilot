@@ -1,6 +1,6 @@
 # VibeCare Flutter 시스템 설계
 
-이 문서는 구현 기준을 요약한다. 상세 유스케이스와 상태도는 `architecture.md`, 공개 HTTP 계약은 `../contracts/openapi.yaml`을 단일 기준으로 사용한다. 기존 React PWA는 비교·검증용이며 주 클라이언트는 Flutter다.
+이 문서는 구현 기준을 요약한다. 상세 유스케이스와 상태도는 `architecture.md`, 공개 HTTP 계약은 `../packages/contracts/openapi.yaml`을 단일 기준으로 사용한다. 기존 React PWA는 비교·검증용이며 주 클라이언트는 Flutter다.
 
 ## 전체 흐름
 

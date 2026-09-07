@@ -30,7 +30,7 @@ yarn-error.log*
 
 # local environment
 .env*
-/worker/.dev.vars
+/services/api/.dev.vars
 
 # deployment and generated files
 .vercel
@@ -40,4 +40,10 @@ next-env.d.ts
 /.wrangler/
 **/.wrangler/
 /outputs/
+/output/
+/tmp/
 /work/
+
+# Flutter/Android machine-local runtime state
+/apps/mobile/.android/
+/apps/mobile/.tmp/

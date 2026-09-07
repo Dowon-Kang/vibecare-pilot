@@ -22,7 +22,7 @@
 - [ ] 운영 환경의 암호화된 `FITRUS_API_KEY` 등록·회전 정책 수립
 - [ ] 운영 비밀값 등록 검증 후 사용자 승인 아래 평문 키 파일 제거
 - [ ] FITRUS 요청 스키마·성공 응답 4건·단위·오류코드 전체 확보
-  - 완료 조건: 공급사 예제 응답이 `contracts/bia-measurement.schema.json` 검증을 통과한다.
+  - 완료 조건: 공급사 예제 응답이 `packages/contracts/bia-measurement.schema.json` 검증을 통과한다.
   - 증거: `docs/evidence/bia-api-validation.md`
 - [ ] 진동기기 통신방식 REST/BLE 확정
   - 완료 조건: 연결, 시작, 중지, ACK, 상태, 타임아웃, 오류코드 명세가 있다.
@@ -161,10 +161,10 @@
 | 2026-09-03 | 알고리즘 | TS 5건, Worker 3건, Dart 검증 통과 | `docs/evidence/algorithm-parity.md` | Codex |
 | 2026-09-03 | 환경 | Flutter CLI 초기화와 Android SDK 미설치 확인 | `docs/evidence/toolchain-status.md` | Codex |
 | 2026-09-06 | FITRUS API | 6개 POST 경로·서버 전용 키 처리 확인 및 어댑터 테스트 | `docs/evidence/fitrus-api-contract.md` | Codex |
-| 2026-09-06 | Flutter Mock | 로그인·전체 원본/평균·vitals·안전·추천·Mock 실행 UI 연결 | `flutter_app/lib/` | Codex |
-| 2026-09-06 | Workers | 인증·측정 조회·규칙·추천·Mock 세션·중지·피드백 API 구현 | `worker/src/`, `contracts/openapi.yaml` | Codex |
+| 2026-09-06 | Flutter Mock | 로그인·전체 원본/평균·vitals·안전·추천·Mock 실행 UI 연결 | `apps/mobile/lib/` | Codex |
+| 2026-09-06 | Workers | 인증·측정 조회·규칙·추천·Mock 세션·중지·피드백 API 구현 | `services/api/src/`, `packages/contracts/openapi.yaml` | Codex |
 | 2026-09-06 | Android | Flutter 3.47.2·SDK 36·Java 21, 테스트 7개 및 debug APK 통과 | `docs/evidence/toolchain-status.md` | Codex |
-| 2026-09-07 | Flutter 입력·전송 | 나이·성별 즉시 재계산, Worker 서버 게이트웨이, Android 35 에뮬레이터 설치·실행 | `flutter_app/lib/`, `flutter test` 10/10 | Codex |
-| 2026-09-07 | 모바일 UX | 첫 화면 상태·강도 조절·고정 CTA, 전송/시작 분리, 실행 카운트다운·중지 및 에뮬레이터 시각 QA 완료 | `flutter_app/lib/presentation/pilot_screen.dart`, `flutter_app/test/widget_test.dart` | Codex |
-| 2026-09-06 | D1 | 초기·확장 마이그레이션 로컬 적용 성공 | `worker/migrations/` | Codex |
+| 2026-09-07 | Flutter 입력·전송 | 나이·성별 즉시 재계산, Worker 서버 게이트웨이, Android 35 에뮬레이터 설치·실행 | `apps/mobile/lib/`, `flutter test` 10/10 | Codex |
+| 2026-09-07 | 모바일 UX | 첫 화면 상태·강도 조절·고정 CTA, 전송/시작 분리, 실행 카운트다운·중지 및 에뮬레이터 시각 QA 완료 | `apps/mobile/lib/presentation/pilot_screen.dart`, `apps/mobile/test/widget_test.dart` | Codex |
+| 2026-09-06 | D1 | 초기·확장 마이그레이션 로컬 적용 성공 | `services/api/migrations/` | Codex |
 | 2026-09-06 | Android 릴리스 | 내부 시험용 release APK 48.7MB·AAB 47.7MB 생성, package/min/target SDK 확인 | `docs/evidence/toolchain-status.md` | Codex |

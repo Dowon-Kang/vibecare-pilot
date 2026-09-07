@@ -1,0 +1,162 @@
+openapi: 3.1.0
+info:
+  title: VibeCare API
+  version: 0.3.0
+  description: Canonical mobile API. FITRUS credentials never cross this boundary.
+servers:
+  - url: https://api.example.invalid
+    description: Replace per environment
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      responses:
+        '200': { description: Service health }
+  /v1/auth/pin:
+    post:
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [participantCode, pin]
+              properties:
+                participantCode: { type: string }
+                pin: { type: string, pattern: '^\d{6}$' }
+      responses:
+        '200': { description: Access and refresh tokens }
+        '401': { description: Invalid credentials }
+        '423': { description: Locked for 15 minutes after five failures }
+  /v1/auth/refresh:
+    post:
+      security: []
+      responses:
+        '200': { description: Rotated access token }
+        '401': { description: Invalid or revoked refresh token }
+  /v1/algorithm-rules/current:
+    get:
+      responses:
+        '200': { description: Active validated AlgorithmRuleSet }
+        '503': { description: No enabled valid rule set; execution is disabled }
+  /v1/fitrus/measurements/{kind}:
+    post:
+      description: Server-only FITRUS proxy. Provider payload remains opaque until the vendor contract is supplied.
+      parameters:
+        - in: path
+          name: kind
+          required: true
+          schema:
+            enum: [bodyFat, bloodPressure, heartRate, stress, stressV2, bodyTemperature]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceId, payload]
+              properties:
+                deviceId: { type: string }
+                measuredAt: { type: string, format: date-time }
+                payload: { type: object, additionalProperties: true }
+      responses:
+        '201': { description: Raw provider response retained; normalization status returned }
+  /v1/participants/me/measurement-set/current:
+    get:
+      description: Returns the latest 20 history records plus any older records in the selected four (at most 24). Selection uses the requested source device, measuredAt descending, then ID descending.
+      parameters:
+        - in: query
+          name: deviceId
+          schema: { type: string }
+      responses:
+        '200': { description: Current body-composition set }
+  /v1/participants/me/vitals:
+    get:
+      responses:
+        '200': { description: Display-only vital history }
+  /v1/recommendations/authorize:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [measurementIds, safety, deviceId, algorithmVersion]
+              properties:
+                measurementIds:
+                  type: array
+                  minItems: 4
+                  maxItems: 4
+                  uniqueItems: true
+                  items: { type: string }
+                safety: { $ref: '#/components/schemas/SafetyCheck' }
+                deviceId: { type: string }
+                sourceDeviceId:
+                  type: string
+                  minLength: 1
+                  description: BIA measurement source device. Legacy callers may omit it to use deviceId. deviceId identifies the target simulator.
+                algorithmVersion: { type: string }
+                requestedIntensityPct:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  description: Optional manual intensity. The server accepts only values between its configured minimum and calculated recommendation.
+      responses:
+        '201': { description: One-time 60-second execution authorization }
+        '409': { description: REVIEW, BLOCKED, stale measurement set, intensity outside range, or algorithm version mismatch }
+        '400': { description: Invalid input or missing explicit safety answers }
+        '503': { description: Algorithm unavailable }
+  /v1/device-sessions:
+    post:
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, minLength: 16 }
+      responses:
+        '201': { description: Mock session started and ACK recorded }
+        '200': { description: Same participant and identical request replayed with the same key }
+        '409': { description: Expired or used authorization, conflicting key, busy target device, or changed algorithm }
+        '503': { description: Algorithm unavailable }
+        '501': { description: Real device protocol is not configured }
+  /v1/device-sessions/{id}/events:
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '202': { description: Simulator event accepted; COMPLETED closes the session }
+        '409': { description: Session already terminal }
+  /v1/device-sessions/{id}/stop:
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: STOPPED or COMPLETED confirmed; terminal calls are idempotent }
+  /v1/session-feedback:
+    post:
+      responses:
+        '200': { description: Feedback stored }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    SafetyCheck:
+      description: All three answers must be explicitly provided; null or omitted is not false. Any true answer blocks execution.
+      type: object
+      required: [acutePain, dizziness, clinicianHold]
+      properties:
+        acutePain: { type: boolean }
+        dizziness: { type: boolean }
+        clinicianHold: { type: boolean }

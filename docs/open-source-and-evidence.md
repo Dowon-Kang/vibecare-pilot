@@ -71,7 +71,7 @@ Flutter 공식 아키텍처 가이드의 View/ViewModel/Repository/Service 분�
 
 각 릴리스는 다음 파일을 남긴다.
 
-- `contracts/fixtures/pilot-0.3.0.json`: TypeScript/Dart/서버 공통 입력·기대값
+- `packages/contracts/fixtures/pilot-0.3.0.json`: TypeScript/Dart/서버 공통 입력·기대값
 - `docs/evidence/algorithm-parity.md`: 세 구현의 결과 비교
 - `docs/evidence/bia-api-validation.md`: 공급사 응답 스키마·4건 정합성 결과
 - `docs/evidence/device-calibration.md`: 단계·Hz·진폭·가속도 교정표

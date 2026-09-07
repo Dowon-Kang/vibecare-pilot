@@ -75,7 +75,7 @@
 
 - Flutter에는 Mock 로그인, 최근 유효 체성분 4건 선택, 전체 체성분 원본·평균, 표시 전용 생체신호, 안전 문진, 추천식, Mock 실행·카운트다운·즉시 중지가 연결되어 있다.
 - Workers에는 PIN 인증·잠금, 토큰 검증, 최신 측정 세트, 표시 전용 생체신호, FITRUS 서버 프록시, 서버 추천 재계산, 1회성 실행 허가, Mock 세션·이벤트·중지·피드백 API가 구현되어 있다.
-- `contracts/openapi.yaml`을 앱과 서버 사이의 단일 공개 계약으로 사용한다.
+- `packages/contracts/openapi.yaml`을 앱과 서버 사이의 단일 공개 계약으로 사용한다.
 - FITRUS 실제 정규화와 실제 진동 출력은 각각 공급사 요청·응답 예제와 진동기 통신·교정 명세를 확보하기 전까지 차단한다.
 - Android 내부 시험용 release APK와 AAB까지 빌드했지만 현재 debug 키 서명이므로 배포용 signing 구성과 실제 Android 기기 검증은 남아 있다.
 
@@ -99,10 +99,14 @@ VibeCare의 주 클라이언트를 기존 React PWA에서 Android 우선 Flutter
 
 ```text
 vibration-control-app/
-├─ app/                 # 기존 React PWA, 비교 기준으로 보존
-├─ flutter_app/         # Android 우선 Flutter 앱
-├─ worker/              # Cloudflare Workers API와 D1 마이그레이션
-├─ contracts/           # 공급사 독립 JSON Schema
+├─ app/                 # Sites/Vinext 웹 비교 화면과 웹 알고리즘
+├─ public/              # 웹 정적 리소스
+├─ apps/
+│  └─ mobile/           # Android 우선 Flutter 앱
+├─ services/
+│  └─ api/              # Cloudflare Workers API와 D1 마이그레이션
+├─ packages/
+│  └─ contracts/        # 공급사 독립 OpenAPI·JSON Schema·fixture
 ├─ docs/                # 시스템·운영·검증 문서
 ├─ plan.md
 └─ checklist.md

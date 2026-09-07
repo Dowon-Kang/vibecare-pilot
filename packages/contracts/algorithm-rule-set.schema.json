@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecare.local/contracts/algorithm-rule-set.schema.json",
+  "title": "Algorithm Rule Set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "activeFrom", "enabled", "base", "age", "sex", "bodyFat", "output"],
+  "properties": {
+    "version": { "type": "string", "pattern": "^pilot-[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "activeFrom": { "type": "string", "format": "date-time" },
+    "enabled": { "type": "boolean" },
+    "base": {
+      "type": "object",
+      "required": ["durationSec", "frequencyHz", "intensityPct"],
+      "properties": {
+        "durationSec": { "type": "integer", "minimum": 1 },
+        "frequencyHz": { "type": "integer", "minimum": 1 },
+        "intensityPct": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "age": {
+      "type": "object",
+      "required": ["threshold", "factor"],
+      "properties": {
+        "threshold": { "type": "integer", "minimum": 18, "maximum": 100 },
+        "factor": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      }
+    },
+    "sex": {
+      "type": "object",
+      "required": ["femaleFactor", "maleFactor"],
+      "properties": {
+        "femaleFactor": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "maleFactor": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      }
+    },
+    "bodyFat": {
+      "type": "object",
+      "required": ["female", "male", "outsideRangeFactor"],
+      "properties": {
+        "female": { "$ref": "#/$defs/range" },
+        "male": { "$ref": "#/$defs/range" },
+        "outsideRangeFactor": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      }
+    },
+    "output": {
+      "type": "object",
+      "required": ["minimumPct", "maximumPct"],
+      "properties": {
+        "minimumPct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "maximumPct": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    }
+  },
+  "$defs": {
+    "range": {
+      "type": "object",
+      "required": ["minimum", "maximum"],
+      "properties": {
+        "minimum": { "type": "number", "minimum": 0, "maximum": 100 },
+        "maximum": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    }
+  }
+}

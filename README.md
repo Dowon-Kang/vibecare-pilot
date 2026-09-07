@@ -1,16 +1,22 @@
 # VibeCare Pilot
 
+> 저장소를 처음 살펴본다면 [파일 구조와 책임](docs/FILE_STRUCTURE.md)부터 확인하세요. Flutter 앱, Worker 백엔드, 공통 계약과 테스트의 실제 연결 경로를 설명합니다.
+
 FITRUS 체성분 측정 4건의 평균과 파일럿 보정 규칙을 이용해 진동 시간·주파수·강도를 추천하고, 전송·시작·중지 과정을 검증하는 연구용 프로토타입입니다.
 
 > 현재 기본 실행은 Mock 데이터와 Mock 장치를 사용합니다. FITRUS 운영 API와 실제 진동 장비는 공급사 요청·응답 계약 및 장비 안전 명세가 확보되기 전까지 활성화하지 않습니다.
 
 ## 저장소 구성
 
-- `flutter_app/` — Android 우선 Flutter 앱. 측정값, 추천 강도, 수동 하향 조절, 전송·시작·중지 UI
-- `worker/` — Cloudflare Workers API. 인증, FITRUS 서버 프록시, 측정 저장, 추천 재계산, 실행 허가와 세션 기록
-- `contracts/` — OpenAPI 및 측정·규칙·장치 명령 계약
-- `app/` — 알고리즘·UI 비교를 위한 웹 프로토타입
-- `docs/` — 아키텍처, FITRUS 확인 범위, 알고리즘 근거와 검증 기록
+```text
+app/                 웹 비교 화면과 웹 전용 알고리즘
+apps/mobile/         Flutter Android 앱
+services/api/        Worker API·FITRUS 프록시·D1
+packages/contracts/  OpenAPI·JSON Schema·공통 fixture
+docs/                설계·근거·검증·프로젝트 분석
+```
+
+파일 단위의 상세 책임과 현재 구현 상태는 [전체 파일 구조](docs/FILE_STRUCTURE.md)를 기준으로 확인합니다.
 
 ## FITRUS 연동 상태
 
@@ -23,14 +29,14 @@ FITRUS 체성분 측정 4건의 평균과 파일럿 보정 규칙을 이용해 �
 | `/stress2` | 대체 스트레스 모델 | 공급사 차이 설명 전까지 미채택 |
 | `/bodytemp` | 체표면/체온 측정 | 저장·표시 후보이며 강도 계산에는 미사용 |
 
-모바일 앱은 FITRUS API를 직접 호출하지 않습니다. `worker/src/fitrus-client.ts`만 `x-api-key`를 사용하며 앱은 VibeCare Worker의 정규화된 계약만 읽습니다. 공급사 성공 응답 스키마가 아직 없어 프록시 응답은 원본으로 저장되고 `normalized: false`로 반환됩니다.
+모바일 앱은 FITRUS API를 직접 호출하지 않습니다. `services/api/src/fitrus-client.ts`만 `x-api-key`를 사용하며 앱은 VibeCare Worker의 정규화된 계약만 읽습니다. 공급사 성공 응답 스키마가 아직 없어 프록시 응답은 원본으로 저장되고 `normalized: false`로 반환됩니다.
 
 ## 로컬 실행
 
 ### Flutter Mock 앱
 
 ```powershell
-cd flutter_app
+cd apps/mobile
 E:\flutter-sdk\bin\flutter.bat run
 ```
 
@@ -46,7 +52,7 @@ npm run dev
 ### Worker
 
 ```powershell
-cd worker
+cd services/api
 npm install
 npm test
 ```
