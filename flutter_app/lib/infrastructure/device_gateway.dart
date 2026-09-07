@@ -62,6 +62,8 @@ abstract interface class DeviceGateway {
   Future<DeviceAuthorization> authorize({
     required AlgorithmResult result,
     required ParticipantProfile participant,
+    required SafetyCheck safety,
+    required int intensityPct,
   });
   Future<DeviceSession> start(DeviceAuthorization authorization);
   Future<void> stop(String sessionId, String reason);

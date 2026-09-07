@@ -58,6 +58,15 @@ class ParticipantProfile {
   final int age;
   final ParticipantSex sex;
   final double heightCm;
+
+  ParticipantProfile copyWith({int? age, ParticipantSex? sex}) =>
+      ParticipantProfile(
+        id: id,
+        code: code,
+        age: age ?? this.age,
+        sex: sex ?? this.sex,
+        heightCm: heightCm,
+      );
 }
 
 /// Provider-independent body-composition values.

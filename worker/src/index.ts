@@ -2,6 +2,7 @@ import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import { issueToken, verifyPin, verifyToken } from './auth';
 import {
+  applyRequestedIntensity,
   calculateRecommendation,
   defaultRuleSet,
   type AlgorithmRuleSet,
@@ -34,6 +35,7 @@ const authorizeSchema = z.object({
   safety: safetySchema,
   deviceId: z.string().min(1),
   algorithmVersion: z.string().min(1),
+  requestedIntensityPct: z.number().int().min(1).max(100).optional(),
 });
 const fitrusKindSchema = z.enum([
   'bodyFat', 'bloodPressure', 'heartRate', 'stress', 'stressV2', 'bodyTemperature',
@@ -283,7 +285,7 @@ app.post('/v1/recommendations/authorize', async (c) => {
   if (parsed.data.algorithmVersion !== ruleSet.version) {
     return c.json({ error: 'ALGORITHM_VERSION_MISMATCH', currentRuleSet: ruleSet }, 409);
   }
-  const result = calculateRecommendation({
+  let result = calculateRecommendation({
     profile: {
       participantId,
       age: Number(participant.age),
@@ -294,6 +296,16 @@ app.post('/v1/recommendations/authorize', async (c) => {
     safety: parsed.data.safety,
     ruleSet,
   });
+  try {
+    result = applyRequestedIntensity(result, parsed.data.requestedIntensityPct, ruleSet);
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return c.json({
+      error: 'INTENSITY_OUTSIDE_SAFE_RANGE',
+      minimumPct: ruleSet.output.minimumPct,
+      maximumPct: result.recommendation?.intensityPct ?? null,
+    }, 409);
+  }
   const measurementSetId = crypto.randomUUID();
   const recommendationId = crypto.randomUUID();
   await c.env.DB.batch([

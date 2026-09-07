@@ -95,6 +95,11 @@ paths:
                 safety: { $ref: '#/components/schemas/SafetyCheck' }
                 deviceId: { type: string }
                 algorithmVersion: { type: string }
+                requestedIntensityPct:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  description: Optional manual intensity. The server accepts only values between its configured minimum and calculated recommendation.
       responses:
         '201': { description: One-time 60-second execution authorization }
         '409': { description: REVIEW, BLOCKED, or algorithm version mismatch }

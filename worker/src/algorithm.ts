@@ -145,3 +145,25 @@ export function calculateRecommendation(input: AlgorithmInput): RecommendationRe
     algorithmVersion: ruleSet.version,
   };
 }
+
+export function applyRequestedIntensity(
+  result: RecommendationResult,
+  requestedIntensityPct: number | undefined,
+  ruleSet: AlgorithmRuleSet = defaultRuleSet,
+): RecommendationResult {
+  if (requestedIntensityPct == null || result.recommendation == null) return result;
+  if (
+    !Number.isInteger(requestedIntensityPct) ||
+    requestedIntensityPct < ruleSet.output.minimumPct ||
+    requestedIntensityPct > result.recommendation.intensityPct
+  ) {
+    throw new RangeError('Requested intensity is outside the server-approved range');
+  }
+  return {
+    ...result,
+    recommendation: {
+      ...result.recommendation,
+      intensityPct: requestedIntensityPct,
+    },
+  };
+}

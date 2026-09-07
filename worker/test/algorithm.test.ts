@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { calculateRecommendation, type CanonicalMeasurement } from '../src/algorithm';
+import {
+  applyRequestedIntensity,
+  calculateRecommendation,
+  type CanonicalMeasurement,
+} from '../src/algorithm';
 
 const values = [
   ['M-001', 42, 17.7, 18.8, 7.9, 18.1],
@@ -54,5 +58,17 @@ describe('pilot-0.3.0 parity', () => {
     });
     expect(result.status).toBe('BLOCKED');
     expect(result.recommendation).toBeNull();
+  });
+
+  it('accepts only a manual intensity within the server-approved range', () => {
+    const result = calculateRecommendation({
+      profile: { participantId: 'USER-001', age: 72, sex: 'female', heightCm: 154 },
+      measurements,
+      safety,
+    });
+
+    expect(applyRequestedIntensity(result, 30).recommendation?.intensityPct).toBe(30);
+    expect(() => applyRequestedIntensity(result, 39)).toThrow(RangeError);
+    expect(() => applyRequestedIntensity(result, 19)).toThrow(RangeError);
   });
 });

@@ -29,6 +29,8 @@ class MockDeviceGateway implements DeviceGateway {
   Future<DeviceAuthorization> authorize({
     required AlgorithmResult result,
     required ParticipantProfile participant,
+    required SafetyCheck safety,
+    required int intensityPct,
   }) async {
     final recommendation = result.recommendation;
     if (!result.canRequestAuthorization ||
@@ -45,7 +47,7 @@ class MockDeviceGateway implements DeviceGateway {
         deviceId: _deviceId!,
         durationSec: recommendation.durationSec,
         frequencyHz: recommendation.frequencyHz,
-        intensityPct: recommendation.intensityPct,
+        intensityPct: intensityPct,
         algorithmVersion: result.algorithmVersion,
         issuedAt: now,
         expiresAt: now.add(const Duration(minutes: 1)),

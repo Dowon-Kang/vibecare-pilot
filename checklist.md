@@ -8,7 +8,7 @@
 
 | 영역 | 상태 | 남은 완료 조건 |
 |---|---|---|
-| Flutter Mock 사용자 흐름 | 검증 완료 | 실 FITRUS HTTP 전환과 실제 Android 기기 QA |
+| Flutter Mock 사용자 흐름 | 검증 완료 | 실 FITRUS 정규화와 실제 물리 Android 기기 QA |
 | 최근 유효 4건과 전체 평균 | 검증 완료 | 실 FITRUS fixture 검증 |
 | Worker 인증·측정·추천·Mock 세션 | 부분 완료 | 라우트 D1 통합 테스트와 배포 환경 구성 |
 | FITRUS 실연동 | 차단 | 요청·응답·단위 계약 확보 및 정규화 어댑터 작성 |
@@ -37,8 +37,9 @@
   - 완료 조건: `flutter --version`이 stable channel을 표시한다.
 - [x] Android Studio·Android SDK·Java 17 이상 설정
   - 완료 조건: `flutter doctor -v`의 Android toolchain 오류가 없다.
-- [ ] 에뮬레이터 또는 실제 Android 기기 연결
+- [x] Android 35 Pixel 7 에뮬레이터 생성·연결·APK 설치
   - 완료 조건: `flutter devices`에서 Android 장치가 표시된다.
+  - 증거: AVD `VibeCare_Pixel_7_API35`, package `com.vibecare.pilot` 설치·실행 확인
 - [x] Android SDK 라이선스 승인
   - 검증: `flutter doctor --android-licenses`
 
@@ -95,11 +96,17 @@
 
 ## 6. 간편 화면
 
-- [x] Mock 로그인→원본·평균→안전문진→추천→실행의 단일 세로 흐름 구현
+- [x] Mock 로그인→API 상태→추천·조절→전송→시작→중지의 모바일 핵심 흐름 구현
+- [x] API 상태·장치 상태·적용 강도·시간·Hz를 첫 화면에서 확인 가능
+- [x] 자동 권장값 이하 수동 강도 Slider·Stepper와 자동값 복원 구현
+- [x] `장치로 보내기`와 `진동 시작`을 분리하고 실행 중에는 고정 `진동 중지`로 전환
+- [x] 원본 4건·전체 평균·생체신호와 보정·안전 설정을 하단 상세 시트로 분리
 - [x] 체성분 12항목 원본과 평균, 표시 전용 생체신호 구현
 - [x] 원본 4건과 보정 사유를 펼침 영역에 배치
 - [x] `REVIEW/BLOCKED`에서 실행 버튼 비활성화
 - [x] 실행 중 남은 시간·연결상태·즉시 중지 구현
+- [x] 나이·성별 변경 시 보정계수와 권장 강도 즉시 재계산
+- [x] FITRUS 4회 평균 체지방률을 읽기 전용 보정 입력으로 표시
 - [ ] 부분 완료 — 52dp 이상 주요 터치영역과 남은 시간 TalkBack live region 적용
   - 남은 조건: 큰 글자·실기기 TalkBack 위젯 검증
 
@@ -121,6 +128,8 @@
 
 - [x] `DeviceGateway` 공통 인터페이스 구현
 - [x] `MockDeviceGateway` 구현
+- [x] API base URL 설정 시 Worker 실행 허가·세션·중지 API를 사용하는 `ServerDeviceGateway` 구현
+- [x] 앱 미리보기와 서버 시간·Hz·강도가 다르면 실행 차단
 - [ ] REST/BLE 공급사 어댑터 계약 테스트 작성
 - [ ] 통신방식 확정 후 실제 게이트웨이 하나 구현
 - [ ] 부분 완료 — Mock 연결·허가·시작·ACK·중지 상태머신 구현
@@ -134,11 +143,11 @@
 - [x] 순수 Dart 검증과 Flutter test runner에서 parity·최근 유효 4건 선택 통과
 - [x] 알고리즘 parity 테스트: 여성 예제 38%, 동일 값 남성 45%
 - [x] 안전 테스트: 통증·어지럼·사용보류 시 추천·실행 차단
-- [ ] 부분 완료 — 위젯 테스트: 로그인, 원본·평균, Mock 시작·중지 통과
+- [ ] 부분 완료 — 위젯 테스트: 로그인, 핵심 상태, 수동 강도, 상세 시트, 전송·시작·중지, 320×568 오버플로 통과
   - 남은 조건: 큰 글자, 오류상태, TalkBack 검증
 - [ ] 통합 테스트: 로그인→BIA→추천→Mock 실행→피드백
 - [ ] 장애 테스트: 네트워크 단절, ACK 미수신, 중복 요청, 앱 백그라운드
-- [x] `dart analyze` 오류·경고 0, `flutter test` 7/7 통과
+- [x] `dart analyze` 오류·경고 0, `flutter test` 10/10 통과
 - [x] 내부 시험용 `flutter build apk --release`와 `flutter build appbundle --release` 통과
   - 주의: 현재 release 빌드는 debug 키로 서명됨. 배포용 keystore와 CI secret 설정 전에는 스토어 배포 금지.
 - [ ] 실제 Android 기기에서 TalkBack·작은 화면·긴 문구 확인
@@ -155,5 +164,7 @@
 | 2026-09-06 | Flutter Mock | 로그인·전체 원본/평균·vitals·안전·추천·Mock 실행 UI 연결 | `flutter_app/lib/` | Codex |
 | 2026-09-06 | Workers | 인증·측정 조회·규칙·추천·Mock 세션·중지·피드백 API 구현 | `worker/src/`, `contracts/openapi.yaml` | Codex |
 | 2026-09-06 | Android | Flutter 3.47.2·SDK 36·Java 21, 테스트 7개 및 debug APK 통과 | `docs/evidence/toolchain-status.md` | Codex |
+| 2026-09-07 | Flutter 입력·전송 | 나이·성별 즉시 재계산, Worker 서버 게이트웨이, Android 35 에뮬레이터 설치·실행 | `flutter_app/lib/`, `flutter test` 10/10 | Codex |
+| 2026-09-07 | 모바일 UX | 첫 화면 상태·강도 조절·고정 CTA, 전송/시작 분리, 실행 카운트다운·중지 및 에뮬레이터 시각 QA 완료 | `flutter_app/lib/presentation/pilot_screen.dart`, `flutter_app/test/widget_test.dart` | Codex |
 | 2026-09-06 | D1 | 초기·확장 마이그레이션 로컬 적용 성공 | `worker/migrations/` | Codex |
 | 2026-09-06 | Android 릴리스 | 내부 시험용 release APK 48.7MB·AAB 47.7MB 생성, package/min/target SDK 확인 | `docs/evidence/toolchain-status.md` | Codex |

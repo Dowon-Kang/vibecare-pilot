@@ -1,6 +1,6 @@
 # 로컬 개발도구 및 빌드 검증
 
-확인일: 2026-09-06
+확인일: 2026-09-07
 
 | 항목 | 결과 | 증거 |
 |---|---|---|
@@ -11,8 +11,10 @@
 | Java | Android Studio JBR 21.0.8 | `flutter doctor -v` |
 | Android 라이선스 | 모두 승인됨 | `flutter doctor -v` |
 | Flutter 정적 분석 | 오류·경고 0 | `dart analyze` → `No issues found!` |
-| Flutter 테스트 | 7/7 통과 | 알고리즘 5, 위젯 2 |
+| Flutter 테스트 | 10/10 통과 | 알고리즘 5, 위젯 5 |
 | Android debug APK | 성공 | `build/app/outputs/flutter-apk/app-debug.apk` |
+| Android 에뮬레이터 | 성공 | Android 35 `VibeCare_Pixel_7_API35`, x86_64 APK 설치·실행 |
+| 에뮬레이터 사용자 흐름 | 성공 | 로그인→장치 전송→진동 시작→카운트다운→중지 및 첫 화면 오버플로 없음 |
 | Android release APK | 성공, 51,046,200 bytes | `build/app/outputs/flutter-apk/app-release.apk` |
 | Android release AAB | 성공, 50,042,634 bytes | `build/app/outputs/bundle/release/app-release.aab` |
 | APK manifest | package `com.vibecare.pilot`, minSdk 24, target/compile 36 | `aapt dump badging` |
