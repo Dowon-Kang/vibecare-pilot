@@ -6,14 +6,14 @@ FR은 `design.md`, `plan.md`, `checklist.md`, 코드의 역할을 바탕으로 �
 
 | 요구사항 ID | 기능 | 입력 | 예상 동작 | 출력 | 예외 상황 | 현재 구현 상태 | 코드 근거 |
 |---|---|---|---|---|---|---|---|
-| FR-001 | 참여자 인증 | 코드·6자리 PIN | 본인 확인, 5회 실패 후15분 잠금 | 프로필·access/refresh | 오입력/잠금/설정 없음 | 부분: 서버 구현, 앱 잠금 안내 부족 | services/api/src/index.ts auth/pin; auth.ts; auth_repository.dart |
+| FR-001 | 참여자 인증 | 코드·6자리 PIN | 본인 확인, 5회 실패 후15분 잠금 | 프로필·access/refresh | 오입력/잠금/설정 없음 | 부분: 서버 구현, 앱 잠금 안내 부족 | backend-api/src/index.ts auth/pin; auth.ts; auth_repository.dart |
 | FR-002 | 토큰 수명 | access/refresh | 만료 처리·갱신·로그아웃 | 인증 유지 또는 재로그인 | 만료/폐기/통신 오류 | 부분: 갱신 API만, 앱 자동 갱신 없음 | auth/refresh; SecureSessionStore; dioProvider |
-| FR-003 | 최근 유효4건 | 본인·기기·측정 이력 | 동일인·동일기기·고유ID·품질·수치 검사 후 최신4건 | 선택ID·이력 | 4건 미만/불량/중복 | 부분: 20건 선제한, 기기 query 누락 | measurement-set/current; selectLatestValidMeasurements; WorkerFitrusRepository |
+| FR-003 | 최근 유효4건 | 본인·기기·측정 이력 | 동일인·동일기기·고유ID·품질·수치 검사 후 최신4건 | 선택ID·이력 | 4건 미만/불량/중복 | 부분: 20건 선제한, 기기 query 누락 | measurement-set/current; selectLatestValidMeasurements; BackendFitrusRepository |
 | FR-004 | 평균·일관성 | 4건·프로필 | 필수5항목 평균 및 체지방/BMI 일관성 검사 | 평균·경고 | 0/NaN/상호 불일치 | 부분: Flutter·웹과 서버 검사 다름 | 세 vibration algorithm 함수 |
 | FR-005 | 명시적 안전문진 | 3문항 예/아니요 | 미응답 REVIEW, 위험 BLOCKED, 명령 불가 | 상태·이유 | 미응답/증상 있음 | 부분: 웹 게이트 있음, Flutter 미응답 없음 | SafetyDraft; SafetyCheck; _SafetySettings |
-| FR-006 | 추천식 | 평균·나이·성별·규칙 | 계수 곱·20~70 clamp·BMI 검토 | 300s·20Hz·강도·버전 | BMI<18.5/비정상 | 기본 예제 구현·테스트 통과; 전체 parity 미확인 | app/lib/vibration-algorithm.ts; domain/vibration_algorithm.dart; services/api/src/algorithm.ts |
+| FR-006 | 추천식 | 평균·나이·성별·규칙 | 계수 곱·20~70 clamp·BMI 검토 | 300s·20Hz·강도·버전 | BMI<18.5/비정상 | 기본 예제 구현·테스트 통과; 전체 parity 미확인 | app/algorithm/vibration-algorithm.ts; domain/vibration_algorithm.dart; backend-api/src/algorithm.ts |
 | FR-007 | 수동 하향 | 정수 강도 | 최솟값 이상·자동추천 이하만 허용 | 선택강도 | 초과·하한 미달 | 구현: UI 및 Worker 검사 | updateIntensity; applyRequestedIntensity |
-| FR-008 | 서버 허가 | ID4개·문진·버전·기기·선택강도 | 최신 데이터 재계산, READY만60초 허가 | authorizationId·expiresAt | stale/버전차/범위오류 | 부분: 재계산 존재, 일관성·비활성 규칙 결함 | recommendations/authorize; ServerDeviceGateway.authorize |
+| FR-008 | 서버 허가 | ID4개·문진·버전·기기·선택강도 | 최신 데이터 재계산, READY만60초 허가 | authorizationId·expiresAt | stale/버전차/범위오류 | 부분: 재계산 존재, 일관성·비활성 규칙 결함 | recommendations/authorize; BackendDeviceGateway.authorize |
 | FR-009 | 세션 시작 | 허가·기기·멱등키 | 본인 허가 단일 사용, 같은 요청은 같은 세션, 기기 중복 방지 | 세션·명령·ACK | 만료/재사용/다른 사용자 | 부분: 교차 참여자 조회·별도 허가 중복 문제 | device-sessions; MockDeviceGateway.start |
 | FR-010 | 중지·완료·백그라운드 | sessionId·reason | 정지 확인, 장애 시 중지 재시도 가능 | 정지·완료 상태 | 네트워크 단절/앱 종료 | 부분: 정상 Mock 통과, 실패 복구·watchdog 없음 | stopSession; onAppBackgrounded; /stop |
 | FR-011 | 사후 반응 | RPE·통증·어지럼·불편 | 본인 세션 평가 저장 | saved | 잘못된 범위/타인세션 | API만 존재, 앱 미구현 | session-feedback; session_feedback |

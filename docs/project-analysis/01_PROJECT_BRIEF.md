@@ -4,7 +4,7 @@
 
 | 항목 | 분석 | 근거/분류 |
 |---|---|---|
-| 이름 | VibeCare Pilot, 패키지 vibecare-pilot-web / vibecare_pilot / vibecare-worker | [사실] 각 package.json, pubspec.yaml, README |
+| 이름 | VibeCare Pilot, 패키지 vibecare-pilot-web / vibecare_pilot / vibecare-backend-api | [사실] 각 package.json, pubspec.yaml, README |
 | 문제 | 참여자가 어떤 측정·보정으로 어떤 진동 설정을 적용하는지, 오늘 실행해도 되는 상태인지 이해하기 어려움 | [사실] design.md §1~2에 명시된 개발 목적 |
 | 주요 사용자 | 고령 연구 참여자와 현장 보조 담당자 | [사실] design.md |
 | 사용자 가치 | 측정 원본·평균·계수·결과를 연결하고 위험 응답 또는 데이터 이상에서 실행을 차단 | [사실] UI·알고리즘 존재. 차단 완전성은 부분 구현 |
@@ -44,7 +44,7 @@
 | 문진 3개 명시 응답 없으면 명령 0건 | [사실] design.md 요구 | Flutter 불충족; 웹 UI에 게이트 있음 |
 | 동일인·동일기기·중복 없는 유효4건으로 계산 | [사실] plan.md | 엔진별 차이와 조회 limit 문제로 부분 충족 |
 | 원본4건·평균·계수·추천·버전 추적 | [사실] design.md, plan.md | 화면·DB 일부 가능. 허가와 추천의 직접 FK 등 부족 |
-| 서버 계산과 앱 시간/Hz/강도 일치 | [사실] plan.md, ServerDeviceGateway.authorize | 비교 코드 있음, 실 HTTP E2E 미검증 |
+| 서버 계산과 앱 시간/Hz/강도 일치 | [사실] plan.md, BackendDeviceGateway.authorize | 비교 코드 있음, 실 HTTP E2E 미검증 |
 | 320px/200% 확대/키보드 접근 | [사실] design.md | Flutter 320×568 위젯 검사만 이번 통과; 나머지 미확인 |
 | 대리 또는 고령 사용자 3명 이상 과업검사 | [사실] design.md | 결과 없음 |
 | 다른 참여자 접근 0건·중지 실패 복구 | [추론] 본인 권한·안전 요구를 시험 조건으로 구체화 | 현재 결함 존재; 승인할 회귀 기준 |

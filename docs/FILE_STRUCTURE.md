@@ -1,6 +1,6 @@
 # VibeCare Pilot 파일 구조
 
-> 기준: Flutter 모바일 앱 + Cloudflare Worker API + 공통 계약 + 비교용 웹 화면
+> 기준: Flutter 모바일 앱 + 백엔드 API + 공통 데이터 규격 + 비교용 웹 화면
 > 상태: `[구현]` 실행 코드 연결 완료 · `[부분]` 외부 명세/실장비 미연결 · `[문서]` 설계·검증 자료
 
 ```text
@@ -10,7 +10,7 @@ vibration-control-app/
 │   ├── page.tsx                              # [구현] 측정값·보정식·추천 명령 웹 화면
 │   ├── layout.tsx                            # [구현] HTML 언어·메타데이터·공통 레이아웃
 │   ├── globals.css                           # [구현] 반응형 레이아웃·접근성 스타일
-│   └── lib/
+│   └── algorithm/
 │       ├── vibration-algorithm.ts            # [구현] 웹용 4건 평균·추천 알고리즘
 │       └── vibration-algorithm.test.mjs      # [구현] 웹 알고리즘·공통 fixture 테스트
 │
@@ -19,69 +19,67 @@ vibration-control-app/
 │   ├── manifest.webmanifest                  # PWA 이름·색상·설치 설정
 │   └── sw.js                                 # 서비스워커 캐시 처리
 │
-├── apps/
-│   └── mobile/                               # 실제 Android 우선 Flutter 앱
-│       ├── lib/
-│       │   ├── main.dart                     # 앱 시작점, Riverpod·Material 3·한국어 설정
-│       │   ├── application/
-│       │   │   └── pilot_controller.dart     # 로그인→조회→계산→전송→시작→중지 흐름
-│       │   ├── domain/                       # 외부 기술에 의존하지 않는 핵심 규칙
-│       │   │   ├── models.dart               # 참여자·측정·추천·허가·장치 세션 모델
-│       │   │   ├── vibration_algorithm.dart  # 최근 유효 4건 평균과 보정계수 계산
-│       │   │   └── session_feedback.dart     # RPE·통증·어지럼 후속 강도 제한
-│       │   ├── infrastructure/               # API·저장소·장치 연결 구현
-│       │   │   ├── auth_repository.dart      # Mock/Worker PIN 로그인·토큰 저장
-│       │   │   ├── authenticated_client.dart # 401 토큰 갱신·중복 refresh 방지
-│       │   │   ├── fitrus_repository.dart    # Mock/Worker 측정값·규칙 조회
-│       │   │   ├── feedback_repository.dart  # 사용 후 피드백 조회·저장
-│       │   │   ├── device_gateway.dart       # connect/authorize/start/stop 공통 계약
-│       │   │   ├── mock_device_gateway.dart  # [구현] 전송·실행·중지 시뮬레이터
-│       │   │   └── server_device_gateway.dart# [부분] Worker 세션 연결, 물리 출력 아님
-│       │   └── presentation/
-│       │       ├── pilot_screen.dart          # 로그인·측정·강도조절·고정 CTA·중지
-│       │       └── overview_card.dart         # 상태·추천값·보정식 요약 카드
-│       ├── test/
-│       │   ├── vibration_algorithm_test.dart # 4건 평균·38/45%·차단 검증
-│       │   ├── widget_test.dart               # 로그인·전송·시작·중지·작은 화면
-│       │   └── authenticated_client_test.dart # 동시 401·토큰 갱신
-│       ├── tool/
-│       │   ├── verify_algorithm.dart          # 알고리즘 수동 검증
-│       │   └── verify_command.dart            # 장치 명령 JSON 수동 검증
-│       ├── android/                           # Android Gradle·Manifest·앱 아이콘
-│       │   └── app/src/main/kotlin/com/vibecare/pilot/
-│       │       └── MainActivity.kt            # Android에서 Flutter를 여는 진입점
-│       ├── pubspec.yaml                       # Flutter·Dio·Riverpod·보안저장소 의존성
-│       ├── pubspec.lock                       # Flutter 패키지 버전 고정
-│       └── analysis_options.yaml              # Dart 정적 분석 규칙
+├── mobile-app/                               # 실제 Android 우선 Flutter 앱
+│   ├── lib/
+│   │   ├── main.dart                         # 앱 시작점, Riverpod·Material 3·한국어 설정
+│   │   ├── controllers/
+│   │   │   └── pilot_controller.dart         # 로그인→조회→계산→전송→시작→중지 흐름
+│   │   ├── models/                           # 화면과 API가 공유하는 데이터 모델
+│   │   │   ├── models.dart                   # 참여자·측정·추천·허가·장치 세션 모델
+│   │   │   └── session_feedback.dart         # RPE·통증·어지럼 후속 강도 제한
+│   │   ├── algorithm/
+│   │   │   └── vibration_algorithm.dart      # 최근 유효 4건 평균과 보정계수 계산
+│   │   ├── services/                         # API·저장소·장치 연결 구현
+│   │   │   ├── auth_repository.dart          # Mock/백엔드 PIN 로그인·토큰 저장
+│   │   │   ├── authenticated_client.dart     # 401 토큰 갱신·중복 refresh 방지
+│   │   │   ├── fitrus_repository.dart        # Mock/백엔드 측정값·규칙 조회
+│   │   │   ├── feedback_repository.dart      # 사용 후 피드백 조회·저장
+│   │   │   ├── device_gateway.dart           # connect/authorize/start/stop 공통 계약
+│   │   │   ├── mock_device_gateway.dart      # [구현] 전송·실행·중지 시뮬레이터
+│   │   │   └── backend_device_gateway.dart   # [부분] 백엔드 세션 연결, 물리 출력 아님
+│   │   └── screens/
+│   │       ├── pilot_screen.dart              # 로그인·측정·강도조절·고정 CTA·중지
+│   │       └── overview_card.dart             # 상태·추천값·보정식 요약 카드
+│   ├── test/
+│   │   ├── vibration_algorithm_test.dart     # 4건 평균·38/45%·차단 검증
+│   │   ├── widget_test.dart                   # 로그인·전송·시작·중지·작은 화면
+│   │   └── authenticated_client_test.dart     # 동시 401·토큰 갱신
+│   ├── tool/
+│   │   ├── verify_algorithm.dart              # 알고리즘 수동 검증
+│   │   └── verify_command.dart                # 장치 명령 JSON 수동 검증
+│   ├── android/                               # Android Gradle·Manifest·앱 아이콘
+│   │   └── app/src/main/kotlin/com/vibecare/pilot/
+│   │       └── MainActivity.kt                # Android에서 Flutter를 여는 진입점
+│   ├── pubspec.yaml                           # Flutter·Dio·Riverpod·보안저장소 의존성
+│   ├── pubspec.lock                           # Flutter 패키지 버전 고정
+│   └── analysis_options.yaml                  # Dart 정적 분석 규칙
 │
-├── services/
-│   └── api/                                  # Cloudflare Worker 백엔드·보안 경계
-│       ├── src/
+├── backend-api/                              # 인증·FITRUS·추천·장치 세션 백엔드
+│   ├── src/
 │       │   ├── index.ts                       # HTTP route·D1 조회·실행 허가 진입점
 │       │   ├── auth.ts                        # PIN 해시·access/refresh token
 │       │   ├── algorithm.ts                   # 서버측 평균·추천 재계산·강도 검증
 │       │   ├── rule-schema.ts                 # 알고리즘 규칙 Zod 검증
 │       │   ├── fitrus-client.ts               # [부분] FITRUS 6개 URL 서버 전용 호출
 │       │   └── feedback.ts                    # RPE·통증·어지럼 후속 보정
-│       ├── migrations/                        # Cloudflare D1 변경 이력
+│   ├── migrations/                            # Cloudflare D1 변경 이력
 │       │   ├── 0001_initial.sql               # 참여자·PIN·BIA·허가·세션·이벤트
 │       │   ├── 0002_measurements_and_rules.sql# 원본·vitals·규칙·4건세트·추천
 │       │   ├── 0003_session_safety.sql        # 중복 실행·세션 안전성
 │       │   └── 0004_feedback_adjustments.sql  # 다음 강도 상한·검토 상태
-│       ├── test/
+│   ├── test/
 │       │   ├── algorithm.test.ts              # 서버 추천 알고리즘
 │       │   ├── auth.test.ts                   # PIN·토큰 보안
 │       │   ├── fitrus-client.test.ts          # 공급사 URL·키·오류 전달
 │       │   └── routes.test.ts                 # 인증·추천·세션·피드백 route
-│       ├── wrangler.jsonc                     # Worker·D1·FITRUS URL·Mock 장치 설정
-│       ├── .dev.vars.example                  # 비밀값 이름 예시, 실제 키 저장 금지
-│       ├── package.json                       # Hono·Zod·test/typecheck
-│       ├── package-lock.json                  # API 패키지 버전 고정
-│       ├── tsconfig.json                      # API TypeScript 설정
-│       └── vitest.config.ts                   # API 테스트 설정
+│   ├── cloudflare-local-runtime.jsonc          # 현재 프로토타입 로컬 실행 설정, AWS 배포용 아님
+│   ├── .dev.vars.example                      # 비밀값 이름 예시, 실제 키 저장 금지
+│   ├── package.json                           # Hono·Zod·test/typecheck
+│   ├── package-lock.json                      # API 패키지 버전 고정
+│   ├── tsconfig.json                          # API TypeScript 설정
+│   └── vitest.config.ts                       # API 테스트 설정
 │
-├── packages/
-│   └── contracts/                             # Flutter·Worker·웹 공통 계약
+├── shared-contracts/                          # Flutter·백엔드·웹 공통 데이터 규격
 │       ├── openapi.yaml                       # 인증·측정·추천·장치 HTTP API
 │       ├── bia-measurement.schema.json        # 체성분 DTO와 단위
 │       ├── vital-measurement.schema.json      # 혈압·심박·스트레스·체온 DTO
@@ -90,6 +88,11 @@ vibration-control-app/
 │       ├── fitrus-endpoints.json              # FITRUS 종류·공급사 URL 매핑
 │       └── fixtures/
 │           └── pilot-0.3.0.json               # 세 알고리즘 결과 일치용 입력
+│
+├── deployment/
+│   └── aws/                                  # 다음 AWS 배포 담당자용 인수 자료
+│       ├── README.md                         # 전환 범위·완료 기준·차단사항
+│       └── required-environment.example      # Secrets Manager/SSM 환경변수 목록
 │
 ├── docs/                                      # 설계·근거·검증 문서
 │   ├── FILE_STRUCTURE.md                      # 현재 문서: 파일 책임 지도
@@ -130,19 +133,19 @@ vibration-control-app/
 
 ```text
 Flutter 화면
-→ apps/mobile/lib/application/pilot_controller.dart
+→ mobile-app/lib/controllers/pilot_controller.dart
 → Repository 또는 DeviceGateway
-→ services/api/src/index.ts
+→ backend-api/src/index.ts
 → 인증 / FITRUS / 추천 알고리즘 / D1 / 장치 세션
 → 표준 JSON 응답
 → Flutter 상태 갱신과 화면 표시
 ```
 
 ```text
-packages/contracts/fixtures/pilot-0.3.0.json
-├── apps/mobile/lib/domain/vibration_algorithm.dart
-├── services/api/src/algorithm.ts
-└── app/lib/vibration-algorithm.ts
+shared-contracts/fixtures/pilot-0.3.0.json
+├── mobile-app/lib/algorithm/vibration_algorithm.dart
+├── backend-api/src/algorithm.ts
+└── app/algorithm/vibration-algorithm.ts
 
 세 구현은 같은 입력에서 같은 추천 결과를 만들어야 한다.
 ```
@@ -152,7 +155,7 @@ packages/contracts/fixtures/pilot-0.3.0.json
 | 영역 | 상태 | 의미 |
 |---|---|---|
 | Flutter 화면·알고리즘 | 구현 | Mock 로그인·측정·추천·전송·시작·중지 가능 |
-| Worker 인증·추천·세션 | 구현 | 로컬 테스트 기준 route와 D1 흐름 존재 |
+| 백엔드 인증·추천·세션 | 구현 | 로컬 테스트 기준 route와 D1 흐름 존재 |
 | FITRUS URL 호출 | 부분 | 서버 client 존재, 성공 응답·정규화 계약 미확정 |
 | 실제 진동기 | 부분 | 공통 Gateway·서버 세션 존재, REST/BLE 명령 미확정 |
 | PWM·가속도·진폭 | 미확정 | 장비 교정표와 물리 안전 상한 필요 |
@@ -164,11 +167,11 @@ packages/contracts/fixtures/pilot-0.3.0.json
 node_modules/                   # 설치한 Node 패키지
 **/build/                       # Flutter·Android 빌드 결과
 .next/ .vinext/ dist/           # 웹 빌드 결과
-.wrangler/                      # Worker 로컬 상태
-apps/mobile/.android/           # 로컬 AVD 설정
-apps/mobile/.tmp/               # adb 임시 로그
+.wrangler/                      # 백엔드 로컬 상태
+mobile-app/.android/           # 로컬 AVD 설정
+mobile-app/.tmp/               # adb 임시 로그
 output/ tmp/                    # PDF와 중간 생성물
-.env* services/api/.dev.vars    # 실제 비밀키·환경값
+.env* backend-api/.dev.vars    # 실제 비밀키·환경값
 ```
 
 ## 이 저장소에 없는 구조
@@ -178,4 +181,4 @@ output/ tmp/                    # PDF와 중간 생성물
 - Dockerfile과 AWS ECR/ECS 배포 workflow 없음
 - 실제 BLE GATT 또는 진동기 REST 명령 구현 없음
 
-현재 프로젝트는 **Python AI 예측 서버**가 아니라 **Flutter 앱과 Cloudflare Worker로 구성된 규칙 기반 진동 추천 연구 프로토타입**이다.
+현재 프로젝트는 **Python AI 예측 서버**가 아니라 **Flutter 앱과 TypeScript 백엔드 API로 구성된 규칙 기반 진동 추천 연구 프로토타입**이다. 백엔드는 현재 D1 형식이므로 AWS 담당자가 런타임과 DB 어댑터를 전환해야 한다.

@@ -1,6 +1,6 @@
 # VibeCare Pilot
 
-> 저장소를 처음 살펴본다면 [파일 구조와 책임](docs/FILE_STRUCTURE.md)부터 확인하세요. Flutter 앱, Worker 백엔드, 공통 계약과 테스트의 실제 연결 경로를 설명합니다.
+> 저장소를 처음 살펴본다면 [파일 구조와 책임](docs/FILE_STRUCTURE.md)부터 확인하세요. Flutter 앱, 백엔드 API, 공통 데이터 규격과 테스트의 실제 연결 경로를 설명합니다.
 
 FITRUS 체성분 측정 4건의 평균과 파일럿 보정 규칙을 이용해 진동 시간·주파수·강도를 추천하고, 전송·시작·중지 과정을 검증하는 연구용 프로토타입입니다.
 
@@ -9,11 +9,12 @@ FITRUS 체성분 측정 4건의 평균과 파일럿 보정 규칙을 이용해 �
 ## 저장소 구성
 
 ```text
-app/                 웹 비교 화면과 웹 전용 알고리즘
-apps/mobile/         Flutter Android 앱
-services/api/        Worker API·FITRUS 프록시·D1
-packages/contracts/  OpenAPI·JSON Schema·공통 fixture
-docs/                설계·근거·검증·프로젝트 분석
+app/               웹 비교 화면과 웹 전용 알고리즘
+mobile-app/        Flutter Android 앱
+backend-api/       FITRUS·장치 연결을 보호하는 백엔드 API
+shared-contracts/ 앱·백엔드 공통 데이터 규격
+deployment/aws/   AWS 배포 담당자용 인수 조건과 환경변수 계약
+docs/              설계·근거·검증·프로젝트 분석
 ```
 
 파일 단위의 상세 책임과 현재 구현 상태는 [전체 파일 구조](docs/FILE_STRUCTURE.md)를 기준으로 확인합니다.
@@ -29,18 +30,18 @@ docs/                설계·근거·검증·프로젝트 분석
 | `/stress2` | 대체 스트레스 모델 | 공급사 차이 설명 전까지 미채택 |
 | `/bodytemp` | 체표면/체온 측정 | 저장·표시 후보이며 강도 계산에는 미사용 |
 
-모바일 앱은 FITRUS API를 직접 호출하지 않습니다. `services/api/src/fitrus-client.ts`만 `x-api-key`를 사용하며 앱은 VibeCare Worker의 정규화된 계약만 읽습니다. 공급사 성공 응답 스키마가 아직 없어 프록시 응답은 원본으로 저장되고 `normalized: false`로 반환됩니다.
+모바일 앱은 FITRUS API를 직접 호출하지 않습니다. `backend-api/src/fitrus-client.ts`만 `x-api-key`를 사용하며 앱은 VibeCare 백엔드 API의 표준 응답만 읽습니다. 공급사 성공 응답 스키마가 아직 없어 프록시 응답은 원본으로 저장되고 `normalized: false`로 반환됩니다.
 
 ## 로컬 실행
 
 ### Flutter Mock 앱
 
 ```powershell
-cd apps/mobile
+cd mobile-app
 E:\flutter-sdk\bin\flutter.bat run
 ```
 
-Worker 연결 빌드는 `--dart-define=VIBECARE_API_BASE_URL=https://...`를 사용합니다. 값을 생략하면 Mock 모드입니다.
+백엔드 연결 빌드는 `--dart-define=VIBECARE_API_BASE_URL=https://...`를 사용합니다. 값을 생략하면 Mock 모드입니다.
 
 ### 웹 비교 화면
 
@@ -49,15 +50,15 @@ npm install
 npm run dev
 ```
 
-### Worker
+### 백엔드 API
 
 ```powershell
-cd services/api
+cd backend-api
 npm install
 npm test
 ```
 
-실제 키는 Git에 넣지 말고 Worker secret `FITRUS_API_KEY`로만 주입합니다.
+실제 키는 Git에 넣지 말고 백엔드 환경변수 `FITRUS_API_KEY`로만 주입합니다. 최종 배포 대상은 AWS이며, 현재 Cloudflare Workers/D1 코드는 교체가 필요한 프로토타입 어댑터입니다. 인수 조건은 [AWS 배포 인계 문서](deployment/aws/README.md)를 따릅니다.
 
 ## 안전 범위
 

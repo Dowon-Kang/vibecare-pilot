@@ -15,7 +15,7 @@
 5. 기본 300초·20Hz·50%에서 계수를 곱한다. 나이≥70이면0.90, 여성0.95/남성1.0, 평균 체지방이 여성20~35% 또는 남성10~28% 밖이면0.90이다. 20~70% 범위로 제한하고 정수 반올림한다.
 6. 평균 BMI<18.5이면 추천 숫자는 남기되 REVIEW라 허가가 불가능하다. 위험 증상 BLOCKED는 엔진 recommendation=null이다.
 
-근거: `app/lib/vibration-algorithm.ts`, `apps/mobile/lib/domain/vibration_algorithm.dart`, `services/api/src/algorithm.ts`.
+근거: `app/algorithm/vibration-algorithm.ts`, `mobile-app/lib/algorithm/vibration_algorithm.dart`, `backend-api/src/algorithm.ts`.
 
 | 입력/출력 | 실제 역할 |
 |---|---|

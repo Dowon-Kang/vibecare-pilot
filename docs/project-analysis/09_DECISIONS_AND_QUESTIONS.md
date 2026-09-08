@@ -11,7 +11,7 @@
 | ADR-003 | Riverpod·Dio | 상태와통신분리 목적은기재, 비교선정이유확인필요 | Bloc/http 등 후보, 당시검토확인불가 | pubspec, 기존OSS문서 | DI·interceptor·Future.wait | lifecycle/복구시험결과 |
 | ADR-004 | secure_storage9.2.4고정 | [사실] Windows native-assets 테스트문제·SDK호환 주석 |10.x | pubspec주석·toolchain-status | 토큰플랫폼저장, 버전업데이트제약 | 대상SDK/도구변경시재검증 |
 | ADR-005 | Worker가 FITRUS키와재계산 소유 | [사실] 앱키노출방지·서버안전경계 | 앱직접공급사호출은제외방향 | README·system-design·FitrusClient | 클라이언트변조방어 의도 | 온디바이스요구·공급사SDK정책 |
-| ADR-006 | Cloudflare Worker+D1 | 선택이유확인필요; 구성과사용목적만존재 | Node서버/다른DB 당시검토없음 | wrangler.jsonc·migrations | 배포/DB운영의존 | 규모·규제·비용·latency목표확정 |
+| ADR-006 | 기존 Cloudflare Worker+D1 프로토타입 | 선택이유확인필요; 구성과사용목적만존재 | Node서버/다른DB 당시검토없음 | cloudflare-local-runtime.jsonc·migrations | AWS 전환 필요 | 규모·규제·비용·latency목표확정 |
 | ADR-007 | 고정PILOT계수와안전게이트 | [사실] 임상확정값없어설명가능한연구규칙 | 향후혼합효과/베이지안계수추정 | plan·open-source-and-evidence·algorithm | 값추적가능, 성능근거는미확정 | 사전평가계획·실데이터승인 |
 | ADR-008 | 동일인·동일기기4건평균 | 반복측정·표준화목적기재; 왜정확히4건인지선택이유확인필요 | 중앙값/품질가중/단일값 검토기록없음 | plan·requiredMeasurementCount | 평균편향/변동성미평가 | 실제반복측정분포·공급사품질 |
 | ADR-009 | 실출력차단·Mock우선 | [사실] 프로토콜·물리교정미확보 | REST/BLE후보 | README·real501·gateway | 물리실행불가, 개발데모가능 | 공급사명세·교정·정지검증 |

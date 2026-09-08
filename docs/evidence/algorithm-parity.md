@@ -2,14 +2,14 @@
 
 검증일: 2026-09-03
 
-공통 fixture: `packages/contracts/fixtures/pilot-0.3.0.json`
+공통 fixture: `shared-contracts/fixtures/pilot-0.3.0.json`
 
 | 구현 | 검증 | 결과 |
 |---|---|---|
 | 기존 TypeScript | `node --test lib\vibration-algorithm.test.mjs` | 5/5 통과 |
 | Flutter 순수 Dart 도메인 | `dart --enable-asserts tool\verify_algorithm.dart` | 통과 |
-| Workers TypeScript | `npm test` (`services/api/`) | 알고리즘 3건 + FITRUS 클라이언트 2건 통과 |
-| Workers 타입 검사 | `npm run typecheck` (`services/api/`) | 통과 |
+| Workers TypeScript | `npm test` (`backend-api/`) | 알고리즘 3건 + FITRUS 클라이언트 2건 통과 |
+| Workers 타입 검사 | `npm run typecheck` (`backend-api/`) | 통과 |
 
 확인된 공통 결과:
 

@@ -30,7 +30,7 @@ yarn-error.log*
 
 # local environment
 .env*
-/services/api/.dev.vars
+/backend-api/.dev.vars
 
 # deployment and generated files
 .vercel
@@ -45,5 +45,8 @@ next-env.d.ts
 /work/
 
 # Flutter/Android machine-local runtime state
-/apps/mobile/.android/
-/apps/mobile/.tmp/
+/mobile-app/.android/
+/mobile-app/.tmp/
+
+# Legacy local Flutter cache left by a locked Android build; never commit it.
+/apps/

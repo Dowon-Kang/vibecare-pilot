@@ -2,27 +2,27 @@
 
 ## 계약의 권위와 공통 규칙
 
-[사실] `packages/contracts/openapi.yaml`은 공개 계약을 의도하지만 많은 request/response schema가 빠져 있다. 아래는 `services/api/src/index.ts`의 실제 구현을 기준으로 복원했다. 응답 success/error는 대체로 JSON이고 공통 예외는500 `{error:'INTERNAL_ERROR'}`다. Hono의 미정의 경로404 등은 이 JSON 형식과 동일하다고 보장할 수 없다.
+[사실] `shared-contracts/openapi.yaml`은 공개 계약을 의도하지만 많은 request/response schema가 빠져 있다. 아래는 `backend-api/src/index.ts`의 실제 구현을 기준으로 복원했다. 응답 success/error는 대체로 JSON이고 공통 예외는500 `{error:'INTERNAL_ERROR'}`다. Hono의 미정의 경로404 등은 이 JSON 형식과 동일하다고 보장할 수 없다.
 
 [사실] `/health`, `/v1/auth/pin`, `/v1/auth/refresh`를 제외한 경로는 `Authorization: Bearer <accessToken>`을 검증한다. 표에서 B는 이 인증을 뜻한다. 비밀키는 요청 본문에 넣지 않는다. API 공통 timeout/retry 미들웨어는 없다. Flutter는 connectTimeout10초만 설정하고 receive/send timeout·자동 재시도·401 자동갱신은 설정하지 않았다. FITRUS fetch는 optional signal을 받지만 호출 라우트는 signal을 주지 않는다.
 
 ## 전체 API
 
-모든 구현 파일은 `services/api/src/index.ts`이며 표의 경로가 라우트 식별자다. “호출”은 저장소 클라이언트 호출 존재 여부다. 서버 연결 경로의 실제 운영 호출을 관측했다는 뜻은 아니다.
+모든 구현 파일은 `backend-api/src/index.ts`이며 표의 경로가 라우트 식별자다. “호출”은 저장소 클라이언트 호출 존재 여부다. 서버 연결 경로의 실제 운영 호출을 관측했다는 뜻은 아니다.
 
 | Method·Endpoint | 호출 주체·실제 호출 코드 | 요청 | 성공 응답 | 인증 | 주요 오류 |
 |---|---|---|---|---|---|
-| GET /health | ServerDeviceGateway.connect | 없음 | 200 `{ok:true,service:'vibecare-api',deviceMode}` | 없음 | DB 연결 검사 없이200; 물리장치 health 아님 |
-| POST /v1/auth/pin | WorkerAuthRepository.login | `{participantCode:string min1,pin:6자리숫자string}`. code trim/uppercase | 200 `{participant:{id,code,age,sex,heightCm},accessToken,refreshToken,expiresInSec:900}` | 없음 | 400 INVALID_REQUEST;503 AUTH_NOT_CONFIGURED;401 INVALID_CREDENTIALS;423 ACCOUNT_LOCKED+lockedUntil |
+| GET /health | BackendDeviceGateway.connect | 없음 | 200 `{ok:true,service:'vibecare-api',deviceMode}` | 없음 | DB 연결 검사 없이200; 물리장치 health 아님 |
+| POST /v1/auth/pin | BackendAuthRepository.login | `{participantCode:string min1,pin:6자리숫자string}`. code trim/uppercase | 200 `{participant:{id,code,age,sex,heightCm},accessToken,refreshToken,expiresInSec:900}` | 없음 | 400 INVALID_REQUEST;503 AUTH_NOT_CONFIGURED;401 INVALID_CREDENTIALS;423 ACCOUNT_LOCKED+lockedUntil |
 | POST /v1/auth/refresh | 앱 호출 없음 | `{refreshToken:string min20}` | 200 `{accessToken,expiresInSec:900}`. refresh 재발급 없음 | refresh 본문 | 400 INVALID_REQUEST(키 설정 오류도 포함);401 INVALID_REFRESH_TOKEN/REFRESH_TOKEN_REVOKED |
-| GET /v1/algorithm-rules/current | WorkerFitrusRepository.loadSnapshot | 없음 | 200 AlgorithmRuleSet 객체 | B | 401 UNAUTHORIZED;JSON/DB 오류500 |
+| GET /v1/algorithm-rules/current | BackendFitrusRepository.loadSnapshot | 없음 | 200 AlgorithmRuleSet 객체 | B | 401 UNAUTHORIZED;JSON/DB 오류500 |
 | POST /v1/fitrus/measurements/:kind | 앱 호출 없음, 직접 API 가능 | kind enum6개; `{deviceId:string min1,measuredAt?:ISO datetime,payload:object}` | 201 `{requestId,rawMeasurementId,normalized:false,providerResponse}` | B | 400 INVALID_REQUEST;503 FITRUS_NOT_CONFIGURED;공급사 실패500 |
-| GET /v1/participants/me/measurement-set/current | WorkerFitrusRepository, deviceId query 전달 안 함 | `?deviceId=...` 선택. 없으면 본인 최근 기록의 기기 | 200 `{history:BiaDTO[],selectedMeasurementIds:string[],syncedAt:ISO}`. 이력20건 | B | 401;DB 오류500;데이터 없으면빈배열 |
-| GET /v1/participants/me/vitals | WorkerFitrusRepository | 없음 | 200 `{items:[{id,kind,measuredAt,values,units}]}` 최근50건 | B | 401;손상JSON/DB500 |
-| POST /v1/recommendations/authorize | ServerDeviceGateway.authorize | `{measurementIds:string[4],safety:{acutePain,dizziness,clinicianHold},deviceId,algorithmVersion,requestedIntensityPct?:int1..100}` | 201 `{authorized:true,authorizationId,recommendationId,expiresAt,result}` 60초 유효 | B | 400 INVALID_REQUEST+details;404 PARTICIPANT_NOT_FOUND;409 MEASUREMENT_SET_STALE+currentMeasurementIds / ALGORITHM_VERSION_MISMATCH+currentRuleSet / INTENSITY_OUTSIDE_SAFE_RANGE+min/max;검토/차단은409 `{authorized:false,recommendationId,result}` |
-| POST /v1/device-sessions | ServerDeviceGateway.start | `{authorizationId,deviceId}` + `Idempotency-Key` min16 | 새 요청201 `{sessionId,status:'RUNNING',mode:'mock',command}`;재요청200 `{sessionId,status,command}` | B | 400 IDEMPOTENCY_KEY_REQUIRED/INVALID_REQUEST;404 AUTHORIZATION_NOT_FOUND;409 AUTHORIZATION_ALREADY_USED/EXPIRED;501 DEVICE_PROTOCOL_NOT_CONFIGURED |
+| GET /v1/participants/me/measurement-set/current | BackendFitrusRepository, deviceId query 전달 안 함 | `?deviceId=...` 선택. 없으면 본인 최근 기록의 기기 | 200 `{history:BiaDTO[],selectedMeasurementIds:string[],syncedAt:ISO}`. 이력20건 | B | 401;DB 오류500;데이터 없으면빈배열 |
+| GET /v1/participants/me/vitals | BackendFitrusRepository | 없음 | 200 `{items:[{id,kind,measuredAt,values,units}]}` 최근50건 | B | 401;손상JSON/DB500 |
+| POST /v1/recommendations/authorize | BackendDeviceGateway.authorize | `{measurementIds:string[4],safety:{acutePain,dizziness,clinicianHold},deviceId,algorithmVersion,requestedIntensityPct?:int1..100}` | 201 `{authorized:true,authorizationId,recommendationId,expiresAt,result}` 60초 유효 | B | 400 INVALID_REQUEST+details;404 PARTICIPANT_NOT_FOUND;409 MEASUREMENT_SET_STALE+currentMeasurementIds / ALGORITHM_VERSION_MISMATCH+currentRuleSet / INTENSITY_OUTSIDE_SAFE_RANGE+min/max;검토/차단은409 `{authorized:false,recommendationId,result}` |
+| POST /v1/device-sessions | BackendDeviceGateway.start | `{authorizationId,deviceId}` + `Idempotency-Key` min16 | 새 요청201 `{sessionId,status:'RUNNING',mode:'mock',command}`;재요청200 `{sessionId,status,command}` | B | 400 IDEMPOTENCY_KEY_REQUIRED/INVALID_REQUEST;404 AUTHORIZATION_NOT_FOUND;409 AUTHORIZATION_ALREADY_USED/EXPIRED;501 DEVICE_PROTOCOL_NOT_CONFIGURED |
 | POST /v1/device-sessions/:id/events | 앱 호출 없음 | `{eventType:ACK/RUNNING/STOPPING/COMPLETED/ERROR/DISCONNECTED,payload?:object}` 기본{} | 202 `{accepted:true}` | B·세션 소유자 | 400 INVALID_REQUEST;404 SESSION_NOT_FOUND;상태 변경 없음 |
-| POST /v1/device-sessions/:id/stop | ServerDeviceGateway.stop | `{reason:string 길이1..100}` | 200 `{sessionId,status:'STOPPED',stoppedAt}` | B·세션 소유자 | 400 INVALID_REQUEST;404 SESSION_NOT_FOUND;물리ACK 없음 |
+| POST /v1/device-sessions/:id/stop | BackendDeviceGateway.stop | `{reason:string 길이1..100}` | 200 `{sessionId,status:'STOPPED',stoppedAt}` | B·세션 소유자 | 400 INVALID_REQUEST;404 SESSION_NOT_FOUND;물리ACK 없음 |
 | POST /v1/session-feedback | 앱 호출 없음 | `{sessionId,rpe?:int0..10 또는null,pain?:int0..10 또는null,dizziness:boolean,discomfort?:string 최대500 또는null}` | 200 `{saved:true}` upsert | B·세션 소유자 | 400 INVALID_REQUEST;404 SESSION_NOT_FOUND;종료 여부 검사 없음 |
 
 공통 B 경로는401 UNAUTHORIZED 가능하다. `POST /device-sessions`의 멱등 재응답 분기는 소유자 검사보다 먼저 실행되므로 위 B만으로 데이터 소유권이 보장되지 않는 예외다(I-01).
@@ -42,7 +42,7 @@
 
 ## 엔티티·DB 계약
 
-근거: `services/api/migrations/0001_initial.sql`, `0002_measurements_and_rules.sql`. 아래에서 `!`는 NOT NULL 또는 PRIMARY KEY 필수, `?`는 nullable, PK/FK/UQ는 키 제약이다. SQL TEXT datetime은 `CURRENT_TIMESTAMP` 기본값과 ISO 문자열이 혼재한다. 표에 없는 DB 범위 검사는 구현됐다고 가정하지 않는다.
+근거: `backend-api/migrations/0001_initial.sql`, `0002_measurements_and_rules.sql`. 아래에서 `!`는 NOT NULL 또는 PRIMARY KEY 필수, `?`는 nullable, PK/FK/UQ는 키 제약이다. SQL TEXT datetime은 `CURRENT_TIMESTAMP` 기본값과 ISO 문자열이 혼재한다. 표에 없는 DB 범위 검사는 구현됐다고 가정하지 않는다.
 
 | 테이블 | 필드·타입·관계 | 생성/수정 주체 | 민감도·검증 |
 |---|---|---|---|
@@ -108,6 +108,6 @@ erDiagram
 5. [사실] deviceId가 BIA 조회와 진동 허가에 동시에 쓰인다. Flutter는 고정 FITRUS-PLUS-01을 허가에 넣으면서 측정조회에는 전달하지 않는다.
 6. [사실] Dart frequencyHz는 int, schema/Worker는 number. _parseRuleSet이 round하므로 소수Hz 규칙에서는 서버 비교 실패 가능.
 7. [사실] plan의 모든 변경 요청 멱등키 규약과 달리 세션 시작만 요구한다. OpenAPI uniqueItems는 Zod 배열 단계에서 검증되지 않으며 후속 세트 검사로 거절될 수 있다.
-8. [사실] ServerDeviceGateway의 “전송 완료”는 서버 허가를 받은 상태다. command_events COMPLETED는 DB session 완료로 이어지지 않고 /stop의 완료 reason도 status=STOPPED를 기록한다.
+8. [사실] BackendDeviceGateway의 “전송 완료”는 서버 허가를 받은 상태다. command_events COMPLETED는 DB session 완료로 이어지지 않고 /stop의 완료 reason도 status=STOPPED를 기록한다.
 
 [추론] 표준DTO를 단일 생성 원천으로 삼고 요청·응답 양방향 schema 검증과 D1 adapter 테스트를 결합해야 언어간 drift를 줄일 수 있다.

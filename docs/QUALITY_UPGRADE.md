@@ -73,7 +73,7 @@
 
 ## 적용과 남은 작업
 
-서버 배포 시 `services/api/migrations/0003_session_safety.sql`을 대상 D1 DB에 적용해야 장치 중복 실행 방지가 작동한다. 이 작업에서는 운영 DB 변경이나 배포를 하지 않았다. 새로 추가한 테스트는 임시 메모리 SQLite에 실제 세 개 마이그레이션을 적용한다.
+서버 배포 시 `backend-api/migrations/0003_session_safety.sql`을 대상 D1 DB에 적용해야 장치 중복 실행 방지가 작동한다. 이 작업에서는 운영 DB 변경이나 배포를 하지 않았다. 새로 추가한 테스트는 임시 메모리 SQLite에 실제 세 개 마이그레이션을 적용한다.
 
 남은 실제 연동 작업:
 

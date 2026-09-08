@@ -10,7 +10,7 @@
 |---|---|---|
 | Flutter Mock 사용자 흐름 | 검증 완료 | 실 FITRUS 정규화와 실제 물리 Android 기기 QA |
 | 최근 유효 4건과 전체 평균 | 검증 완료 | 실 FITRUS fixture 검증 |
-| Worker 인증·측정·추천·Mock 세션 | 부분 완료 | 라우트 D1 통합 테스트와 배포 환경 구성 |
+| 백엔드 인증·측정·추천·Mock 세션 | 부분 완료 | AWS DB 어댑터·통합 테스트·배포 환경 구성 |
 | FITRUS 실연동 | 차단 | 요청·응답·단위 계약 확보 및 정규화 어댑터 작성 |
 | 실제 진동기 | 차단 | REST/BLE·ACK·중지·물리 출력 교정 명세 확보 |
 
@@ -22,7 +22,7 @@
 - [ ] 운영 환경의 암호화된 `FITRUS_API_KEY` 등록·회전 정책 수립
 - [ ] 운영 비밀값 등록 검증 후 사용자 승인 아래 평문 키 파일 제거
 - [ ] FITRUS 요청 스키마·성공 응답 4건·단위·오류코드 전체 확보
-  - 완료 조건: 공급사 예제 응답이 `packages/contracts/bia-measurement.schema.json` 검증을 통과한다.
+  - 완료 조건: 공급사 예제 응답이 `shared-contracts/bia-measurement.schema.json` 검증을 통과한다.
   - 증거: `docs/evidence/bia-api-validation.md`
 - [ ] 진동기기 통신방식 REST/BLE 확정
   - 완료 조건: 연결, 시작, 중지, ACK, 상태, 타임아웃, 오류코드 명세가 있다.
@@ -59,22 +59,22 @@
 ## 3. 인증과 참여자 흐름
 
 - [x] 참여자 코드+6자리 PIN 로그인 화면과 Mock 인증 구현
-- [ ] 부분 완료 — Worker PIN 5회 실패 시 15분 잠금 구현
+- [ ] 부분 완료 — 백엔드 PIN 5회 실패 시 15분 잠금 구현
   - 남은 조건: Flutter 잠금 종료시각 표시와 D1 통합 테스트
 - [ ] 부분 완료 — access/refresh token 발급·검증과 secure storage 구현
   - 남은 조건: Flutter 실 API 인증 전환과 토큰 자동갱신
-- [x] Worker에서 토큰 participant ID로 본인 BIA 데이터만 조회
+- [x] 백엔드에서 토큰 participant ID로 본인 BIA 데이터만 조회
 - [ ] 세션 만료·네트워크 오류·오프라인 상태 안내
 
 ## 4. BIA 수신과 4회 평균
 
-- [ ] 부분 완료 — 공급사 독립 BIA DTO와 Worker canonical adapter 구현
+- [ ] 부분 완료 — 공급사 독립 BIA DTO와 백엔드 표준 변환 구현
   - 남은 조건: FITRUS 성공 응답 예제로 공급사 정규화 adapter 완성
 - [x] 동일 사용자·동일 기기의 최근 유효 4건 선택
 - [x] 필수 숫자, 품질상태, 중복 측정 ID 검사
 - [x] 체중·BMI·체지방률·체지방량·골격근량과 선택 7항목 평균 구현
 - [x] 체지방량/체중과 BMI/키·체중 일관성 검사
-- [x] 평균에 사용한 측정 ID를 앱 결과와 Worker measurement set에 저장
+- [x] 평균에 사용한 측정 ID를 앱 결과와 백엔드 measurement set에 저장
 
 ## 5. 알고리즘 이식
 
@@ -110,10 +110,10 @@
 - [ ] 부분 완료 — 52dp 이상 주요 터치영역과 남은 시간 TalkBack live region 적용
   - 남은 조건: 큰 글자·실기기 TalkBack 위젯 검증
 
-## 7. Workers와 D1
+## 7. 백엔드 API와 데이터 저장
 
-- [x] Workers 프로젝트 기본 구성
-- [ ] staging/prod 환경과 실제 D1 ID 구성
+- [x] 백엔드 API 프로토타입 기본 구성
+- [ ] AWS staging/prod 환경과 데이터베이스 구성
 - [x] D1 초기·확장 마이그레이션과 핵심 테이블 작성 및 로컬 적용
 - [x] PBKDF2 PIN 해시, 로그인 잠금, 서명 access/refresh token 구현
 - [ ] 부분 완료 — FITRUS 원본 보존과 canonical 조회 구현
@@ -128,13 +128,13 @@
 
 - [x] `DeviceGateway` 공통 인터페이스 구현
 - [x] `MockDeviceGateway` 구현
-- [x] API base URL 설정 시 Worker 실행 허가·세션·중지 API를 사용하는 `ServerDeviceGateway` 구현
+- [x] API base URL 설정 시 백엔드 실행 허가·세션·중지 API를 사용하는 `BackendDeviceGateway` 구현
 - [x] 앱 미리보기와 서버 시간·Hz·강도가 다르면 실행 차단
 - [ ] REST/BLE 공급사 어댑터 계약 테스트 작성
 - [ ] 통신방식 확정 후 실제 게이트웨이 하나 구현
 - [ ] 부분 완료 — Mock 연결·허가·시작·ACK·중지 상태머신 구현
   - 남은 조건: 실기기 타임아웃·재시도 계약 테스트
-- [x] Mock과 Worker에서 중복 실행·만료 허가 차단
+- [x] Mock과 백엔드에서 중복 실행·만료 허가 차단
 - [ ] 부분 완료 — 앱 백그라운드 전환 시 Mock 안전 중지 구현
   - 남은 조건: 실기기 연결 해제·오류 검증
 
@@ -158,13 +158,13 @@
 | 날짜 | 단계 | 결과 | 검증 명령/증거 | 담당 |
 |---|---|---|---|---|
 | 2026-09-03 | 근거·OSS | 논문 적용범위와 라이선스 후보 문서화 | `docs/open-source-and-evidence.md` | Codex |
-| 2026-09-03 | 알고리즘 | TS 5건, Worker 3건, Dart 검증 통과 | `docs/evidence/algorithm-parity.md` | Codex |
+| 2026-09-03 | 알고리즘 | TS 5건, 백엔드 3건, Dart 검증 통과 | `docs/evidence/algorithm-parity.md` | Codex |
 | 2026-09-03 | 환경 | Flutter CLI 초기화와 Android SDK 미설치 확인 | `docs/evidence/toolchain-status.md` | Codex |
 | 2026-09-06 | FITRUS API | 6개 POST 경로·서버 전용 키 처리 확인 및 어댑터 테스트 | `docs/evidence/fitrus-api-contract.md` | Codex |
-| 2026-09-06 | Flutter Mock | 로그인·전체 원본/평균·vitals·안전·추천·Mock 실행 UI 연결 | `apps/mobile/lib/` | Codex |
-| 2026-09-06 | Workers | 인증·측정 조회·규칙·추천·Mock 세션·중지·피드백 API 구현 | `services/api/src/`, `packages/contracts/openapi.yaml` | Codex |
+| 2026-09-06 | Flutter Mock | 로그인·전체 원본/평균·vitals·안전·추천·Mock 실행 UI 연결 | `mobile-app/lib/` | Codex |
+| 2026-09-06 | 백엔드 API | 인증·측정 조회·규칙·추천·Mock 세션·중지·피드백 API 구현 | `backend-api/src/`, `shared-contracts/openapi.yaml` | Codex |
 | 2026-09-06 | Android | Flutter 3.47.2·SDK 36·Java 21, 테스트 7개 및 debug APK 통과 | `docs/evidence/toolchain-status.md` | Codex |
-| 2026-09-07 | Flutter 입력·전송 | 나이·성별 즉시 재계산, Worker 서버 게이트웨이, Android 35 에뮬레이터 설치·실행 | `apps/mobile/lib/`, `flutter test` 10/10 | Codex |
-| 2026-09-07 | 모바일 UX | 첫 화면 상태·강도 조절·고정 CTA, 전송/시작 분리, 실행 카운트다운·중지 및 에뮬레이터 시각 QA 완료 | `apps/mobile/lib/presentation/pilot_screen.dart`, `apps/mobile/test/widget_test.dart` | Codex |
-| 2026-09-06 | D1 | 초기·확장 마이그레이션 로컬 적용 성공 | `services/api/migrations/` | Codex |
+| 2026-09-07 | Flutter 입력·전송 | 나이·성별 즉시 재계산, 백엔드 게이트웨이, Android 35 에뮬레이터 설치·실행 | `mobile-app/lib/`, `flutter test` 10/10 | Codex |
+| 2026-09-07 | 모바일 UX | 첫 화면 상태·강도 조절·고정 CTA, 전송/시작 분리, 실행 카운트다운·중지 및 에뮬레이터 시각 QA 완료 | `mobile-app/lib/screens/pilot_screen.dart`, `mobile-app/test/widget_test.dart` | Codex |
+| 2026-09-06 | D1 | 초기·확장 마이그레이션 로컬 적용 성공 | `backend-api/migrations/` | Codex |
 | 2026-09-06 | Android 릴리스 | 내부 시험용 release APK 48.7MB·AAB 47.7MB 생성, package/min/target SDK 확인 | `docs/evidence/toolchain-status.md` | Codex |

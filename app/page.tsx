@@ -24,7 +24,7 @@ import {
   type BodyCompositionMeasurement,
   type Profile,
   type SafetyAnswers,
-} from '@/app/lib/vibration-algorithm';
+} from '@/app/algorithm/vibration-algorithm';
 
 const mockMeasurements: BodyCompositionMeasurement[] = [
   { id: 'M-001', userId: 'USER-001', measuredAt: '2026-08-22T23:20:00+09:00', deviceId: 'FITRUS-PLUS-01', qualityPassed: true, weightKg: 42, bmi: 18.7, bodyFatPct: 18.8, fatMassKg: 7.9, skeletalMuscleMassKg: 18.1, basalMetabolicRateKcal: 1106.1, bodyWaterPct: 59.7, proteinKg: 6.7, mineralKg: 2.4, ecwRatio: 0.38, waistCm: 61.8, visceralFatLevel: 8.51 },

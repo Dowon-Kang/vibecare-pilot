@@ -117,4 +117,4 @@ FITRUS 공통 주소는 `https://api.thefitrus.com/fitrus-ml/measure`다. 뒤에
 
 품질 확인은 다음 기준으로 한다: 작은 화면에서 핵심 결과와 행동 버튼이 보일 것, 큰 글자에서도 잘리지 않을 것, 샘플을 실측으로 오해하지 않을 것, 문진 미응답에서는 시작할 수 없을 것, 오류가 나면 다음 행동이 보일 것. 현재 이 전체 기준을 통과했다고 확인한 상태는 아니다.
 
-근거: `services/api/src/fitrus-client.ts`, `services/api/src/index.ts`, 세 알고리즘 구현, Flutter controller/화면/테스트, `packages/contracts/`, 기존 인수 분석. 구체적인 코드 문제와 재현은 `08_VERIFICATION.md`에 기록했다.
+근거: `backend-api/src/fitrus-client.ts`, `backend-api/src/index.ts`, 세 알고리즘 구현, Flutter controller/화면/테스트, `shared-contracts/`, 기존 인수 분석. 구체적인 코드 문제와 재현은 `08_VERIFICATION.md`에 기록했다.

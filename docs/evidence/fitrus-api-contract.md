@@ -19,7 +19,7 @@
 - 빈 JSON을 API 키 없이 POST하면 `403 Forbidden`과 `x-api-key` 관련 오류를 반환했다.
 - 사용자가 제공한 키를 메모리에서만 읽어 `/bodyfat`에 전송하자 인증을 통과해 `400 Bad Request / Failed to read request`가 반환되었다. 키 값은 로그·문서·프로젝트에 복사하지 않았다.
 - 오류 응답 타입은 `application/problem+json`이다.
-- 따라서 키는 Flutter 앱이나 저장소에 두지 않고 Workers 비밀값 `FITRUS_API_KEY`로만 주입한다.
+- 따라서 키는 Flutter 앱이나 저장소에 두지 않고 백엔드 환경변수 `FITRUS_API_KEY`로만 주입한다.
 - 일반적인 `/v3/api-docs`와 `/swagger-ui` 경로에서는 공개 스키마를 확인할 수 없었다.
 
 ## 아직 공급사에서 받아야 하는 항목
@@ -36,4 +36,4 @@
 
 ## 키 보관 조치
 
-현재 `E:\산학협력\산학협력api.txt`는 평문 키 파일이므로 개발 확인용으로만 취급한다. 운영 환경에서는 Workers/Sites의 암호화된 환경 비밀값 `FITRUS_API_KEY`로 등록하고, 등록·검증 후 평문 파일은 사용자 승인 아래 제거한다. 키를 Flutter 빌드, API 응답, 로그, Git, 문서에 포함하지 않는다.
+현재 `E:\산학협력\산학협력api.txt`는 평문 키 파일이므로 개발 확인용으로만 취급한다. 운영 환경에서는 AWS Secrets Manager 또는 SSM의 암호화된 비밀값 `FITRUS_API_KEY`로 등록하고, 등록·검증 후 평문 파일은 사용자 승인 아래 제거한다. 키를 Flutter 빌드, API 응답, 로그, Git, 문서에 포함하지 않는다.

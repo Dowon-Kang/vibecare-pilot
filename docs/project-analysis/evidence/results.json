@@ -12,7 +12,7 @@
     "workerTypecheck": "passed",
     "dartAnalyze": "No issues found",
     "webBuild": "passed",
-    "lint": {"result": "failed", "errors": 2, "locations": ["services/api/src/index.ts:120", "services/api/test/fitrus-client.test.ts:9"]},
+    "lint": {"result": "failed", "errors": 2, "locations": ["backend-api/src/index.ts:120", "backend-api/test/fitrus-client.test.ts:9"]},
     "webHttp": {"url": "http://localhost:3000", "status": 200, "rawContentLength": 40274, "containsVibeCare": true},
     "cleanInstall": "not run",
     "androidBuildThisAnalysis": "not run",

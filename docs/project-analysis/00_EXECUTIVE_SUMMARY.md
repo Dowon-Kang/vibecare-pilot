@@ -2,7 +2,7 @@
 
 ## 프로젝트 정의
 
-[사실] **VibeCare Pilot은 고령 연구 참여자의 체성분 측정 4건과 안전 응답을 바탕으로 연구용 진동 설정을 계산하고 Mock 전송·실행·중지 흐름을 시험하는 프로토타입이다.** 근거: `README.md`, `design.md`, `apps/mobile/lib/application/pilot_controller.dart`, `services/api/src/index.ts`.
+[사실] **VibeCare Pilot은 고령 연구 참여자의 체성분 측정 4건과 안전 응답을 바탕으로 연구용 진동 설정을 계산하고 Mock 전송·실행·중지 흐름을 시험하는 프로토타입이다.** 근거: `README.md`, `design.md`, `mobile-app/lib/controllers/pilot_controller.dart`, `backend-api/src/index.ts`.
 
 ## 실제 완성도
 

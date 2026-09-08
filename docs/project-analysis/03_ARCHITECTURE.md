@@ -23,7 +23,7 @@ flowchart LR
     R --> SW[Service Worker 캐시]
 ```
 
-[사실] 웹은 Flutter API의 프론트엔드가 아니다. `app/page.tsx`에 Worker 호출이 없고 독립적인 고정 데이터·계산·명령 미리보기만 있다. 웹 배포용 Worker 번들과 `services/api/src/index.ts`의 업무 API도 별개다. `.openai/hosting.json`의 D1/R2는 null이고 업무 Worker는 `wrangler.jsonc`의 DB 바인딩을 사용한다. Sites에 웹을 빌드/배포했다고 업무 D1·API가 자동 준비되는 구조가 아니다.
+[사실] 웹은 Flutter API의 프론트엔드가 아니다. `app/page.tsx`에 백엔드 호출이 없고 독립적인 고정 데이터·계산·명령 미리보기만 있다. 웹 빌드와 `backend-api/src/index.ts`의 업무 API도 별개다. `.openai/hosting.json`은 기존 웹 미리보기 설정이고 업무 백엔드의 현재 로컬 설정은 `cloudflare-local-runtime.jsonc`다. 최종 AWS 배포에는 별도 런타임과 DB 어댑터가 필요하다.
 
 ## 계층별 실제 책임
 
@@ -31,11 +31,11 @@ flowchart LR
 |---|---|---|
 | Presentation | Flutter pilot_screen.dart / main.dart, 웹 page.tsx / globals.css | 화면, 입력, lifecycle; 화면 파일이 큰 단일 구성 |
 | 상태 관리 | Riverpod Notifier PilotController/PilotState, 웹 useState/useMemo | 로그인·snapshot·추천·허가·세션·타이머; 서버 세션과 지속 동기화하지 않음 |
-| Controller/API | services/api/src/index.ts의 Hono 라우트 | 인증·검증·조회·계산·저장을 한 파일에서 수행 |
+| Controller/API | backend-api/src/index.ts의 Hono 라우트 | 인증·검증·조회·계산·저장을 한 파일에서 수행 |
 | Service/Use Case | PilotController, Worker 라우트 내부 | 독립 Worker use-case 서비스 계층 없음 |
-| Domain | Flutter models/vibration_algorithm, Worker algorithm.ts, app/lib/vibration-algorithm.ts | 순수 계산·상태 모델; 세 구현의 검증·DTO 차이 존재 |
+| Domain | Flutter models/vibration_algorithm, Worker algorithm.ts, app/algorithm/vibration-algorithm.ts | 순수 계산·상태 모델; 세 구현의 검증·DTO 차이 존재 |
 | Repository/Data Access | Flutter AuthRepository/FitrusRepository; Worker D1 SQL | Flutter는 인터페이스로 교체 가능. Worker는 라우트에 SQL 직접 배치 |
-| 외부 연동 | Dio, FitrusClient, ServerDeviceGateway | ServerDeviceGateway는 실제 장치 어댑터가 아니라 Worker 호출기 |
+| 외부 연동 | Dio, FitrusClient, BackendDeviceGateway | BackendDeviceGateway는 실제 장치 어댑터가 아니라 Worker 호출기 |
 | 공통 모듈 | contracts JSON Schema/OpenAPI/fixture | 참조 문서와 데이터, 런타임 코드 생성·검증에 연결되지 않음 |
 
 ## 저장·인증·운영
@@ -60,10 +60,10 @@ flowchart LR
 | React19 / Vinext beta / Vite8 | 웹 화면·SSR·빌드 | [사실] 비교 기준 웹 보존. Vinext 선택 자체는 근거 확인 불가 | 빠른 계산 UI와 Worker 빌드 | beta, .next 잔존·웹/업무 도구 버전 차이 | Next.js, 정적 React Vite |
 | Sites plugin | vite.config.ts와 hosting.json | [사실] 기존 웹 호스팅 연결; 초기 선택 이유 확인 필요 | 빌드·호스팅 연계 가능 | 업무 API/D1와 별도 경계 | 별도 Cloudflare 프로젝트 |
 | Vitest/node:test/flutter_test | 각 test 파일 | 선택 이유 확인 필요 | 각 플랫폼 기본 검증 | Worker 테스트는 Node 환경; 실제 배포·물리기기 증거 아님 | workerd+D1 통합·Android integration_test |
-| JSON Schema/OpenAPI | packages/contracts/ | [사실] plan.md 공급사 독립 계약·공개 계약 단일화 | 언어간 명세 공유 | import/생성/CI 검증 없어서 drift | DTO 생성+계약 테스트 |
+| JSON Schema/OpenAPI | shared-contracts/ | [사실] plan.md 공급사 독립 계약·공개 계약 단일화 | 언어간 명세 공유 | import/생성/CI 검증 없어서 drift | DTO 생성+계약 테스트 |
 
 라이브러리의 현재 최신성·외부 라이선스·취약점 유무를 이 표로 인증하지 않는다. 버전은 저장소 및 로컬 설치에 근거한다. 외부 문헌의 임상 결론도 새로 검증하지 않았다.
 
 ## 문서와 구현 차이
 
-[사실] `docs/architecture.md`의 정규화·표준편차·실기기 ACK·피드백 사용자 흐름은 목표 구조를 포함한다. `plan.md`의 aggregation_sets는 실제 measurement_sets와 이름이 다르고 device_profiles 테이블은 없다. `docs/system-design.md`의 “Flutter 검증 대기”는 후속 toolchain-status 및 이번 테스트보다 오래된 기록이다. `apps/mobile/README.md`의 실출력 컴파일타임 플래그 설명에 대응하는 별도 real-device 플래그는 없고 API URL로 gateway를 바꾸며 서버가 real501을 반환한다.
+[사실] `docs/architecture.md`의 정규화·표준편차·실기기 ACK·피드백 사용자 흐름은 목표 구조를 포함한다. `plan.md`의 aggregation_sets는 실제 measurement_sets와 이름이 다르고 device_profiles 테이블은 없다. `docs/system-design.md`의 “Flutter 검증 대기”는 후속 toolchain-status 및 이번 테스트보다 오래된 기록이다. `mobile-app/README.md`의 실출력 컴파일타임 플래그 설명에 대응하는 별도 real-device 플래그는 없고 API URL로 gateway를 바꾸며 서버가 real501을 반환한다.

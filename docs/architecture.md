@@ -29,8 +29,8 @@ flowchart TD
 sequenceDiagram
     actor User as 참여자
     participant App as Flutter 앱
-    participant API as Workers API
-    participant DB as D1
+    participant API as 백엔드 API
+    participant DB as 데이터 저장소
     participant BIA as BIA 공급 API
     participant Dev as REST/BLE 기기
 
@@ -68,7 +68,7 @@ flowchart LR
         DEVICE[진동 기기]
     end
 
-    subgraph Worker[Cloudflare Workers]
+    subgraph Backend[백엔드 API]
         AUTH[PIN 인증·잠금]
         ADAPTER[BIA 정규화 어댑터]
         ENGINE[pilot-0.3.0 안전 엔진]
@@ -76,7 +76,7 @@ flowchart LR
         SESSION[세션·ACK·피드백 API]
     end
 
-    subgraph Storage[D1]
+    subgraph Storage[데이터 저장소: 현재 D1, AWS 전환 예정]
         RAW[(BIA 원본)]
         RULES[(버전 규칙)]
         AUDIT[(추천·명령 감사로그)]

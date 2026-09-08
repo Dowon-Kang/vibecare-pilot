@@ -65,7 +65,7 @@
 - [x] Mock와 실기기 미연결 상태가 첫 화면에 표시된다.
 - [x] 390px 모바일과 915px 데스크톱에서 가로 스크롤이 없다.
 - [x] 프로덕션 빌드, 화면 소스 lint, 알고리즘 테스트 5건, 브라우저 상호작용 검증을 통과한다.
-- [ ] 전체 저장소 lint의 기존 공용 UI·Worker 오류를 별도 정리한다.
+- [ ] 전체 저장소 lint의 기존 공용 UI·백엔드 오류를 별도 정리한다.
 
 ---
 
@@ -74,8 +74,8 @@
 ## 구현 기준선 (2026-09-06)
 
 - Flutter에는 Mock 로그인, 최근 유효 체성분 4건 선택, 전체 체성분 원본·평균, 표시 전용 생체신호, 안전 문진, 추천식, Mock 실행·카운트다운·즉시 중지가 연결되어 있다.
-- Workers에는 PIN 인증·잠금, 토큰 검증, 최신 측정 세트, 표시 전용 생체신호, FITRUS 서버 프록시, 서버 추천 재계산, 1회성 실행 허가, Mock 세션·이벤트·중지·피드백 API가 구현되어 있다.
-- `packages/contracts/openapi.yaml`을 앱과 서버 사이의 단일 공개 계약으로 사용한다.
+- 백엔드 API에는 PIN 인증·잠금, 토큰 검증, 최신 측정 세트, 표시 전용 생체신호, FITRUS 서버 프록시, 서버 추천 재계산, 1회성 실행 허가, Mock 세션·이벤트·중지·피드백 API가 구현되어 있다.
+- `shared-contracts/openapi.yaml`을 앱과 서버 사이의 단일 공개 계약으로 사용한다.
 - FITRUS 실제 정규화와 실제 진동 출력은 각각 공급사 요청·응답 예제와 진동기 통신·교정 명세를 확보하기 전까지 차단한다.
 - Android 내부 시험용 release APK와 AAB까지 빌드했지만 현재 debug 키 서명이므로 배포용 signing 구성과 실제 Android 기기 검증은 남아 있다.
 
@@ -101,12 +101,10 @@ VibeCare의 주 클라이언트를 기존 React PWA에서 Android 우선 Flutter
 vibration-control-app/
 ├─ app/                 # Sites/Vinext 웹 비교 화면과 웹 알고리즘
 ├─ public/              # 웹 정적 리소스
-├─ apps/
-│  └─ mobile/           # Android 우선 Flutter 앱
-├─ services/
-│  └─ api/              # Cloudflare Workers API와 D1 마이그레이션
-├─ packages/
-│  └─ contracts/        # 공급사 독립 OpenAPI·JSON Schema·fixture
+├─ mobile-app/          # Android 우선 Flutter 앱
+├─ backend-api/         # HTTP API·알고리즘·현재 D1 기반 저장 흐름
+├─ shared-contracts/    # 공급사 독립 OpenAPI·JSON Schema·fixture
+├─ deployment/aws/      # AWS 담당자용 환경변수·전환·검증 계약
 ├─ docs/                # 시스템·운영·검증 문서
 ├─ plan.md
 └─ checklist.md
@@ -176,7 +174,7 @@ abstract interface class DeviceGateway {
 
 PILOT 규칙은 앱에 고정된 임상값으로 취급하지 않는다. 서버의 `AlgorithmRuleSet`에 버전, 적용일, 활성화 여부, 변경 사유를 저장하고 앱은 승인된 규칙만 사용한다. 오프라인 캐시 규칙으로 미리보기는 가능하지만 실제 전송은 최신 규칙 검증과 서버 허가가 필요하다.
 
-Flutter 로컬 계산은 즉각적인 화면 피드백용이다. 실제 기기 실행 전 Workers가 측정 ID 4건과 안전 응답으로 평균 및 추천을 다시 계산한다. 두 결과가 다르면 실행을 거부하고 규칙을 다시 동기화한다.
+Flutter 로컬 계산은 즉각적인 화면 피드백용이다. 실제 기기 실행 전 백엔드 API가 측정 ID 4건과 안전 응답으로 평균 및 추천을 다시 계산한다. 두 결과가 다르면 실행을 거부하고 규칙을 다시 동기화한다.
 
 ### 4.1 VibeCare 단계형 접근
 
@@ -194,11 +192,11 @@ Flutter 로컬 계산은 즉각적인 화면 피드백용이다. 실제 기기 �
 
 ```text
 BIA 공급 API
-→ Workers 인증·스키마·중복 검사
-→ D1 원본 및 정규화 값 저장
+→ 백엔드 인증·스키마·중복 검사
+→ 데이터 저장소에 원본 및 정규화 값 저장
 → Flutter에 동일인·동일 기기의 최근 유효 측정 4건 전달
 → Flutter 로컬 미리 계산
-→ Workers authoritative 재계산
+→ 백엔드 authoritative 재계산
 → 1회성 실행 허가 발급
 → REST 또는 BLE 기기 명령
 → ACK·상태·중지·사후반응 저장
@@ -208,7 +206,7 @@ BIA 공급 API
 
 ### 5.1 FITRUS 공급 API
 
-공급사 기준 URL은 `https://api.thefitrus.com/fitrus-ml/measure`이며 `/bp`, `/hr`, `/stress`, `/bodytemp`, `/bodyfat`, `/stress2`를 사용한다. 모두 POST 전용이고 `x-api-key`가 필요하므로 Flutter가 직접 호출하지 않는다. Workers의 `FitrusClient`만 키를 비밀값으로 받아 호출하고, 응답 원본과 표준 DTO를 분리해 저장한다.
+공급사 기준 URL은 `https://api.thefitrus.com/fitrus-ml/measure`이며 `/bp`, `/hr`, `/stress`, `/bodytemp`, `/bodyfat`, `/stress2`를 사용한다. 모두 POST 전용이고 `x-api-key`가 필요하므로 Flutter가 직접 호출하지 않는다. 백엔드의 `FitrusClient`만 키를 비밀값으로 받아 호출하고, 응답 원본과 표준 DTO를 분리해 저장한다.
 
 `bodyfat`은 4회 평균의 주 입력이다. 혈압·심박·체온·스트레스·스트레스2는 1차 버전에서 표시하고 저장만 하며 추천이나 차단에 사용하지 않는다. 연구책임자가 별도 임계값과 근거를 승인한 다음 규칙 버전에서만 안전 게이트 보조 입력으로 승격한다.
 

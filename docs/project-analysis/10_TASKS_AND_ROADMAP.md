@@ -2,16 +2,18 @@
 
 아래는 [추론]에 해당하는 제안이다. 실제 코드 수정·배포·장비 실행은 이번 분석에서 수행하지 않았다. 시간·비용 추정치나 미확정 외부 계약을 임의로 채우지 않았다.
 
+> 2026-09-08 변경: 최종 배포 대상은 AWS다. 아래의 기존 Wrangler/D1/Sites 배포 명령은 과거 프로토타입 조사 기록이며 실행 절차로 사용하지 않는다. 현재 인수 기준은 `../../deployment/aws/README.md`가 우선한다.
+
 ## 우선순위와 독립 작업 분해
 
 | 작업 | 목표 | 수정 가능 범위 | 수정 금지 범위 | 선행 작업 | 산출물 | 검증·완료 조건 | 충돌/독립성 |
 |---|---|---|---|---|---|---|---|
-| T-01 최우선 | I-01 멱등권한누락차단 | services/api/src/index.ts 세션경로·services/api/test 신규route시험 | Flutter·규칙계수·운영DB | 없음 | 소유자/요청결합검사·회귀시험 | 다른참여자·다른본문충돌거절;동일요청재시도같은세션 | T-03/04도index.ts수정하므로직렬 |
+| T-01 최우선 | I-01 멱등권한누락차단 | backend-api/src/index.ts 세션경로·backend-api/test 신규route시험 | Flutter·규칙계수·운영DB | 없음 | 소유자/요청결합검사·회귀시험 | 다른참여자·다른본문충돌거절;동일요청재시도같은세션 | T-03/04도index.ts수정하므로직렬 |
 | T-02 최우선 | I-02 명시문진게이트 | Flutter models/controller/screen/test | Worker·계수·DB | design문진규약유지확인, 현규약대로구현가능 | 미확인상태·3문항UI·차단시험 | 미응답명령0건,위험BLOCKED,재로그인/세션갱신문진초기화 | T-01과독립;T-05/07은Flutter파일충돌 |
 | T-03 우선 | I-03/04 검증·규칙중단일치 | worker algorithm/index·tests;Dart domain/tests;lib·fixtures | 기기실출력·임상계수임의변경 | T-01종료,T-02모델계약고정 | canonical검증·disabled거절·공통fixture | 모든엔진경계결과합의,활성룰없음허가0건 | 여러엔진소유범위라T-02/04동시금지 |
-| T-04 우선 | I-06/07 서버세션상태정리 | services/api/index·신규migration·route시험·device계약 | 기존migration변경·물리출력 | T-01/03, source/target기기계약 | 기기lease·상태전이·종료이력·조회API | 기기별활성1개,중복/경쟁/완료일관성 | Worker변경과충돌,직렬 |
+| T-04 우선 | I-06/07 서버세션상태정리 | backend-api/index·신규migration·route시험·device계약 | 기존migration변경·물리출력 | T-01/03, source/target기기계약 | 기기lease·상태전이·종료이력·조회API | 기기별활성1개,중복/경쟁/완료일관성 | Worker변경과충돌,직렬 |
 | T-05 우선 | I-05/11 중지·인증복구 | Flutter controller/gateway/auth/UI/tests | 계수·Worker비승인API | T-02/04계약·T-03모델안정 | stopFailed·재중지·refresh·세션복원 | 오류후중지CTA유지,만료·background·재시작검증 | Flutter개편과직렬 |
-| T-06 계약 | FITRUS 정규화구현 | fitrus-client·새adapter·contracts·services/api/test·새migration | 공급사미확정필드가정·실키fixture | 공급사성공계약·단위·품질정의 | 비식별fixture·ingest·canonical검증 | 실예제4건이schema통과,중복/오류/본인권한시험 | index.ts연결은T-04후;사전명세수집은독립 |
+| T-06 계약 | FITRUS 정규화구현 | fitrus-client·새adapter·contracts·backend-api/test·새migration | 공급사미확정필드가정·실키fixture | 공급사성공계약·단위·품질정의 | 비식별fixture·ingest·canonical검증 | 실예제4건이schema통과,중복/오류/본인권한시험 | index.ts연결은T-04후;사전명세수집은독립 |
 | T-07 제품 | 프로필/기기/피드백완성 | Flutter repos/controller/screen·Worker신규API·contracts | 임상기준·기존데이터삭제 | T-04/05/06·역할/기기정책확정 | 프로필원천·source/targetID·평가UI | 로그인→실정규화→추천→Mock→평가E2E | Worker/Flutter양쪽충돌,기능별직렬 |
 | T-08 운영 | clean빌드·서명·환경·CI | 별도CI/도구·새env설정·Android signing·운영문서 | secret커밋·프로덕션임의배포 | 목표환경·담당자,SDK확정 | 빌드/배포런북·SBOM·서명·artifact해시 | clean설치/빌드/회귀·stagingrestore성공 | 앱소스변경과대체로독립,의존성업데이트는별도합의 |
 | T-09 검증 | 실기기계약·교정·ACK검증 | 새Device adapter·계약시험·교정자료 | 명세없는실출력활성화 | 공급사명세,T-04~07안정,안전승인 | 장비별교정·timeout/stop·제한시험결과 | 물리중지·연결해제·최대출력기준통과 | 선행결과의존,독립작업아님 |
@@ -37,7 +39,7 @@ Set-Location 'E:\산학협력\vibration-control-app'
 git status --short
 node --version
 npm ci
-Set-Location worker
+Set-Location backend-api
 npm ci
 Set-Location ..\apps\mobile
 & E:\flutter-sdk\bin\flutter.bat --version
@@ -77,7 +79,7 @@ Invoke-WebRequest http://localhost:3000 -TimeoutSec 30
 ```
 
 ```powershell
-Set-Location 'E:\산학협력\vibration-control-app\worker'
+Set-Location 'E:\산학협력\vibration-control-app\\backend-api'
 # .dev.vars가 없는 새 개발환경에서만 템플릿 복사
 if (-not (Test-Path -LiteralPath '.dev.vars')) {
     Copy-Item -LiteralPath '.dev.vars.example' -Destination '.dev.vars'
@@ -91,11 +93,11 @@ npm run dev
 
 ```powershell
 Set-Location 'E:\산학협력\vibration-control-app'
-node --test app/lib/vibration-algorithm.test.mjs
+node --test app/algorithm/vibration-algorithm.test.mjs
 .\node_modules\.bin\tsc.cmd --noEmit --incremental false
 npm run lint
 npm run build
-Set-Location worker
+Set-Location backend-api
 npm test
 npm run typecheck
 ```
@@ -123,8 +125,8 @@ $env:GRADLE_USER_HOME='E:\산학협력\.gradle-cache'
 
 ```powershell
 Set-Location 'E:\산학협력\vibration-control-app'
-node docs/project-analysis/evidence/probe-worker.mjs
-node docs/project-analysis/evidence/probe-workerd.mjs
+node docs/project-analysis/evidence/probe-backend-api.mjs
+node docs/project-analysis/evidence/probe-cloudflare-runtime.mjs
 python docs/project-analysis/evidence/probe-contracts.py
 ```
 
@@ -133,7 +135,7 @@ Python검사는jsonschema4.25.1을사용했다. 이패키지는프로젝트배�
 ### DB 초기화
 
 ```powershell
-Set-Location 'E:\산학협력\vibration-control-app\worker'
+Set-Location 'E:\산학협력\vibration-control-app\\backend-api'
 npx wrangler d1 migrations apply vibecare-dev --local
 npx wrangler d1 execute vibecare-dev --local --command "SELECT name FROM sqlite_master WHERE type='table';"
 ```
@@ -145,7 +147,7 @@ npx wrangler d1 execute vibecare-dev --local --command "SELECT name FROM sqlite_
 [제안/미검증] 업무Worker는실제D1 ID·독립staging설정·secrets·백업·서명/권한검증이준비돼야한다. 다음은운영담당자용명령형태이며현재placeholder환경에그대로실행하는완료절차가아니다.
 
 ```powershell
-Set-Location 'E:\산학협력\vibration-control-app\worker'
+Set-Location 'E:\산학협력\vibration-control-app\\backend-api'
 npx wrangler whoami
 npx wrangler d1 list
 npx wrangler secret put AUTH_TOKEN_SECRET
@@ -162,7 +164,7 @@ npx wrangler deploy
 ### 로그·장애 대응
 
 ```powershell
-Set-Location 'E:\산학협력\vibration-control-app\worker'
+Set-Location 'E:\산학협력\vibration-control-app\\backend-api'
 npx wrangler tail
 npx wrangler d1 execute vibecare-dev --local --command "SELECT status,COUNT(*) AS count FROM device_sessions GROUP BY status;"
 npx wrangler d1 execute vibecare-dev --local --command "SELECT version,enabled,active_from FROM algorithm_rule_sets;"
@@ -179,7 +181,7 @@ npx wrangler d1 execute vibecare-dev --local --command "SELECT version,enabled,a
 ### 롤백
 
 ```powershell
-Set-Location 'E:\산학협력\vibration-control-app\worker'
+Set-Location 'E:\산학협력\vibration-control-app\\backend-api'
 npx wrangler deployments list
 npx wrangler versions list
 # 정상 버전과 DB 호환성을 확인한 운영자가 입력. 이번에는 실행하지 않음
