@@ -12,7 +12,7 @@ void main() {
     _m('M4', 42.1, 17.8, 18.9, 8, 18.1),
   ];
 
-  test('4회 평균과 여성 PILOT 결과가 fixture와 일치한다', () {
+  test('4회 평균으로 여성 전신 골격근지수와 프로토콜을 계산한다', () {
     final result = calculateRecommendation(
       profile: const ParticipantProfile(
         id: 'USER-001',
@@ -25,11 +25,15 @@ void main() {
     );
     expect(result.average?.weightKg, 42.05);
     expect(result.average?.bodyFatPct, 18.88);
-    expect(result.recommendation?.intensityPct, 38);
+    expect(result.muscleAssessment?.totalSmmi, 7.63);
+    expect(result.muscleAssessment?.level, MuscleLevel.reference);
+    expect(result.recommendation?.frequencyHz, 20);
+    expect(result.recommendation?.durationSec, 300);
+    expect(result.recommendation?.intensityPct, 50);
     expect(result.status, RecommendationStatus.review);
   });
 
-  test('같은 값의 남성 결과는 45%다', () {
+  test('같은 골격근량도 남성 전신 골격근지수 기준에서는 낮은 등급이다', () {
     final result = calculateRecommendation(
       profile: const ParticipantProfile(
         id: 'USER-001',
@@ -40,7 +44,10 @@ void main() {
       measurements: measurements,
       safety: const SafetyCheck.confirmedClear(),
     );
-    expect(result.recommendation?.intensityPct, 45);
+    expect(result.muscleAssessment?.level, MuscleLevel.low);
+    expect(result.recommendation?.frequencyHz, 12);
+    expect(result.recommendation?.durationSec, 180);
+    expect(result.recommendation?.intensityPct, 30);
   });
 
   test('어지럼은 추천과 실행을 차단한다', () {
@@ -92,11 +99,11 @@ void main() {
   });
 
   test('공유 fixture JSON으로 웹과 서버와 같은 결과를 확인한다', () {
-    final f =
-        jsonDecode(
-              File('../shared-contracts/fixtures/pilot-0.3.0.json').readAsStringSync(),
-            )
-            as Map<String, dynamic>;
+    final f = jsonDecode(
+      File(
+        '../shared-contracts/fixtures/pilot-0.6.0.json',
+      ).readAsStringSync(),
+    ) as Map<String, dynamic>;
     final rows = (f['measurements'] as List).map((m) {
       final v = m['values'];
       return _m(

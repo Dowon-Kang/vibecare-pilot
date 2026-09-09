@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "deviceId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "calibrationVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "approvedProtocolId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+    },
+    "deviceType": {
+      "type": "string",
+      "const": "whole_body_platform"
+    },
+    "waveform": {
+      "type": "string",
+      "const": "sinusoidal"
+    },
+    "posture": {
+      "type": "string",
+      "minLength": 1
+    },
+    "contact": {
+      "type": "string",
+      "minLength": 1
+    },
+    "loadMinKg": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "loadMaxKg": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "peakG": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "rmsG": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "durationSec": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "peakG",
+        "rmsG",
+        "durationSec"
+      ],
+      "additionalProperties": false
+    },
+    "points": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "frequencyHz": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "intensityPct": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "peakToPeakDisplacementMm": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "measuredPeakG": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "measuredRmsG": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "uncertaintyG": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "frequencyHz",
+          "intensityPct",
+          "peakToPeakDisplacementMm",
+          "measuredPeakG",
+          "measuredRmsG",
+          "uncertaintyG"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "deviceId",
+    "calibrationVersion",
+    "approvedProtocolId",
+    "expiresAt",
+    "deviceType",
+    "waveform",
+    "posture",
+    "contact",
+    "loadMinKg",
+    "loadMaxKg",
+    "limits",
+    "points"
+  ],
+  "additionalProperties": false,
+  "title": "Whole-body platform bench calibration",
+  "description": "Sinusoidal, specified axis/posture/contact/load only. Cross-field constraints and measured consistency require src/calibration.ts. Passing is not clinical authorization."
+}

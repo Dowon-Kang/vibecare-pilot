@@ -31,23 +31,26 @@ await test('four valid measurements are averaged', () => {
   assert.equal(result.averagedValues.bodyFatPct, 25);
 });
 
-await test('age and sex pilot rules are included in the recommendation', () => {
+await test('muscle index selects the simulation protocol without an arbitrary age decrement', () => {
   const result = calculateVibrationRecommendation(profile, measurements, safe);
   assert.equal(result.status, 'READY');
-  assert.equal(result.recommendation.intensityPct, 43);
-  assert.equal(result.adjustments[0].factor, 0.9);
-  assert.equal(result.adjustments[1].factor, 0.95);
+  assert.deepEqual(result.recommendation, {
+    durationSec: 300, frequencyHz: 20, intensityPct: 50, targetAccelerationG: null,
+  });
+  assert.equal(result.muscleAssessment.level, 'reference');
+  assert.equal(result.adjustments[0].id, 'TOTAL_SMMI_PROTOCOL_RESEARCH');
+  assert.equal(result.adjustments[1].factor, 1);
 });
 
-await test('body fat outside the sex-specific pilot range reduces intensity', () => {
+await test('body fat does not replace the muscle-driven base protocol', () => {
   const lowBodyFat = measurements.map((measurement) => ({
     ...measurement,
     bodyFatPct: 18,
     fatMassKg: measurement.weightKg * 0.18,
   }));
   const result = calculateVibrationRecommendation(profile, lowBodyFat, safe);
-  assert.equal(result.recommendation.intensityPct, 38);
-  assert.equal(result.adjustments[2].factor, 0.9);
+  assert.equal(result.recommendation.intensityPct, 50);
+  assert.equal(result.adjustments.length, 2);
 });
 
 await test('a current safety symptom blocks recommendation', () => {
@@ -66,7 +69,7 @@ await test('a set with fewer than four measurements requires review', () => {
 });
 
 await test('shared contract fixture gives the same research recommendation', () => {
-  const fixture = JSON.parse(readFileSync(new URL('../../shared-contracts/fixtures/pilot-0.3.0.json', import.meta.url), 'utf8'));
+  const fixture = JSON.parse(readFileSync(new URL('../../shared-contracts/fixtures/pilot-0.6.0.json', import.meta.url), 'utf8'));
   const result = calculateVibrationRecommendation({...fixture.profile,userId:fixture.profile.participantId},
     fixture.measurements.map(m => ({...m,...m.values,userId:m.participantId})),safe);
   assert.equal(result.recommendation.intensityPct, fixture.expected.femaleIntensityPct);

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: VibeCare API
-  version: 0.3.0
+  version: 0.6.0
   description: Canonical mobile API. FITRUS credentials never cross this boundary.
 servers:
   - url: https://api.example.invalid
@@ -79,6 +79,7 @@ paths:
         '200': { description: Display-only vital history }
   /v1/recommendations/authorize:
     post:
+      description: pilot-0.6.0 is simulation-only. READY means simulator eligibility, never physical clearance. Real mode is denied before a permit is issued.
       requestBody:
         required: true
         content:
@@ -106,8 +107,8 @@ paths:
                   maximum: 100
                   description: Optional manual intensity. The server accepts only values between its configured minimum and calculated recommendation.
       responses:
-        '201': { description: One-time 60-second execution authorization }
-        '409': { description: REVIEW, BLOCKED, stale measurement set, intensity outside range, or algorithm version mismatch }
+        '201': { description: 'One-time 60-second mock authorization; mode=mock, result.realDeviceSendAllowed=false; result includes executionStatus, reasonCodes, evidence and muscleStatistics' }
+        '409': { description: 'REVIEW, BLOCKED, CALIBRATION_REQUIRED, stale measurement set, intensity outside range, or algorithm version mismatch' }
         '400': { description: Invalid input or missing explicit safety answers }
         '503': { description: Algorithm unavailable }
   /v1/device-sessions:
@@ -120,7 +121,7 @@ paths:
       responses:
         '201': { description: Mock session started and ACK recorded }
         '200': { description: Same participant and identical request replayed with the same key }
-        '409': { description: Expired or used authorization, conflicting key, busy target device, or changed algorithm }
+        '409': { description: 'Expired or used authorization, conflicting key, busy target device, or changed algorithm' }
         '503': { description: Algorithm unavailable }
         '501': { description: Real device protocol is not configured }
   /v1/device-sessions/{id}/events:
@@ -144,8 +145,29 @@ paths:
         '200': { description: STOPPED or COMPLETED confirmed; terminal calls are idempotent }
   /v1/session-feedback:
     post:
+      description: Idempotent by participant and session; conflicting retries rejected. policyVersion feedback-0.2.0 and reasonCode accompany the adjustment. Physical telemetry is nullable and participant-reported, not device-attested.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, rpe, pain, dizziness]
+              properties:
+                sessionId: { type: string }
+                rpe: { type: integer, minimum: 0, maximum: 10 }
+                pain: { type: integer, minimum: 0, maximum: 10 }
+                dizziness: { type: boolean }
+                intensityRating: { type: string, enum: [weak, suitable, strong] }
+                durationRating: { type: string, enum: [weak, suitable, strong] }
+                frequencyRating: { type: string, enum: [weak, suitable, strong] }
+                earlyStopped: { type: boolean }
+                actualDurationSec: { type: [number, 'null'], minimum: 0 }
+                measuredPeakG: { type: [number, 'null'], minimum: 0 }
+                measuredRmsG: { type: [number, 'null'], minimum: 0 }
       responses:
         '200': { description: Feedback stored }
+        '409': { description: Conflicting feedback or non-terminal session }
 components:
   securitySchemes:
     bearerAuth:

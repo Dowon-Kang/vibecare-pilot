@@ -74,7 +74,10 @@ class BackendDeviceGateway implements DeviceGateway {
     final serverResult = json['result'] as Map<String, dynamic>?;
     final serverRecommendation =
         serverResult?['recommendation'] as Map<String, dynamic>?;
-    if (json['authorized'] != true || serverRecommendation == null) {
+    if (json['authorized'] != true ||
+        json['mode'] != 'mock' ||
+        serverResult?['realDeviceSendAllowed'] != false ||
+        serverRecommendation == null) {
       throw StateError('서버가 실행을 허가하지 않았습니다.');
     }
     final serverDuration = serverRecommendation['durationSec'] as num;
@@ -119,7 +122,7 @@ class BackendDeviceGateway implements DeviceGateway {
         options: Options(headers: {'Idempotency-Key': command.idempotencyKey}),
       );
       final json = response.data ?? const <String, dynamic>{};
-      if (json['status'] != 'RUNNING') {
+      if (json['status'] != 'RUNNING' || json['mode'] != 'mock') {
         throw StateError('기기 ACK를 확인하지 못했습니다.');
       }
       _emit(DeviceConnectionState.running);

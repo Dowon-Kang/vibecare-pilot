@@ -30,7 +30,7 @@ const measurements: CanonicalMeasurement[] = values.map(
 
 const safety = { acutePain: false, dizziness: false, clinicianHold: false };
 
-describe('pilot-0.3.0 parity', () => {
+describe('pilot-0.6.0 muscle-driven parity', () => {
   it('returns the female fixture result', () => {
     const result = calculateRecommendation({
       profile: { participantId: 'USER-001', age: 72, sex: 'female', heightCm: 154 },
@@ -39,17 +39,19 @@ describe('pilot-0.3.0 parity', () => {
     });
     expect(result.average?.weightKg).toBe(42.05);
     expect(result.average?.bodyFatPct).toBe(18.88);
-    expect(result.recommendation?.intensityPct).toBe(38);
+    expect(result.muscleAssessment).toEqual({totalSmmi: 7.63, level: 'reference'});
+    expect(result.recommendation).toEqual({durationSec: 300, frequencyHz: 20, intensityPct: 50});
     expect(result.status).toBe('REVIEW');
   });
 
-  it('returns 45% for the same male input', () => {
+  it('uses the male low-muscle protocol for the same absolute muscle mass', () => {
     const result = calculateRecommendation({
       profile: { participantId: 'USER-001', age: 72, sex: 'male', heightCm: 154 },
       measurements,
       safety,
     });
-    expect(result.recommendation?.intensityPct).toBe(45);
+    expect(result.muscleAssessment?.level).toBe('low');
+    expect(result.recommendation).toEqual({durationSec: 180, frequencyHz: 12, intensityPct: 30});
   });
 
   it('blocks dizziness before making a recommendation', () => {
@@ -70,12 +72,12 @@ describe('pilot-0.3.0 parity', () => {
     });
 
     expect(applyRequestedIntensity(result, 30).recommendation?.intensityPct).toBe(30);
-    expect(() => applyRequestedIntensity(result, 39)).toThrow(RangeError);
+    expect(() => applyRequestedIntensity(result, 51)).toThrow(RangeError);
     expect(() => applyRequestedIntensity(result, 19)).toThrow(RangeError);
   });
 });
 
-const fixture = JSON.parse(readFileSync(new URL('../../shared-contracts/fixtures/pilot-0.3.0.json', import.meta.url), 'utf8'));
+const fixture = JSON.parse(readFileSync(new URL('../../shared-contracts/fixtures/pilot-0.6.0.json', import.meta.url), 'utf8'));
 it('reads the shared contract fixture', () => {
   const result = calculateRecommendation({profile: fixture.profile, safety, ruleSet: fixture.ruleSet,
     measurements: fixture.measurements.map((m: {values: object}) => ({...m,...m.values}))});

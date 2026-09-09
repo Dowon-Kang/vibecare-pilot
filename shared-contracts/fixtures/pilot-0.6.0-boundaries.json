@@ -1,0 +1,307 @@
+{
+  "version": "pilot-0.6.0",
+  "heightCm": 200,
+  "note": "Hand-computed thresholds: female SMM=23/27 kg, male=34/43 kg at 2m. No pre-classification rounding.",
+  "cases": [
+    {
+      "id": "female-23-below",
+      "sex": "female",
+      "muscles": [
+        22.999,
+        22.999,
+        22.999,
+        22.999
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "low",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "female-23-at",
+      "sex": "female",
+      "muscles": [
+        23,
+        23,
+        23,
+        23
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "low",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "female-23-above",
+      "sex": "female",
+      "muscles": [
+        23.001,
+        23.001,
+        23.001,
+        23.001
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "medium",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "female-27-below",
+      "sex": "female",
+      "muscles": [
+        26.999,
+        26.999,
+        26.999,
+        26.999
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "medium",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "female-27-at",
+      "sex": "female",
+      "muscles": [
+        27,
+        27,
+        27,
+        27
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "medium",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "female-27-above",
+      "sex": "female",
+      "muscles": [
+        27.001,
+        27.001,
+        27.001,
+        27.001
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "reference",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "male-34-below",
+      "sex": "male",
+      "muscles": [
+        33.999,
+        33.999,
+        33.999,
+        33.999
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "low",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "male-34-at",
+      "sex": "male",
+      "muscles": [
+        34,
+        34,
+        34,
+        34
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "low",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "male-34-above",
+      "sex": "male",
+      "muscles": [
+        34.001,
+        34.001,
+        34.001,
+        34.001
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "medium",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "male-43-below",
+      "sex": "male",
+      "muscles": [
+        42.999,
+        42.999,
+        42.999,
+        42.999
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "medium",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "male-43-at",
+      "sex": "male",
+      "muscles": [
+        43,
+        43,
+        43,
+        43
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "medium",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "male-43-above",
+      "sex": "male",
+      "muscles": [
+        43.001,
+        43.001,
+        43.001,
+        43.001
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "reference",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "unstable",
+      "sex": "female",
+      "muscles": [
+        22.99,
+        23.01,
+        22.99,
+        23.01
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "REVIEW",
+      "tier": "low",
+      "executionStatus": "REVIEW"
+    },
+    {
+      "id": "bmi-before-rounding",
+      "sex": "female",
+      "muscles": [
+        24,
+        24,
+        24,
+        24
+      ],
+      "age": 72,
+      "bmi": 18.499,
+      "status": "REVIEW",
+      "tier": "medium",
+      "executionStatus": "REVIEW"
+    },
+    {
+      "id": "bmi-boundary",
+      "sex": "female",
+      "muscles": [
+        24,
+        24,
+        24,
+        24
+      ],
+      "age": 72,
+      "bmi": 18.5,
+      "status": "READY",
+      "tier": "medium",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "age-69",
+      "sex": "female",
+      "muscles": [
+        28,
+        28,
+        28,
+        28
+      ],
+      "age": 69,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "reference",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "age-70",
+      "sex": "female",
+      "muscles": [
+        28,
+        28,
+        28,
+        28
+      ],
+      "age": 70,
+      "bmi": 20,
+      "status": "READY",
+      "tier": "reference",
+      "executionStatus": "CALIBRATION_REQUIRED"
+    },
+    {
+      "id": "outside-cohort",
+      "sex": "female",
+      "muscles": [
+        28,
+        28,
+        28,
+        28
+      ],
+      "age": 59,
+      "bmi": 20,
+      "status": "REVIEW",
+      "tier": "reference",
+      "executionStatus": "REVIEW"
+    },
+    {
+      "id": "three-readings",
+      "sex": "female",
+      "muscles": [
+        24,
+        24,
+        24
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "REVIEW",
+      "tier": null,
+      "executionStatus": "INSUFFICIENT_DATA"
+    },
+    {
+      "id": "dizziness",
+      "sex": "female",
+      "muscles": [
+        24,
+        24,
+        24,
+        24
+      ],
+      "age": 72,
+      "bmi": 20,
+      "status": "BLOCKED",
+      "tier": null,
+      "executionStatus": "BLOCKED",
+      "dizziness": true
+    }
+  ]
+}

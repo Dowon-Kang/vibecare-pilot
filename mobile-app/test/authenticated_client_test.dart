@@ -7,6 +7,9 @@ import 'package:vibecare_pilot/models/models.dart';
 import 'package:vibecare_pilot/services/auth_repository.dart';
 import 'package:vibecare_pilot/services/authenticated_client.dart';
 import 'package:vibecare_pilot/services/backend_device_gateway.dart';
+import 'package:vibecare_pilot/services/device_gateway.dart';
+import 'package:vibecare_pilot/services/fitrus_repository.dart';
+import 'package:vibecare_pilot/algorithm/vibration_algorithm.dart';
 
 class Adapter implements HttpClientAdapter {
   Adapter(this.handle);
@@ -46,6 +49,134 @@ Future<MemorySessionStore> loggedIn() async {
 }
 
 void main() {
+  test('서버 버전·수치·실행 모드가 다르면 허가를 사용하지 않는다', () async {
+    const participant = ParticipantProfile(
+      id: 'TEST',
+      age: 72,
+      sex: ParticipantSex.female,
+      heightCm: 150,
+    );
+    final snapshot = await MockFitrusRepository().loadSnapshot(
+      participant: participant,
+      deviceId: 'BIA',
+    );
+    final result = calculateRecommendation(
+      profile: participant,
+      measurements: snapshot.selectedMeasurements,
+      safety: const SafetyCheck.confirmedClear(),
+    );
+    expect(result.canRequestAuthorization, isTrue);
+    final dio = Dio(BaseOptions(baseUrl: 'https://test.invalid'));
+    final gateway = BackendDeviceGateway(dio);
+    addTearDown(dio.close);
+    addTearDown(gateway.dispose);
+    for (final change in ['version', 'frequency', 'real']) {
+      dio.httpClientAdapter = Adapter(
+        (r) async => r.path == '/health'
+            ? body(200, {})
+            : body(201, {
+                'authorized': true,
+                'mode': change == 'real' ? 'real' : 'mock',
+                'result': {
+                  'realDeviceSendAllowed': false,
+                  'algorithmVersion': change == 'version'
+                      ? 'pilot-0.5.0'
+                      : algorithmVersion,
+                  'recommendation': {
+                    'durationSec': result.recommendation!.durationSec,
+                    'frequencyHz': change == 'frequency'
+                        ? 99
+                        : result.recommendation!.frequencyHz,
+                    'intensityPct': result.recommendation!.intensityPct,
+                  },
+                },
+              }),
+      );
+      await gateway.connect('MOCK');
+      await expectLater(
+        gateway.authorize(
+          result: result,
+          participant: participant,
+          safety: const SafetyCheck.confirmedClear(),
+          intensityPct: result.recommendation!.intensityPct,
+          sourceDeviceId: 'BIA',
+        ),
+        throwsStateError,
+      );
+    }
+  });
+  test('네트워크·ACK 실패는 실행 성공이 아니며 재시도 키를 유지한다', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://test.invalid'));
+    final gateway = BackendDeviceGateway(dio);
+    addTearDown(dio.close);
+    addTearDown(gateway.dispose);
+    final states = <DeviceConnectionState>[];
+    final sub = gateway.statusStream.listen(states.add);
+    addTearDown(sub.cancel);
+    final now = DateTime.now();
+    final auth = DeviceAuthorization(
+      command: DeviceCommand(
+        authorizationId: 'A',
+        participantId: 'TEST',
+        deviceId: 'MOCK',
+        durationSec: 180,
+        frequencyHz: 12,
+        intensityPct: 30,
+        algorithmVersion: algorithmVersion,
+        issuedAt: now,
+        expiresAt: now.add(const Duration(minutes: 1)),
+        idempotencyKey: 'stable-retry-123456',
+      ),
+    );
+    for (final failure in ['network', 'timeout', 'missing_ack']) {
+      dio.httpClientAdapter = Adapter((r) async {
+        expect(r.headers['Idempotency-Key'], 'stable-retry-123456');
+        if (failure != 'missing_ack') {
+          throw DioException(
+            requestOptions: r,
+            type: failure == 'timeout'
+                ? DioExceptionType.receiveTimeout
+                : DioExceptionType.connectionError,
+          );
+        }
+        return body(200, {'mode': 'mock', 'status': 'STARTING'});
+      });
+      await expectLater(
+        gateway.start(auth),
+        throwsA(anyOf(isA<DioException>(), isA<StateError>())),
+      );
+    }
+    await Future<void>.delayed(Duration.zero);
+    expect(states, isNot(contains(DeviceConnectionState.running)));
+    expect(states.where((s) => s == DeviceConnectionState.error).length, 3);
+  });
+  test('서버 규칙의 근육량 프로토콜이 없으면 기본값으로 대체하지 않는다', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://test.invalid'));
+    addTearDown(dio.close);
+    dio.httpClientAdapter = Adapter((r) async {
+      if (r.path.endsWith('/current') && r.path.contains('algorithm-rules')) {
+        return body(200, {'version': algorithmVersion});
+      }
+      if (r.path.endsWith('/vitals')) return body(200, {'items': []});
+      return body(200, {
+        'history': [],
+        'selectedMeasurementIds': [],
+        'syncedAt': '2026-09-09T00:00:00Z',
+      });
+    });
+    await expectLater(
+      BackendFitrusRepository(dio).loadSnapshot(
+        participant: const ParticipantProfile(
+          id: 'TEST',
+          age: 72,
+          sex: ParticipantSex.female,
+          heightCm: 150,
+        ),
+        deviceId: 'BIA',
+      ),
+      throwsFormatException,
+    );
+  });
   test('동시 401은 한 번 갱신하고 같은 멱등 키로 요청을 재시도한다', () async {
     final store = await loggedIn();
     final dio = createAuthenticatedClient('https://test.invalid', store);

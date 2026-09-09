@@ -47,6 +47,13 @@ next-env.d.ts
 # Flutter/Android machine-local runtime state
 /mobile-app/.android/
 /mobile-app/.tmp/
+/mobile-app/output/
 
 # Legacy local Flutter cache left by a locked Android build; never commit it.
 /apps/
+
+# Codex local work log; product evidence belongs in docs/evidence.
+/state/
+
+# Local secret notes must never be committed.
+*.local.txt

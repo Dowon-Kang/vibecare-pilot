@@ -8,6 +8,8 @@ class MockDeviceGateway implements DeviceGateway {
   String? _deviceId;
   String? _activeSessionId;
   bool _disposed = false;
+  bool _starting = false;
+  final _usedAuthorizations = <String>{};
 
   @override
   Stream<DeviceConnectionState> get statusStream => _states.stream;
@@ -18,7 +20,9 @@ class MockDeviceGateway implements DeviceGateway {
 
   @override
   Future<void> connect(String deviceId) async {
-    if (_activeSessionId != null) throw StateError('이미 실행 중인 세션이 있습니다.');
+    if (_activeSessionId != null || _starting) {
+      throw StateError('이미 실행 중인 세션이 있습니다.');
+    }
     _emit(DeviceConnectionState.connecting);
     await Future<void>.delayed(const Duration(milliseconds: 250));
     _deviceId = deviceId;
@@ -42,6 +46,9 @@ class MockDeviceGateway implements DeviceGateway {
       throw StateError('READY 상태와 연결된 Mock 기기가 필요합니다.');
     }
     final now = DateTime.now();
+    if (intensityPct < 20 || intensityPct > recommendation.intensityPct) {
+      throw StateError('시연 허용 강도를 벗어났습니다.');
+    }
     _emit(DeviceConnectionState.authorized);
     return DeviceAuthorization(
       command: DeviceCommand(
@@ -61,7 +68,12 @@ class MockDeviceGateway implements DeviceGateway {
 
   @override
   Future<DeviceSession> start(DeviceAuthorization authorization) async {
-    if (_activeSessionId != null) throw StateError('중복 실행은 허용되지 않습니다.');
+    if (_activeSessionId != null || _starting) {
+      throw StateError('중복 실행은 허용되지 않습니다.');
+    }
+    if (_usedAuthorizations.contains(authorization.command.authorizationId)) {
+      throw StateError('이미 사용한 허가입니다.');
+    }
     if (authorization.command.expiresAt.isBefore(DateTime.now())) {
       throw StateError('실행 허가가 만료되었습니다.');
     }
@@ -69,9 +81,12 @@ class MockDeviceGateway implements DeviceGateway {
       throw StateError('실행 허가와 연결 기기가 다릅니다.');
     }
     _emit(DeviceConnectionState.starting);
+    _starting = true;
+    _usedAuthorizations.add(authorization.command.authorizationId);
     await Future<void>.delayed(const Duration(milliseconds: 200));
     final id = 'MOCK-${DateTime.now().millisecondsSinceEpoch}';
     _activeSessionId = id;
+    _starting = false;
     _emit(DeviceConnectionState.running);
     return DeviceSession(
       id: id,

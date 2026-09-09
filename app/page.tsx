@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import {
   ALGORITHM_VERSION,
-  PILOT_RULES,
   averageMeasurements,
   calculateVibrationRecommendation,
   createMockCommand,
@@ -78,8 +77,7 @@ export default function Home() {
   const preview = execution.status === 'BLOCKED' ? null : calculation.recommendation;
   const adjustments = calculation.adjustments;
   const ageFactor = adjustments.find((item) => item.id === 'AGE_70_PILOT')?.factor ?? 1;
-  const sexFactor = adjustments.find((item) => item.id === 'SEX_RESPONSE_PILOT')?.factor ?? 1;
-  const bodyFatFactor = adjustments.find((item) => item.id === 'BODY_FAT_RANGE_PILOT')?.factor ?? 1;
+  const muscleBase = adjustments.find((item) => item.id === 'TOTAL_SMMI_PROTOCOL_RESEARCH');
   const status = execution.status === 'BLOCKED' ? 'BLOCKED' : !safetyComplete ? 'REVIEW' : execution.status;
   const canCreateCommand = safetyComplete && execution.status === 'READY' && Boolean(execution.recommendation);
   const unansweredCount = Object.values(safetyDraft).filter((value) => value === null).length;
@@ -138,14 +136,14 @@ export default function Home() {
             <span className="version">{ALGORITHM_VERSION}</span>
           </div>
 
-          <div className="formula" aria-label={`기본 강도 ${PILOT_RULES.base.intensityPct}% 곱하기 연령계수 ${ageFactor.toFixed(2)} 곱하기 성별계수 ${sexFactor.toFixed(2)} 곱하기 체지방계수 ${bodyFatFactor.toFixed(2)}`}>
-            <FormulaItem label="기본 강도" value={`${PILOT_RULES.base.intensityPct}%`} detail="파일럿 시작값" />
+          <div className="formula" aria-label={`추정 근육지수로 선택한 연구용 기본 강도, 추가 계수 ${ageFactor.toFixed(2)}`}>
+            <FormulaItem
+              label="근육량 기본값"
+              value={`${calculation.muscleAssessment?.totalSmmi.toFixed(2) ?? '—'}`}
+              detail={`kg/m² · ${calculation.muscleAssessment?.level ?? '확인 필요'}`}
+            />
             <FormulaOperator />
-            <FormulaItem label="연령" value={`× ${ageFactor.toFixed(2)}`} detail={`${profile.age}세`} adjusted={ageFactor < 1} />
-            <FormulaOperator />
-            <FormulaItem label="성별" value={`× ${sexFactor.toFixed(2)}`} detail={profile.sex === 'female' ? '여성' : '남성'} adjusted={sexFactor < 1} />
-            <FormulaOperator />
-            <FormulaItem label="체지방" value={`× ${bodyFatFactor.toFixed(2)}`} detail={`${formatNumber(aggregation.averagedValues?.bodyFatPct)}% 평균`} adjusted={bodyFatFactor < 1} />
+            <FormulaItem label="추가 감산" value={`× ${ageFactor.toFixed(2)}`} detail="일괄 연령 감산 제거" adjusted={false} />
           </div>
 
           <details className="profile-editor">
@@ -168,13 +166,14 @@ export default function Home() {
               <div className="intensity-gauge" style={{ '--intensity': `${preview.intensityPct}%` } as CSSProperties} aria-label={`권장 진동 세기 ${preview.intensityPct}%`}>
                 <div><strong>{preview.intensityPct}</strong><span>%</span></div>
               </div>
-              <p className="formula-summary">50 × {ageFactor.toFixed(2)} × {sexFactor.toFixed(2)} × {bodyFatFactor.toFixed(2)} = <strong>{preview.intensityPct}%</strong></p>
+              <p className="formula-summary">{muscleBase?.reason ?? '근육량 기본 프로토콜을 계산합니다.'} 시뮬레이션 설정 <strong>{preview.intensityPct}%</strong></p>
               <dl className="secondary-results"><div><dt>사용 시간</dt><dd>{preview.durationSec / 60}<span>분</span></dd></div><div><dt>주파수</dt><dd>{preview.frequencyHz}<span>Hz</span></dd></div></dl>
             </>
           ) : (
             <div className="result-unavailable"><AlertTriangle aria-hidden="true" /><p>입력 데이터 검토가 필요해 계산값을 표시할 수 없습니다.</p></div>
           )}
-          <p className="preview-caution"><Info aria-hidden="true" />계산값은 실행 허가가 아니며 연구용 파일럿 기준입니다.</p>
+          <p className="preview-caution"><Info aria-hidden="true" />시연 전용 · 실제 장치 보정 필요 · 근육량과 진동값의 관계는 연구가설입니다.</p>
+          {calculation.muscleStatistics && <details><summary>측정 변동과 실행 조건</summary><p>표준편차 {calculation.muscleStatistics.sdKg.toFixed(3)} kg · 변동계수 {calculation.muscleStatistics.cvPct.toFixed(2)}%</p><p>{calculation.executionStatus} · {calculation.reasonCodes.join(', ')}</p></details>}
           <button type="button" className="command-button" disabled={!canCreateCommand || Boolean(commandPreview)} onClick={createPreview}>
             <FileJson aria-hidden="true" />{commandPreview ? 'Mock 명령 생성됨' : canCreateCommand ? 'Mock 명령 확인하기' : '안전 확인 후 사용할 수 있습니다'}
           </button>

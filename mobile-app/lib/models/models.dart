@@ -2,12 +2,34 @@ enum ParticipantSex { female, male }
 
 enum RecommendationStatus { ready, review, blocked }
 
+enum MuscleLevel { low, medium, reference }
+
 enum VitalKind { bloodPressure, heartRate, stress, stressV2, bodyTemperature }
 
 class BodyFatRange {
   const BodyFatRange(this.minimum, this.maximum);
   final double minimum;
   final double maximum;
+}
+
+class MuscleThresholds {
+  const MuscleThresholds({
+    required this.lowMaximum,
+    required this.mediumMaximum,
+  });
+  final double lowMaximum;
+  final double mediumMaximum;
+}
+
+class ProtocolPreset {
+  const ProtocolPreset({
+    required this.durationSec,
+    required this.frequencyHz,
+    required this.intensityPct,
+  });
+  final int durationSec;
+  final int frequencyHz;
+  final double intensityPct;
 }
 
 class AlgorithmRuleSet {
@@ -26,6 +48,11 @@ class AlgorithmRuleSet {
     required this.outsideBodyFatFactor,
     required this.minimumPct,
     required this.maximumPct,
+    required this.femaleMuscleThresholds,
+    required this.maleMuscleThresholds,
+    required this.lowMuscleProtocol,
+    required this.mediumMuscleProtocol,
+    required this.referenceMuscleProtocol,
   });
 
   final String version;
@@ -42,6 +69,11 @@ class AlgorithmRuleSet {
   final double outsideBodyFatFactor;
   final double minimumPct;
   final double maximumPct;
+  final MuscleThresholds femaleMuscleThresholds;
+  final MuscleThresholds maleMuscleThresholds;
+  final ProtocolPreset lowMuscleProtocol;
+  final ProtocolPreset mediumMuscleProtocol;
+  final ProtocolPreset referenceMuscleProtocol;
 }
 
 class ParticipantProfile {
@@ -223,6 +255,25 @@ class Recommendation {
   final int intensityPct;
 }
 
+class MuscleAssessment {
+  const MuscleAssessment({
+    required this.totalSmmi,
+    required this.level,
+    required this.meanSkeletalMuscleMassKg,
+    this.sdKg = 0,
+    this.cvPct = 0,
+    this.minimumKg = 0,
+    this.maximumKg = 0,
+    this.unstable = false,
+  });
+
+  final double totalSmmi;
+  final MuscleLevel level;
+  final double meanSkeletalMuscleMassKg;
+  final double sdKg, cvPct, minimumKg, maximumKg;
+  final bool unstable;
+}
+
 class AlgorithmResult {
   const AlgorithmResult({
     required this.status,
@@ -231,6 +282,7 @@ class AlgorithmResult {
     required this.adjustments,
     required this.recommendation,
     required this.algorithmVersion,
+    required this.muscleAssessment,
     this.measurementIds = const [],
   });
 
@@ -240,7 +292,35 @@ class AlgorithmResult {
   final List<Adjustment> adjustments;
   final Recommendation? recommendation;
   final String algorithmVersion;
+  final MuscleAssessment? muscleAssessment;
   final List<String> measurementIds;
 
   bool get canRequestAuthorization => status == RecommendationStatus.ready;
+  // READY is only eligibility for a simulated session, never a physical permit.
+  bool get realDeviceSendAllowed => false;
+  Map<String, String> get evidence => const {
+    'muscleIndex': 'INDIRECT',
+    'thresholds': 'INDIRECT',
+    'protocol': 'PILOT',
+    'averaging': 'PILOT',
+    'boundaryReview': 'PILOT',
+    'physicalEquation': 'EVIDENCE',
+  };
+  String get executionStatus => status == RecommendationStatus.blocked
+      ? 'BLOCKED'
+      : measurementIds.length != 4
+      ? 'INSUFFICIENT_DATA'
+      : status == RecommendationStatus.review
+      ? 'REVIEW'
+      : 'CALIBRATION_REQUIRED';
+  List<String> get reasonCodes => [
+    if (status == RecommendationStatus.blocked) 'SAFETY_HOLD',
+    if (measurementIds.length != 4) 'INSUFFICIENT_DATA',
+    if (status == RecommendationStatus.review) 'INPUT_OR_SAFETY_REVIEW',
+    if (muscleAssessment?.unstable == true) 'MUSCLE_TIER_UNSTABLE',
+    'SMM_DEFINITION_UNVERIFIED',
+    'PILOT_PROTOCOL',
+    'CALIBRATION_REQUIRED',
+    'SIMULATION_ONLY',
+  ];
 }

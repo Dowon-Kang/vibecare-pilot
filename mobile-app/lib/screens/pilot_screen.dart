@@ -1,11 +1,13 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'overview_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/pilot_controller.dart';
 import '../models/models.dart';
+import '../models/session_feedback.dart';
 import '../services/device_gateway.dart';
+import 'overview_card.dart';
 
 class PilotScreen extends ConsumerStatefulWidget {
   const PilotScreen({super.key});
@@ -60,12 +62,12 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const _BrandMark(),
-                const SizedBox(height: 28),
+                const SizedBox(height: 22),
                 Text(
                   '오늘의 진동 운동을\n안전하게 시작해요',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontSize: 30,
-                    height: 1.25,
+                    fontSize: 28,
+                    height: 1.2,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -73,7 +75,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                   '최근 측정값을 확인하고 알맞은 강도로 장치에 전달합니다.',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 24),
                 TextField(
                   controller: _participantCode,
                   enabled: !state.isBusy,
@@ -133,7 +135,18 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
     final snapshot = state.snapshot!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('VibeCare'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('오늘의 진동 설정'),
+            Text(
+              state.profile!.code,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: '측정값 새로고침',
@@ -156,17 +169,11 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                '시연 실행 · 실제 장치 출력 없음',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              _SystemStatusStrip(state: state),
               const SizedBox(height: 8),
               if (state.error != null) ...[
                 _ErrorBanner(message: state.error!),
@@ -174,15 +181,19 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
               ],
               if (state.session != null)
                 _RunningCard(state: state)
+              else if (state.feedbackSession != null)
+                _FeedbackCard(state: state)
               else
                 OverviewCard(
                   state: state,
                   onDetails: () => _showMeasurementDetails(snapshot),
                   onSettings: _showSettings,
-                  onCommand: _showCommand,
+                  onCommand: _showCalculationEvidence,
                 ),
-              const SizedBox(height: 8),
-              _SafetySettings(state: state),
+              if (state.session == null && state.feedbackSession == null) ...[
+                const SizedBox(height: 8),
+                _SafetySettings(state: state),
+              ],
             ],
           ),
         ),
@@ -256,8 +267,10 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
     );
   }
 
-  void _showCommand() {
+  void _showCalculationEvidence() {
     final state = ref.read(pilotControllerProvider);
+    final result = state.result!;
+    final ruleSet = state.snapshot!.ruleSet;
     final command =
         state.pendingAuthorization?.command ?? state.session?.command;
     showModalBottomSheet<void>(
@@ -271,26 +284,81 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Text('명령 상세', style: Theme.of(context).textTheme.titleLarge),
-              const Text('우리 앱 내부에서 사용하는 형식입니다. 실제 장치의 통신 규격·출력 교정은 아직 미정입니다.'),
-              const SizedBox(height: 12),
-              SelectableText(
-                const JsonEncoder.withIndent('  ').convert(
-                  command?.toJson() ??
-                      {
-                        'status': 'PREVIEW_ONLY',
-                        'physicalOutputEnabled': false,
-                        'sourceDeviceId': PilotController.sourceDeviceId,
-                        'targetDeviceId': PilotController.targetDeviceId,
-                        'measurementIds': state.result?.measurementIds,
-                        'durationSec':
-                            state.result?.recommendation?.durationSec,
-                        'frequencyHz':
-                            state.result?.recommendation?.frequencyHz,
-                        'intensityPct': state.selectedIntensityPct,
-                        'algorithmVersion': state.result?.algorithmVersion,
-                      },
+              Text('계산 근거', style: Theme.of(context).textTheme.titleLarge),
+              const Text('시연 전용 · 실출력 보정 필요. 추정 근육지수는 진단값이 아닙니다.'),
+              if (result.muscleAssessment != null)
+                Text(
+                  '4건 범위 ${result.muscleAssessment!.minimumKg.toStringAsFixed(2)}–${result.muscleAssessment!.maximumKg.toStringAsFixed(2)} kg · '
+                  '표준편차 ${result.muscleAssessment!.sdKg.toStringAsFixed(3)} kg · 변동계수 ${result.muscleAssessment!.cvPct.toStringAsFixed(2)}%',
                 ),
+              Text('실제 실행 상태: ${result.executionStatus}'),
+              Text('검토 코드: ${result.reasonCodes.join(', ')}'),
+              const SizedBox(height: 4),
+              Text(
+                '알고리즘 ${result.algorithmVersion} · 현재는 임상 확정 전 PILOT 규칙입니다.',
+              ),
+              const SizedBox(height: 18),
+              _DetailSection(
+                title: '최종 강도 계산',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '기본 ${ruleSet.baseIntensityPct.toStringAsFixed(0)}% '
+                      '${result.adjustments.map((item) => '× ${item.factor.toStringAsFixed(2)}').join(' ')} '
+                      '= ${result.recommendation?.intensityPct ?? '—'}%',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    for (final adjustment in result.adjustments)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.check_circle_outline,
+                              size: 19,
+                              color: Color(0xFF087F6B),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${adjustment.label} × ${adjustment.factor.toStringAsFixed(2)}\n${adjustment.reason}',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: const Text('장치 전송 정보'),
+                subtitle: const Text('개발·연동 확인용'),
+                children: [
+                  SelectableText(
+                    const JsonEncoder.withIndent('  ').convert(
+                      command?.toJson() ??
+                          {
+                            'status': 'PREVIEW_ONLY',
+                            'physicalOutputEnabled': false,
+                            'sourceDeviceId': PilotController.sourceDeviceId,
+                            'targetDeviceId': PilotController.targetDeviceId,
+                            'measurementIds': result.measurementIds,
+                            'durationSec': result.recommendation?.durationSec,
+                            'frequencyHz': result.recommendation?.frequencyHz,
+                            'intensityPct': state.selectedIntensityPct,
+                            'algorithmVersion': result.algorithmVersion,
+                          },
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -341,16 +409,102 @@ class _BrandMark extends StatelessWidget {
     alignment: Alignment.centerLeft,
     child: DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFE2F1ED),
-        borderRadius: BorderRadius.circular(18),
+        color: const Color(0xFFEAF5F2),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: const Padding(
-        padding: EdgeInsets.all(14),
-        child: Icon(Icons.vibration, size: 34, color: Color(0xFF176B5B)),
+        padding: EdgeInsets.all(12),
+        child: Icon(Icons.vibration, size: 30, color: Color(0xFF087F6B)),
       ),
     ),
   );
 }
+
+class _SystemStatusStrip extends StatelessWidget {
+  const _SystemStatusStrip({required this.state});
+  final PilotState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final isMock = apiBaseUrl.isEmpty;
+    final deviceLabel = state.isRunning
+        ? '시연 진행 중'
+        : state.isTransmitted
+        ? '설정 준비됨'
+        : isMock
+        ? '장치 미연결'
+        : _deviceLabel(state.deviceState);
+    return Semantics(
+      container: true,
+      label: '데이터 ${isMock ? '샘플' : '동기화됨'}, 장치 $deviceLabel',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _StatusItem(
+                icon: isMock
+                    ? Icons.science_outlined
+                    : Icons.cloud_done_outlined,
+                label: isMock ? '샘플 데이터' : '데이터 수신됨',
+              ),
+            ),
+            Container(width: 1, height: 22, color: const Color(0xFFD1D1D6)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatusItem(
+                icon: state.isRunning
+                    ? Icons.vibration
+                    : state.isTransmitted
+                    ? Icons.check_circle_outline
+                    : Icons.portable_wifi_off,
+                label: deviceLabel,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusItem extends StatelessWidget {
+  const _StatusItem({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(icon, size: 19, color: const Color(0xFF087F6B)),
+      const SizedBox(width: 7),
+      Flexible(
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+      ),
+    ],
+  );
+}
+
+String _deviceLabel(DeviceConnectionState state) => switch (state) {
+  DeviceConnectionState.connecting => '연결 중',
+  DeviceConnectionState.ready => '장치 준비됨',
+  DeviceConnectionState.authorized => '설정 준비됨',
+  DeviceConnectionState.starting => '시작 확인 중',
+  DeviceConnectionState.running => '실행 중',
+  DeviceConnectionState.stopping => '중지 확인 중',
+  DeviceConnectionState.completed => '사용 완료',
+  DeviceConnectionState.error => '연결 확인 필요',
+  DeviceConnectionState.disconnected => '장치 미연결',
+};
 
 class _RunningCard extends StatelessWidget {
   const _RunningCard({required this.state});
@@ -361,9 +515,9 @@ class _RunningCard extends StatelessWidget {
     final seconds = state.remainingSec % 60;
     final command = state.session!.command;
     return Card(
-      color: const Color(0xFFEAF5F1),
+      color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
         child: Column(
           children: [
             Wrap(
@@ -376,27 +530,44 @@ class _RunningCard extends StatelessWidget {
                   state.error == null ? '시연 실행 중' : '중지 응답 미확인',
                   style: const TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
+            Text('남은 시간', style: Theme.of(context).textTheme.bodyLarge),
             Semantics(
               liveRegion: true,
               label: '남은 시간 $minutes분 $seconds초',
               child: Text(
                 '$minutes:${seconds.toString().padLeft(2, '0')}',
                 style: const TextStyle(
-                  fontSize: 58,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF17352F),
+                  fontSize: 60,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1C1C1E),
                 ),
               ),
             ),
             Text(
               '강도 ${command.intensityPct}% · ${command.frequencyHz}Hz',
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF4E5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, size: 21),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('시연 모드입니다. 실제 진동은 발생하지 않습니다.')),
+                ],
+              ),
             ),
           ],
         ),
@@ -414,6 +585,187 @@ class _PulseDot extends StatelessWidget {
     decoration: const BoxDecoration(
       shape: BoxShape.circle,
       color: Color(0xFF159570),
+    ),
+  );
+}
+
+class _FeedbackCard extends ConsumerStatefulWidget {
+  const _FeedbackCard({required this.state});
+  final PilotState state;
+
+  @override
+  ConsumerState<_FeedbackCard> createState() => _FeedbackCardState();
+}
+
+class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
+  FeedbackRating? _intensityRating;
+  FeedbackRating? _durationRating;
+  FeedbackRating? _frequencyRating;
+  int? _pain;
+  bool? _dizziness;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
+    final canSubmit =
+        _intensityRating != null &&
+        _durationRating != null &&
+        _frequencyRating != null &&
+        _pain != null &&
+        _dizziness != null &&
+        !state.isBusy;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Icon(
+              Icons.check_circle_outline,
+              size: 30,
+              color: Color(0xFF087F6B),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '사용을 마쳤습니다',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              '다음 강도를 안전하게 계산하도록 지금 상태를 알려주세요.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            _FeedbackChoice<FeedbackRating>(
+              id: 'intensity',
+              title: '강도는 어땠나요?',
+              values: const {
+                FeedbackRating.weak: '약했어요',
+                FeedbackRating.suitable: '적당해요',
+                FeedbackRating.strong: '강했어요',
+              },
+              selected: _intensityRating,
+              onChanged: (value) => setState(() => _intensityRating = value),
+            ),
+            _FeedbackChoice<FeedbackRating>(
+              id: 'duration',
+              title: '시간은 어땠나요?',
+              values: const {
+                FeedbackRating.weak: '짧았어요',
+                FeedbackRating.suitable: '적당해요',
+                FeedbackRating.strong: '길었어요',
+              },
+              selected: _durationRating,
+              onChanged: (value) => setState(() => _durationRating = value),
+            ),
+            _FeedbackChoice<FeedbackRating>(
+              id: 'frequency',
+              title: '주파수 느낌은 어땠나요?',
+              values: const {
+                FeedbackRating.weak: '약했어요',
+                FeedbackRating.suitable: '적당해요',
+                FeedbackRating.strong: '강했어요',
+              },
+              selected: _frequencyRating,
+              onChanged: (value) => setState(() => _frequencyRating = value),
+            ),
+            _FeedbackChoice<int>(
+              id: 'pain',
+              title: '통증이 있었나요?',
+              values: const {0: '없었어요', 1: '있었어요'},
+              selected: _pain,
+              onChanged: (value) => setState(() => _pain = value),
+            ),
+            _FeedbackChoice<bool>(
+              id: 'dizziness',
+              title: '어지럼이 있었나요?',
+              values: const {false: '없었어요', true: '있었어요'},
+              selected: _dizziness,
+              onChanged: (value) => setState(() => _dizziness = value),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              key: const ValueKey('feedback-submit-button'),
+              onPressed: canSubmit
+                  ? () => ref
+                        .read(pilotControllerProvider.notifier)
+                        .submitFeedback(
+                          SessionFeedback(
+                            rpe: switch (_intensityRating!) {
+                              FeedbackRating.weak => 2,
+                              FeedbackRating.suitable => 4,
+                              FeedbackRating.strong => 8,
+                            },
+                            pain: _pain!,
+                            dizziness: _dizziness!,
+                            intensityRating: _intensityRating!,
+                            durationRating: _durationRating!,
+                            frequencyRating: _frequencyRating!,
+                          ),
+                        )
+                  : null,
+              child: state.isBusy
+                  ? const SizedBox.square(
+                      dimension: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('상태 저장하고 마치기'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeedbackChoice<T extends Object> extends StatelessWidget {
+  const _FeedbackChoice({
+    required this.id,
+    required this.title,
+    required this.values,
+    required this.selected,
+    required this.onChanged,
+  });
+  final String id;
+  final String title;
+  final Map<T, String> values;
+  final T? selected;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        SegmentedButton<T>(
+          segments: [
+            for (final entry in values.entries)
+              ButtonSegment(
+                value: entry.key,
+                label: Text(
+                  entry.value,
+                  key: ValueKey('feedback-$id-${entry.key}'),
+                ),
+              ),
+          ],
+          selected: selected == null ? <T>{} : {selected as T},
+          emptySelectionAllowed: true,
+          showSelectedIcon: true,
+          onSelectionChanged: (selection) {
+            if (selection.isNotEmpty) onChanged(selection.single);
+          },
+          style: ButtonStyle(
+            minimumSize: WidgetStateProperty.all(const Size(0, 46)),
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -527,43 +879,65 @@ class _PrimaryActionBar extends ConsumerWidget {
     final String label;
     final String helper;
 
-    if (state.isRunning) {
+    if (state.feedbackSession != null) {
+      action = null;
+      icon = Icons.fact_check_outlined;
+      label = '사용 후 상태를 입력해 주세요';
+      helper = '위의 5개 항목을 저장하면 다음 사용을 준비할 수 있습니다.';
+    } else if (state.isRunning) {
       action = state.isBusy ? null : () => controller.stopSession();
       icon = Icons.stop_circle_outlined;
       label = state.isBusy
           ? '중지 확인 중…'
           : state.deviceState == DeviceConnectionState.error
           ? '중지 다시 요청'
-          : '시연 중지';
+          : apiBaseUrl.isEmpty
+          ? '시연 중지'
+          : '즉시 중지';
       helper = '중지 응답이 확인될 때까지 실행 기록을 유지합니다.';
     } else if (state.isTransmitted) {
       action = state.isBusy ? null : controller.startSession;
       icon = Icons.play_arrow_rounded;
-      label = '시연 시작';
-      helper = '명령 준비 완료 · 실제 장치로는 보내지 않습니다.';
+      label = apiBaseUrl.isEmpty ? '시연 시작' : '진동 시작';
+      helper = apiBaseUrl.isEmpty
+          ? '설정 준비 완료 · 실제 장치로는 보내지 않습니다.'
+          : '장치가 설정을 받았습니다. 시작 전 주변을 확인해 주세요.';
     } else {
       action = canSend ? controller.sendToDevice : null;
       icon = Icons.send_to_mobile_outlined;
-      label = state.isBusy ? '명령 준비 중…' : '시연 명령 준비';
+      label = state.isBusy
+          ? '설정 보내는 중…'
+          : apiBaseUrl.isEmpty
+          ? '시연 설정 준비하기'
+          : '장치로 설정 보내기';
       helper = !state.safety.isComplete
           ? '오늘 상태 3문항에 모두 답해 주세요.'
           : state.result?.status == RecommendationStatus.ready
-          ? '선택 강도 ${state.selectedIntensityPct ?? 0}% · 실제 출력 없음'
+          ? apiBaseUrl.isEmpty
+                ? '선택 강도 ${state.selectedIntensityPct ?? 0}% · 실제 출력 없음'
+                : '선택 강도 ${state.selectedIntensityPct ?? 0}%를 장치로 보냅니다.'
           : '안전 검토가 끝나야 장치로 보낼 수 있습니다.';
     }
 
     return Material(
-      color: Colors.white,
-      elevation: 16,
+      color: const Color(0xFFF9F9FB),
+      elevation: 0,
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(helper, style: Theme.of(context).textTheme.bodySmall),
-              const SizedBox(height: 7),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  helper,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              const SizedBox(height: 6),
               FilledButton.icon(
                 key: ValueKey(
                   state.isRunning
@@ -586,8 +960,8 @@ class _PrimaryActionBar extends ConsumerWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: state.isRunning
                       ? const Color(0xFFB42318)
-                      : const Color(0xFF176B5B),
-                  minimumSize: const Size.fromHeight(58),
+                      : const Color(0xFF087F6B),
+                  minimumSize: const Size.fromHeight(52),
                 ),
               ),
             ],
@@ -615,8 +989,8 @@ class _ProfileSettings extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F6F4),
-              borderRadius: BorderRadius.circular(15),
+              color: const Color(0xFFF2F2F7),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
@@ -638,7 +1012,7 @@ class _ProfileSettings extends ConsumerWidget {
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 25,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -681,7 +1055,7 @@ class _ProfileSettings extends ConsumerWidget {
                 : (value) => controller.updateProfile(sex: value.single),
             showSelectedIcon: false,
             style: ButtonStyle(
-              minimumSize: WidgetStateProperty.all(const Size(0, 54)),
+              minimumSize: WidgetStateProperty.all(const Size(0, 48)),
             ),
           ),
           const SizedBox(height: 12),
@@ -705,14 +1079,36 @@ class _SafetySettings extends ConsumerWidget {
     final controller = ref.read(pilotControllerProvider.notifier);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              '오늘 상태 확인 · ${state.safety.answeredCount}/3',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            Row(
+              children: [
+                const Icon(Icons.health_and_safety_outlined, size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '사용 전 상태 확인',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Text(
+                  '${state.safety.answeredCount}/3',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                minHeight: 5,
+                value: state.safety.answeredCount / 3,
+                backgroundColor: const Color(0xFFE5EBE9),
+              ),
+            ),
+            const SizedBox(height: 2),
             _answer(
               context,
               'pain',
@@ -761,20 +1157,38 @@ class _SafetySettings extends ConsumerWidget {
                     ? null
                     : () => onChanged(answer),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(54, 48),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  minimumSize: const Size(58, 44),
+                  padding: const EdgeInsets.symmetric(horizontal: 9),
                   backgroundColor: value == answer
-                      ? Theme.of(context).colorScheme.primaryContainer
+                      ? answer
+                            ? Theme.of(context).colorScheme.errorContainer
+                            : const Color(0xFFE1F1EC)
+                      : const Color(0xFFF2F2F7),
+                  foregroundColor: value == answer && answer
+                      ? Theme.of(context).colorScheme.onErrorContainer
                       : null,
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9),
+                  ),
                 ),
-                child: Text(answer ? '예' : '아니요'),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (value == answer) ...[
+                      const Icon(Icons.check, size: 17),
+                      const SizedBox(width: 3),
+                    ],
+                    Text(answer ? '예' : '아니요'),
+                  ],
+                ),
               ),
             ),
           ),
       ],
     );
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.only(top: 5),
       child: LayoutBuilder(
         builder: (context, constraints) =>
             MediaQuery.textScalerOf(context).scale(16) > 21
@@ -785,7 +1199,7 @@ class _SafetySettings extends ConsumerWidget {
             : Row(
                 children: [
                   Expanded(
-                    child: Text(title, style: const TextStyle(fontSize: 15)),
+                    child: Text(title, style: const TextStyle(fontSize: 16)),
                   ),
                   choices,
                 ],
@@ -802,13 +1216,10 @@ class _DetailSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: Colors.white,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(18),
-      side: const BorderSide(color: Color(0xFFDCE5E2)),
-    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     clipBehavior: Clip.antiAlias,
     child: Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -848,8 +1259,8 @@ class _MetricGrid extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(11),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F6F4),
-              borderRadius: BorderRadius.circular(11),
+              color: const Color(0xFFF2F2F7),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

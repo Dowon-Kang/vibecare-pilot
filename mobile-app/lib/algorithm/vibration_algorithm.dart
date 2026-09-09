@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import '../models/models.dart';
 
-const algorithmVersion = 'pilot-0.3.0';
+const algorithmVersion = 'pilot-0.6.0';
 const requiredMeasurementCount = 4;
 const pilotRuleSet = AlgorithmRuleSet(
   version: algorithmVersion,
@@ -11,14 +11,37 @@ const pilotRuleSet = AlgorithmRuleSet(
   frequencyHz: 20,
   baseIntensityPct: 50,
   ageThreshold: 70,
-  ageFactor: 0.90,
-  femaleFactor: 0.95,
+  ageFactor: 1,
+  femaleFactor: 1,
   maleFactor: 1,
   femaleBodyFat: BodyFatRange(20, 35),
   maleBodyFat: BodyFatRange(10, 28),
-  outsideBodyFatFactor: 0.90,
+  outsideBodyFatFactor: 1,
   minimumPct: 20,
   maximumPct: 70,
+  femaleMuscleThresholds: MuscleThresholds(
+    lowMaximum: 5.75,
+    mediumMaximum: 6.75,
+  ),
+  maleMuscleThresholds: MuscleThresholds(
+    lowMaximum: 8.50,
+    mediumMaximum: 10.75,
+  ),
+  lowMuscleProtocol: ProtocolPreset(
+    durationSec: 180,
+    frequencyHz: 12,
+    intensityPct: 30,
+  ),
+  mediumMuscleProtocol: ProtocolPreset(
+    durationSec: 240,
+    frequencyHz: 16,
+    intensityPct: 40,
+  ),
+  referenceMuscleProtocol: ProtocolPreset(
+    durationSec: 300,
+    frequencyHz: 20,
+    intensityPct: 50,
+  ),
 );
 
 double _round(double value, int digits) {
@@ -87,7 +110,8 @@ AlgorithmResult calculateRecommendation({
       profile.age < 18 ||
       profile.age > 100 ||
       !profile.heightCm.isFinite ||
-      profile.heightCm <= 0) {
+      profile.heightCm < 100 ||
+      profile.heightCm > 250) {
     warnings.add('참여자 정보가 유효하지 않습니다.');
   }
   final ruleNumbers = [
@@ -102,9 +126,20 @@ AlgorithmResult calculateRecommendation({
     ruleSet.femaleBodyFat.maximum,
     ruleSet.maleBodyFat.minimum,
     ruleSet.maleBodyFat.maximum,
+    ruleSet.femaleMuscleThresholds.lowMaximum,
+    ruleSet.femaleMuscleThresholds.mediumMaximum,
+    ruleSet.maleMuscleThresholds.lowMaximum,
+    ruleSet.maleMuscleThresholds.mediumMaximum,
+    ruleSet.lowMuscleProtocol.intensityPct,
+    ruleSet.mediumMuscleProtocol.intensityPct,
+    ruleSet.referenceMuscleProtocol.intensityPct,
   ];
   if (ruleNumbers.any((v) => !v.isFinite) ||
-      ruleSet.version.trim().isEmpty ||
+      ruleSet.version != algorithmVersion ||
+      ruleSet.ageFactor != 1 ||
+      ruleSet.femaleFactor != 1 ||
+      ruleSet.maleFactor != 1 ||
+      ruleSet.outsideBodyFatFactor != 1 ||
       ruleSet.ageThreshold < 18 ||
       ruleSet.ageThreshold > 100 ||
       ruleSet.femaleBodyFat.minimum < 0 ||
@@ -127,6 +162,26 @@ AlgorithmResult calculateRecommendation({
       ruleSet.femaleBodyFat.minimum > ruleSet.femaleBodyFat.maximum ||
       ruleSet.maleBodyFat.minimum > ruleSet.maleBodyFat.maximum) {
     warnings.add('계산 규칙의 범위를 확인해 주세요.');
+  }
+  final protocols = [
+    ruleSet.lowMuscleProtocol,
+    ruleSet.mediumMuscleProtocol,
+    ruleSet.referenceMuscleProtocol,
+  ];
+  if (ruleSet.femaleMuscleThresholds.lowMaximum <= 0 ||
+      ruleSet.femaleMuscleThresholds.lowMaximum >=
+          ruleSet.femaleMuscleThresholds.mediumMaximum ||
+      ruleSet.maleMuscleThresholds.lowMaximum <= 0 ||
+      ruleSet.maleMuscleThresholds.lowMaximum >=
+          ruleSet.maleMuscleThresholds.mediumMaximum ||
+      protocols.any(
+        (p) =>
+            p.durationSec <= 0 ||
+            p.frequencyHz <= 0 ||
+            p.intensityPct < ruleSet.minimumPct ||
+            p.intensityPct > ruleSet.maximumPct,
+      )) {
+    warnings.add('근육량 기반 계산 규칙의 범위를 확인해 주세요.');
   }
   if (measurements.any(
     (m) => m.id.trim().isEmpty || m.deviceId.trim().isEmpty,
@@ -154,7 +209,7 @@ AlgorithmResult calculateRecommendation({
   }
 
   BiaValues? average;
-  if (measurements.isNotEmpty && measurements.every(_hasValidCoreValues)) {
+  if (measurements.length == 4 && measurements.every(_hasValidCoreValues)) {
     average = BiaValues(
       weightKg: _round(_mean(measurements.map((m) => m.values.weightKg)), 2),
       bmi: _round(_mean(measurements.map((m) => m.values.bmi)), 2),
@@ -196,6 +251,50 @@ AlgorithmResult calculateRecommendation({
     }
   }
 
+  MuscleAssessment? muscleAssessment;
+  ProtocolPreset? muscleProtocol;
+  if (warnings.isEmpty &&
+      average != null &&
+      profile.heightCm.isFinite &&
+      profile.heightCm > 0) {
+    final heightM = profile.heightCm / 100;
+    final muscles = measurements
+        .map((m) => m.values.skeletalMuscleMassKg)
+        .toList();
+    final sum = muscles.reduce((a, b) => a + b);
+    final mean = sum / 4;
+    final totalSmmi = mean / math.pow(heightM, 2);
+    final thresholds = profile.sex == ParticipantSex.female
+        ? ruleSet.femaleMuscleThresholds
+        : ruleSet.maleMuscleThresholds;
+    final heightSquared = heightM * heightM;
+    MuscleLevel classify(double total, int count) =>
+        total <= thresholds.lowMaximum * heightSquared * count
+        ? MuscleLevel.low
+        : total <= thresholds.mediumMaximum * heightSquared * count
+        ? MuscleLevel.medium
+        : MuscleLevel.reference;
+    final level = classify(sum, 4);
+    final sd = math.sqrt(
+      muscles.fold<double>(0, (s, m) => s + math.pow(m - mean, 2)) / 3,
+    );
+    muscleProtocol = switch (level) {
+      MuscleLevel.low => ruleSet.lowMuscleProtocol,
+      MuscleLevel.medium => ruleSet.mediumMuscleProtocol,
+      MuscleLevel.reference => ruleSet.referenceMuscleProtocol,
+    };
+    muscleAssessment = MuscleAssessment(
+      totalSmmi: _round(totalSmmi, 2),
+      level: level,
+      meanSkeletalMuscleMassKg: mean,
+      sdKg: sd,
+      cvPct: 100 * sd / mean,
+      minimumKg: muscles.reduce(math.min),
+      maximumKg: muscles.reduce(math.max),
+      unstable: muscles.map((m) => classify(m, 1)).toSet().length > 1,
+    );
+  }
+
   final safetyWarnings = <String>[
     if (safety.acutePain == true) '현재 통증이 있어 실행을 차단합니다.',
     if (safety.dizziness == true) '어지럼 증상이 있어 실행을 차단합니다.',
@@ -212,48 +311,51 @@ AlgorithmResult calculateRecommendation({
       adjustments: const [],
       recommendation: null,
       algorithmVersion: ruleSet.version,
+      muscleAssessment: null,
       measurementIds: measurements.map((m) => m.id).toList(growable: false),
     );
   }
 
-  final isFemale = profile.sex == ParticipantSex.female;
-  final bodyFatRange = isFemale ? ruleSet.femaleBodyFat : ruleSet.maleBodyFat;
-  final bodyFatOutOfRange =
-      average.bodyFatPct < bodyFatRange.minimum ||
-      average.bodyFatPct > bodyFatRange.maximum;
+  final selectedProtocol = muscleProtocol!;
+  final levelLabel = switch (muscleAssessment!.level) {
+    MuscleLevel.low => '낮은 근육량 등급',
+    MuscleLevel.medium => '중간 근육량 등급',
+    MuscleLevel.reference => '참조 이상 근육량 등급',
+  };
   final adjustments = <Adjustment>[
     Adjustment(
+      id: 'TOTAL_SMMI_PROTOCOL_RESEARCH',
+      label: '근육량 기본값',
+      factor: selectedProtocol.intensityPct / ruleSet.baseIntensityPct,
+      reason:
+          '추정 근육지수 ${muscleAssessment.totalSmmi.toStringAsFixed(2)}kg/m², '
+          '$levelLabel에 따라 ${selectedProtocol.frequencyHz}Hz·'
+          '${selectedProtocol.durationSec}초·${selectedProtocol.intensityPct.toStringAsFixed(0)}%를 선택했습니다. '
+          'FITRUS 교정 전 연구용 기준입니다.',
+    ),
+    Adjustment(
       id: 'AGE_70_PILOT',
-      label: '연령 보정',
+      label: '추가 감산 없음',
       factor: profile.age >= ruleSet.ageThreshold ? ruleSet.ageFactor : 1,
       reason: profile.age >= ruleSet.ageThreshold
-          ? '${ruleSet.ageThreshold}세 이상 PILOT 감산'
-          : '감산 조건 아님',
-    ),
-    Adjustment(
-      id: 'SEX_RESPONSE_PILOT',
-      label: '성별 보정',
-      factor: isFemale ? ruleSet.femaleFactor : ruleSet.maleFactor,
-      reason: isFemale ? '여성 PILOT 5% 감산' : '남성 기준계수',
-    ),
-    Adjustment(
-      id: 'BODY_FAT_RANGE_PILOT',
-      label: '체지방 보정',
-      factor: bodyFatOutOfRange ? ruleSet.outsideBodyFatFactor : 1,
-      reason: bodyFatOutOfRange ? '성별 PILOT 참고범위 밖 10% 감산' : '성별 PILOT 참고범위 안',
+          ? '근거 없는 연령별 일괄 감산 제거'
+          : '추가 나이 계수 없음',
     ),
   ];
 
-  final factor = adjustments.fold<double>(
-    1,
-    (value, item) => value * item.factor,
-  );
-  final intensity = (ruleSet.baseIntensityPct * factor)
+  final ageFactor = profile.age >= ruleSet.ageThreshold
+      ? ruleSet.ageFactor
+      : 1.0;
+  final intensity = (selectedProtocol.intensityPct * ageFactor)
       .clamp(ruleSet.minimumPct, ruleSet.maximumPct)
       .round();
+  final duration = (selectedProtocol.durationSec * ageFactor).round();
   final reviewWarnings = <String>[
     if (!safety.isComplete) '오늘 상태 3문항에 모두 답해 주세요.',
-    if (average.bmi < 18.5) '평균 BMI가 18.5 미만이므로 전문가 검토가 필요합니다.',
+    if (_mean(measurements.map((m) => m.values.bmi)) < 18.5)
+      '평균 BMI가 18.5 미만이므로 전문가 검토가 필요합니다.',
+    if (profile.age < 60) '60세 이상 연구 대상 범위 밖입니다.',
+    if (muscleAssessment.unstable) '반복 측정의 근육지수 등급이 달라 재측정과 검토가 필요합니다.',
   ];
 
   return AlgorithmResult(
@@ -264,11 +366,12 @@ AlgorithmResult calculateRecommendation({
     warnings: reviewWarnings,
     adjustments: adjustments,
     recommendation: Recommendation(
-      durationSec: ruleSet.durationSec,
-      frequencyHz: ruleSet.frequencyHz,
+      durationSec: duration,
+      frequencyHz: selectedProtocol.frequencyHz,
       intensityPct: intensity,
     ),
     algorithmVersion: ruleSet.version,
+    muscleAssessment: muscleAssessment,
     measurementIds: measurements.map((m) => m.id).toList(growable: false),
   );
 }

@@ -1,6 +1,6 @@
 # VibeCare Pilot
 
-> 저장소를 처음 살펴본다면 [파일 구조와 책임](docs/FILE_STRUCTURE.md)부터 확인하세요. Flutter 앱, 백엔드 API, 공통 데이터 규격과 테스트의 실제 연결 경로를 설명합니다.
+> 저장소를 처음 살펴본다면 [문서·파일 구조 안내](docs/README.md)부터 확인하세요. Flutter 앱, 백엔드 API, 공통 계약과 검증 자료의 책임을 한 곳에서 안내합니다.
 
 FITRUS 체성분 측정 4건의 평균과 파일럿 보정 규칙을 이용해 진동 시간·주파수·강도를 추천하고, 전송·시작·중지 과정을 검증하는 연구용 프로토타입입니다.
 
@@ -17,7 +17,7 @@ deployment/aws/   AWS 배포 담당자용 인수 조건과 환경변수 계약
 docs/              설계·근거·검증·프로젝트 분석
 ```
 
-파일 단위의 상세 책임과 현재 구현 상태는 [전체 파일 구조](docs/FILE_STRUCTURE.md)를 기준으로 확인합니다.
+파일 단위 책임과 현재 구현 상태는 [문서 인덱스](docs/README.md)를 기준으로 확인합니다.
 
 ## FITRUS 연동 상태
 
@@ -62,9 +62,11 @@ npm test
 
 ## 안전 범위
 
-`pilot-0.3.0`의 연령·성별·체지방 계수는 임상 확정값이 아닌 파일럿 규칙입니다. 통증·어지럼·사용 보류는 실행을 차단하며, 실제 장비의 진폭·가속도·ACK·긴급중지 명세가 검증되기 전에는 물리 출력을 활성화하지 않습니다.
+`pilot-0.6.0`은 최근 4건 평균 골격근량 / 키²를 **추정 근육지수(연구용)**로 사용해 Mock 시간·주파수·강도를 선택합니다. FITRUS와 문헌 측정법의 동등성이 확인되지 않아 경계값 적용은 `INDIRECT`, 3단계 조건과 피드백 감산은 `PILOT`입니다. 기존 70세 이상 ×0.90 규칙은 폐기했습니다. 원시값으로 분류하고 SD/CV/범위와 경계 불안정성을 함께 표시합니다.
 
-상세 진행 상태는 [`checklist.md`](checklist.md), 시스템 구조는 [`docs/system-design.md`](docs/system-design.md)를 참고하세요.
+사용자 장치는 발판형 전신진동 장치입니다. `READY`는 시연 가능 상태일 뿐 실출력 허가가 아니며, 실제 실행 상태는 `CALIBRATION_REQUIRED`, `realDeviceSendAllowed=false`입니다. 통증·어지럼·사용 보류는 Mock도 차단합니다. 교정표의 물리량 검사만으로 임상 안전이 입증되지 않습니다. [수식·논문·설계 심사](docs/algorithm/pilot-0.6.0-design-review.md), [최신 검증 결과](docs/evidence/pilot-0.6.0-validation.md)를 확인하세요. 기존 버전 자료는 이력으로 보존했습니다.
+
+상세 진행 상태는 [`checklist.md`](checklist.md), 시스템 구조는 [`docs/architecture.md`](docs/architecture.md), 최신 알고리즘은 [근거·수식·검증 문서](docs/algorithm/adaptive-research-v2.md)를 참고하세요.
 
 ## Windows 문제 해결
 

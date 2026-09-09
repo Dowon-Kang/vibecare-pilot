@@ -34,9 +34,12 @@ void main() {
 
   assert(female.average?.weightKg == 42.05);
   assert(female.average?.bodyFatPct == 18.88);
-  assert(female.recommendation?.intensityPct == 38);
+  assert(female.muscleAssessment?.totalSmmi == 7.63);
+  assert(female.muscleAssessment?.level == MuscleLevel.reference);
+  assert(female.recommendation?.intensityPct == 50);
   assert(female.status == RecommendationStatus.review);
-  assert(male.recommendation?.intensityPct == 45);
+  assert(male.muscleAssessment?.level == MuscleLevel.low);
+  assert(male.recommendation?.intensityPct == 30);
   final history = [
     ...measurements,
     _m('M5', 42, 17.7, 18.8, 7.9, 18.1, minute: 5),
@@ -51,7 +54,7 @@ void main() {
   assert(selected.first.id == 'M5');
   assert(selected.map((item) => item.id).toSet().length == 4);
   stdout.writeln(
-    'pilot-0.3.0 Dart verification passed: parity and latest-valid-4 selection',
+    'pilot-0.6.0 muscle-driven Dart verification passed',
   );
 }
 

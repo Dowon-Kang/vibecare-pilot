@@ -1,0 +1,6 @@
+-- Keep historical versions and their rule JSON for audit; select the new simulator only.
+UPDATE algorithm_rule_sets SET enabled=0 WHERE enabled=1;
+INSERT INTO algorithm_rule_sets(version,enabled,active_from,rules_json,change_reason,evidence_reference,approved_by)
+VALUES('pilot-0.6.0',1,'2026-09-08T00:00:00Z','{"version":"pilot-0.6.0","activeFrom":"2026-09-08T00:00:00Z","enabled":true,"base":{"durationSec":300,"frequencyHz":20,"intensityPct":50},"age":{"threshold":70,"factor":1},"sex":{"femaleFactor":1,"maleFactor":1},"bodyFat":{"female":{"minimum":20,"maximum":35},"male":{"minimum":10,"maximum":28},"outsideRangeFactor":1},"muscle":{"female":{"lowMaximum":5.75,"mediumMaximum":6.75},"male":{"lowMaximum":8.5,"mediumMaximum":10.75},"protocols":{"low":{"durationSec":180,"frequencyHz":12,"intensityPct":30},"medium":{"durationSec":240,"frequencyHz":16,"intensityPct":40},"reference":{"durationSec":300,"frequencyHz":20,"intensityPct":50}}},"output":{"minimumPct":20,"maximumPct":70},"research":{"mode":"simulation_only","measurementDefinition":"unverified","protocolEvidence":"PILOT"}}','Simulation only; raw precision, variability gate, retired age multiplier.','docs/algorithm/pilot-0.6.0-design-review.md',NULL);
+ALTER TABLE session_feedback ADD COLUMN execution_json TEXT;
+ALTER TABLE feedback_adjustments ADD COLUMN reason_code TEXT NOT NULL DEFAULT 'LEGACY_POLICY';

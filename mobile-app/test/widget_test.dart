@@ -30,7 +30,7 @@ void main() {
       final finder = find.byKey(ValueKey(key));
       expect(finder.hitTestable(), findsOneWidget, reason: key);
     }
-    expect(find.text('38%'), findsOneWidget);
+    expect(find.text('50%'), findsOneWidget);
     expect(
       tester
           .widget<FilledButton>(find.byKey(const ValueKey('send-button')))
@@ -50,6 +50,29 @@ void main() {
     await _tap(tester, 'start-button');
     expect(find.text('시연 실행 중'), findsOneWidget);
     await _tap(tester, 'stop-button');
+    expect(find.byKey(const ValueKey('send-button')), findsOneWidget);
+  });
+
+  testWidgets('사용 후 강도·시간·주파수의 약함을 각각 기록한다', (tester) async {
+    _size(tester, const Size(390, 844));
+    await _login(tester);
+    await _clear(tester);
+    await _tap(tester, 'send-button');
+    await _tap(tester, 'start-button');
+    await _tap(tester, 'stop-button');
+
+    expect(find.text('강도는 어땠나요?'), findsOneWidget);
+    expect(find.text('시간은 어땠나요?'), findsOneWidget);
+    expect(find.text('주파수 느낌은 어땠나요?'), findsOneWidget);
+    await _tap(tester, 'feedback-intensity-FeedbackRating.weak');
+    await _tap(tester, 'feedback-duration-FeedbackRating.weak');
+    await _tap(tester, 'feedback-frequency-FeedbackRating.weak');
+    await _tap(tester, 'feedback-pain-0');
+    await _tap(tester, 'feedback-dizziness-false');
+    await _tap(tester, 'feedback-submit-button');
+
+    expect(find.text('50%'), findsNothing);
+    expect(find.text('오늘은 사용을 보류해 주세요'), findsOneWidget);
     expect(find.byKey(const ValueKey('send-button')), findsOneWidget);
   });
 
@@ -80,7 +103,7 @@ void main() {
     _size(tester, const Size(390, 844));
     await _login(tester);
     await _tap(tester, 'safety-pain-yes');
-    expect(find.text('38%'), findsNothing);
+    expect(find.text('50%'), findsNothing);
     expect(find.text('오늘은 사용을 보류해 주세요'), findsOneWidget);
     expect(
       tester
@@ -90,11 +113,18 @@ void main() {
     );
   });
 
-  testWidgets('상세 시트에서 원본과 출력 JSON을 확인하고 강도를 낮춘다', (tester) async {
+  testWidgets('상세 시트에서 계산 근거와 원본을 확인하고 강도를 낮춘다', (tester) async {
     _size(tester, const Size(390, 844));
     await _login(tester);
     await _tap(tester, 'command-details-button');
-    expect(find.textContaining('PREVIEW_ONLY'), findsOneWidget);
+    expect(find.text('계산 근거'), findsWidgets);
+    expect(find.textContaining('기본 50%'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('장치 전송 정보'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('장치 전송 정보'), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     await _tap(tester, 'details-button');

@@ -46,7 +46,10 @@ final deviceGatewayProvider = Provider<DeviceGateway>((ref) {
   return gateway;
 });
 
-final feedbackRepositoryProvider = Provider<FeedbackRepository>((ref) => FeedbackRepository(apiBaseUrl.isEmpty ? null : ref.read(dioProvider)));
+final feedbackRepositoryProvider = Provider<FeedbackRepository>(
+  (ref) =>
+      FeedbackRepository(apiBaseUrl.isEmpty ? null : ref.read(dioProvider)),
+);
 
 final pilotControllerProvider = NotifierProvider<PilotController, PilotState>(
   PilotController.new,
@@ -109,7 +112,9 @@ class PilotState {
     bool? isBusy,
     Object? error = _unset,
   }) => PilotState(
-    feedbackSession: identical(feedbackSession,_unset) ? this.feedbackSession : feedbackSession as DeviceSession?,
+    feedbackSession: identical(feedbackSession, _unset)
+        ? this.feedbackSession
+        : feedbackSession as DeviceSession?,
     feedbackAdjustment: feedbackAdjustment ?? this.feedbackAdjustment,
     profile: identical(profile, _unset)
         ? this.profile
@@ -171,15 +176,20 @@ class PilotController extends Notifier<PilotState> {
             participant: session.participant,
             deviceId: sourceDeviceId,
           );
-      final adjustment = await ref.read(feedbackRepositoryProvider).load(session.participant.id);
-      state = state.copyWith(feedbackAdjustment:adjustment);
+      final adjustment = await ref
+          .read(feedbackRepositoryProvider)
+          .load(session.participant.id);
+      state = state.copyWith(feedbackAdjustment: adjustment);
       final result = calculateRecommendation(
         profile: session.participant,
         measurements: snapshot.selectedMeasurements,
         safety: const SafetyCheck(),
         ruleSet: snapshot.ruleSet,
       );
-      final adjustedResult = state.feedbackAdjustment.apply(result, snapshot.ruleSet.minimumPct);
+      final adjustedResult = state.feedbackAdjustment.apply(
+        result,
+        snapshot.ruleSet.minimumPct,
+      );
       state = state.copyWith(
         profile: session.participant,
         snapshot: snapshot,
@@ -198,20 +208,32 @@ class PilotController extends Notifier<PilotState> {
 
   Future<void> refreshMeasurements() async {
     final profile = state.profile;
-    if (profile == null || state.isBusy || state.isRunning || state.feedbackSession != null) return;
+    if (profile == null ||
+        state.isBusy ||
+        state.isRunning ||
+        state.feedbackSession != null) {
+      return;
+    }
     state = state.copyWith(isBusy: true, error: null);
     try {
       final snapshot = await ref
           .read(fitrusRepositoryProvider)
           .loadSnapshot(participant: profile, deviceId: sourceDeviceId);
-      state = state.copyWith(feedbackAdjustment:await ref.read(feedbackRepositoryProvider).load(profile.id));
+      state = state.copyWith(
+        feedbackAdjustment: await ref
+            .read(feedbackRepositoryProvider)
+            .load(profile.id),
+      );
       final result = calculateRecommendation(
         profile: profile,
         measurements: snapshot.selectedMeasurements,
         safety: state.safety,
         ruleSet: snapshot.ruleSet,
       );
-      final adjustedResult = state.feedbackAdjustment.apply(result, snapshot.ruleSet.minimumPct);
+      final adjustedResult = state.feedbackAdjustment.apply(
+        result,
+        snapshot.ruleSet.minimumPct,
+      );
       state = state.copyWith(
         snapshot: snapshot,
         result: adjustedResult,
@@ -246,7 +268,10 @@ class PilotController extends Notifier<PilotState> {
       safety: next,
       ruleSet: snapshot.ruleSet,
     );
-    final adjustedResult = state.feedbackAdjustment.apply(result, snapshot.ruleSet.minimumPct);
+    final adjustedResult = state.feedbackAdjustment.apply(
+      result,
+      snapshot.ruleSet.minimumPct,
+    );
     state = state.copyWith(
       safety: next,
       result: adjustedResult,
@@ -274,7 +299,10 @@ class PilotController extends Notifier<PilotState> {
       safety: state.safety,
       ruleSet: snapshot.ruleSet,
     );
-    final adjustedResult = state.feedbackAdjustment.apply(result, snapshot.ruleSet.minimumPct);
+    final adjustedResult = state.feedbackAdjustment.apply(
+      result,
+      snapshot.ruleSet.minimumPct,
+    );
     state = state.copyWith(
       profile: next,
       result: adjustedResult,
@@ -404,6 +432,7 @@ class PilotController extends Notifier<PilotState> {
     state = state.copyWith(isBusy: true, error: null);
     try {
       await ref.read(deviceGatewayProvider).stop(session.id, reason);
+      _earlyStops[session.id] = reason != 'completed';
       state = state.copyWith(
         feedbackSession: session,
         session: null,
@@ -420,20 +449,48 @@ class PilotController extends Notifier<PilotState> {
     }
   }
 
+  final _earlyStops = <String, bool>{};
   Future<void> submitFeedback(SessionFeedback feedback) async {
     final finished = state.feedbackSession;
     final profile = state.profile;
     final snapshot = state.snapshot;
-    if (finished == null || profile == null || snapshot == null || state.isBusy) return;
-    state = state.copyWith(isBusy:true,error:null);
+    if (finished == null ||
+        profile == null ||
+        snapshot == null ||
+        state.isBusy) {
+      return;
+    }
+    state = state.copyWith(isBusy: true, error: null);
     try {
-      final adjustment = await ref.read(feedbackRepositoryProvider).save(profile.id,finished.id,finished.command.intensityPct,feedback);
-      final base = calculateRecommendation(profile:profile,measurements:snapshot.selectedMeasurements,safety:const SafetyCheck(),ruleSet:snapshot.ruleSet);
-      final result = adjustment.apply(base,snapshot.ruleSet.minimumPct);
-      state = state.copyWith(feedbackSession:null,feedbackAdjustment:adjustment,result:result,selectedIntensityPct:result.recommendation?.intensityPct,
-        isIntensityManual:false,safety:const SafetyCheck(),isBusy:false,error:null);
-    } catch(error) {
-      state = state.copyWith(isBusy:false,error:_message(error));
+      final adjustment = await ref
+          .read(feedbackRepositoryProvider)
+          .save(
+            profile.id,
+            finished.id,
+            finished.command.intensityPct,
+            feedback.withExecution(
+              earlyStopped: _earlyStops[finished.id] ?? true,
+            ),
+          );
+      final base = calculateRecommendation(
+        profile: profile,
+        measurements: snapshot.selectedMeasurements,
+        safety: const SafetyCheck(),
+        ruleSet: snapshot.ruleSet,
+      );
+      final result = adjustment.apply(base, snapshot.ruleSet.minimumPct);
+      state = state.copyWith(
+        feedbackSession: null,
+        feedbackAdjustment: adjustment,
+        result: result,
+        selectedIntensityPct: result.recommendation?.intensityPct,
+        isIntensityManual: false,
+        safety: const SafetyCheck(),
+        isBusy: false,
+        error: null,
+      );
+    } catch (error) {
+      state = state.copyWith(isBusy: false, error: _message(error));
     }
   }
 
@@ -453,7 +510,11 @@ class PilotController extends Notifier<PilotState> {
 
   Future<void> logout() async {
     await stopSession('logout');
-    if (state.session != null || state.feedbackSession != null || state.isBusy) return;
+    if (state.session != null ||
+        state.feedbackSession != null ||
+        state.isBusy) {
+      return;
+    }
     await ref.read(sessionStoreProvider).clear();
     state = const PilotState();
   }
@@ -472,6 +533,7 @@ class PilotController extends Notifier<PilotState> {
         'FEEDBACK_ADJUSTMENT_CHANGED': '설문 반영값이 바뀌었습니다. 새로고침해 주세요.',
         'DEVICE_BUSY': '이 장치에 아직 끝나지 않은 실행이 있습니다. 담당자에게 확인해 주세요.',
         'DEVICE_PROTOCOL_NOT_CONFIGURED': '실제 장치 연결 규격이 아직 준비되지 않았습니다.',
+        'CALIBRATION_REQUIRED': '장치 진폭·가속도와 측정값 검증이 필요합니다. 현재는 시연만 가능합니다.',
         'INTENSITY_OUTSIDE_SAFE_RANGE': '허용된 강도 범위를 확인해 주세요.',
       };
       if (messages.containsKey(code)) return messages[code]!;

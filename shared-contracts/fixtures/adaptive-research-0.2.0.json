@@ -1,0 +1,63 @@
+{
+  "description": "SYNTHETIC software test data; not clinical recommendations or real approvals.",
+  "base": {
+    "evaluatedAt":"2026-09-09T00:00:00.000Z",
+    "context":{"participantId":"TEST-P1","deviceId":"TEST-WBV1","policyVersion":"TEST-V1","muscleCategory":"MIDDLE","currentStageId":"S1","historyComplete":true},
+    "muscleAssessment":{"category":"MIDDLE"},
+    "currentSafety":{"acutePain":false,"dizziness":false,"clinicianHold":false},
+    "policy":{
+      "version":"TEST-V1","approvalRef":"SYNTHETIC-NOT-APPROVED","enabled":true,"maxHistoryAgeSec":2592000,
+      "feedback":{"minimumCompletedSessionsAtStage":2,"targetRpeMinimum":2,"targetRpeMaximum":6},
+      "stages":[{"id":"S0","rank":0,"protocolId":"P0"},{"id":"S1","rank":1,"protocolId":"P1"},{"id":"S2","rank":2,"protocolId":"P2"}],
+      "transitions":[{"from":"S0","to":"S1","reviewRef":"TEST"},{"from":"S1","to":"S0","reviewRef":"TEST"},{"from":"S1","to":"S2","reviewRef":"TEST"},{"from":"S2","to":"S1","reviewRef":"TEST"}],
+      "initialStageByCategory":{"LOW":"S0","NOT_LOW":"S1","MIDDLE":"S1","REFERENCE":"S2"}
+    },
+    "history":[
+      {"sessionId":"TEST-A","participantId":"TEST-P1","deviceId":"TEST-WBV1","policyVersion":"TEST-V1","muscleCategory":"MIDDLE","stageId":"S1","completedAt":"2026-09-01T09:00:00.000Z","completed":true,"rpe":4,"acutePain":false,"dizziness":false,"clinicianHold":false,"durationFeeling":"WEAK","frequencyFeeling":"WEAK","intensityFeeling":"WEAK"},
+      {"sessionId":"TEST-B","participantId":"TEST-P1","deviceId":"TEST-WBV1","policyVersion":"TEST-V1","muscleCategory":"MIDDLE","stageId":"S1","completedAt":"2026-09-02T09:00:00.000Z","completed":true,"rpe":4,"acutePain":false,"dizziness":false,"clinicianHold":false,"durationFeeling":"WEAK","frequencyFeeling":"WEAK","intensityFeeling":"WEAK"}
+    ]
+  },
+  "cases":[
+    {"name":"repeated weak responses","set":{},"decision":"STEP_UP_REVIEW","reason":"REPEATED_LOW_RESPONSE_WITHIN_TARGET_RPE","stage":"S2"},
+    {"name":"explicit new participant","set":{"history":[],"context.currentStageId":null},"decision":"INITIAL_CANDIDATE","reason":"MUSCLE_CATEGORY_INITIAL_STAGE","stage":"S1"},
+    {"name":"low muscle initial","set":{"history":[],"context.currentStageId":null,"context.muscleCategory":"LOW","muscleAssessment.category":"LOW"},"decision":"INITIAL_CANDIDATE","reason":"MUSCLE_CATEGORY_INITIAL_STAGE","stage":"S0"},
+    {"name":"history omitted","unset":["history"],"set":{},"decision":"HISTORY_REVIEW","reason":"SESSION_HISTORY_REQUIRED","stage":null},
+    {"name":"history null","set":{"history":null},"decision":"HISTORY_REVIEW","reason":"SESSION_HISTORY_REQUIRED","stage":null},
+    {"name":"history wrong type","set":{"history":{}},"decision":"HISTORY_REVIEW","reason":"SESSION_HISTORY_REQUIRED","stage":null},
+    {"name":"returning user cannot reset","set":{"history":[]},"decision":"HISTORY_REVIEW","reason":"CURRENT_STAGE_WITHOUT_HISTORY","stage":null},
+    {"name":"partial history","set":{"context.historyComplete":false},"decision":"HISTORY_REVIEW","reason":"HISTORY_CONTEXT_INCOMPLETE","stage":null},
+    {"name":"context absent","unset":["context"],"set":{},"decision":"HISTORY_REVIEW","reason":"HISTORY_CONTEXT_INCOMPLETE","stage":null},
+    {"name":"another participant","set":{"history.0.participantId":"OTHER"},"decision":"HISTORY_REVIEW","reason":"SESSION_CONTEXT_MISMATCH","stage":null},
+    {"name":"another device","set":{"history.0.deviceId":"OTHER"},"decision":"HISTORY_REVIEW","reason":"SESSION_CONTEXT_MISMATCH","stage":null},
+    {"name":"old session policy","set":{"history.0.policyVersion":"OLD"},"decision":"HISTORY_REVIEW","reason":"SESSION_CONTEXT_MISMATCH","stage":null},
+    {"name":"changed muscle category","set":{"muscleAssessment.category":"LOW"},"decision":"HISTORY_REVIEW","reason":"CONTEXT_REBASELINE_REQUIRED","stage":null},
+    {"name":"changed policy","set":{"context.policyVersion":"OLD"},"decision":"HISTORY_REVIEW","reason":"CONTEXT_REBASELINE_REQUIRED","stage":null},
+    {"name":"current stage differs","set":{"context.currentStageId":"S0"},"decision":"HISTORY_REVIEW","reason":"CURRENT_STAGE_HISTORY_MISMATCH","stage":null},
+    {"name":"future session","set":{"history.0.completedAt":"2027-09-01T09:00:00.000Z"},"decision":"HISTORY_REVIEW","reason":"SESSION_TIME_OUTSIDE_POLICY","stage":null},
+    {"name":"stale history","set":{"history.0.completedAt":"2025-09-01T09:00:00.000Z"},"decision":"HISTORY_REVIEW","reason":"SESSION_TIME_OUTSIDE_POLICY","stage":null},
+    {"name":"timestamp tie","set":{"history.0.completedAt":"2026-09-02T09:00:00.000Z"},"decision":"HISTORY_REVIEW","reason":"SESSION_HISTORY_INVALID","stage":null},
+    {"name":"duplicate id","set":{"history.0.sessionId":"TEST-B"},"decision":"HISTORY_REVIEW","reason":"SESSION_HISTORY_INVALID","stage":null},
+    {"name":"invalid date","set":{"history.0.completedAt":"2026-02-30T09:00:00.000Z"},"decision":"HISTORY_REVIEW","reason":"SESSION_HISTORY_INVALID","stage":null},
+    {"name":"missing safety","unset":["currentSafety.acutePain"],"set":{},"decision":"HISTORY_REVIEW","reason":"CURRENT_SAFETY_INCOMPLETE","stage":null},
+    {"name":"current pain priority","set":{"currentSafety.acutePain":true,"history":null},"decision":"HOLD","reason":"CURRENT_SAFETY_HOLD","stage":null},
+    {"name":"older pain cannot disappear","set":{"history.0.acutePain":true},"decision":"HOLD","reason":"PRIOR_SESSION_SAFETY_HOLD","stage":null},
+    {"name":"older dizziness cannot disappear","set":{"history.0.dizziness":true},"decision":"HOLD","reason":"PRIOR_SESSION_SAFETY_HOLD","stage":null},
+    {"name":"prior incomplete session","set":{"history.1.completed":false},"decision":"HOLD","reason":"PRIOR_SESSION_NOT_COMPLETED","stage":null},
+    {"name":"strong single parameter","set":{"history.1.frequencyFeeling":"STRONG"},"decision":"STEP_DOWN_CANDIDATE","reason":"TOLERABILITY_STEP_DOWN","stage":"S0"},
+    {"name":"high RPE","set":{"history.1.rpe":7},"decision":"STEP_DOWN_CANDIDATE","reason":"TOLERABILITY_STEP_DOWN","stage":"S0"},
+    {"name":"low RPE not automatic escalation","set":{"history.1.rpe":1},"decision":"KEEP_CANDIDATE","reason":"MORE_STABLE_SESSIONS_REQUIRED","stage":"S1"},
+    {"name":"RPE out of scale","set":{"history.1.rpe":11},"decision":"HISTORY_REVIEW","reason":"SESSION_HISTORY_INVALID","stage":null},
+    {"name":"mixed feedback","set":{"history.0.frequencyFeeling":"OK"},"decision":"KEEP_CANDIDATE","reason":"RESPONSE_ACCEPTABLE_KEEP_STAGE","stage":"S1"},
+    {"name":"more sessions required","set":{"policy.feedback.minimumCompletedSessionsAtStage":3},"decision":"KEEP_CANDIDATE","reason":"MORE_STABLE_SESSIONS_REQUIRED","stage":"S1"},
+    {"name":"integer double in JSON","set":{"policy.feedback.minimumCompletedSessionsAtStage":2.0},"decision":"STEP_UP_REVIEW","reason":"REPEATED_LOW_RESPONSE_WITHIN_TARGET_RPE","stage":"S2"},
+    {"name":"highest stage","set":{"context.currentStageId":"S2","history.0.stageId":"S2","history.1.stageId":"S2"},"decision":"KEEP_CANDIDATE","reason":"HIGHEST_APPROVED_STAGE_REACHED","stage":"S2"},
+    {"name":"lowest intolerance","set":{"context.currentStageId":"S0","history.0.stageId":"S0","history.1.stageId":"S0","history.1.rpe":7},"decision":"HOLD","reason":"LOWEST_STAGE_NOT_TOLERATED","stage":null},
+    {"name":"disabled policy","set":{"policy.enabled":false},"decision":"POLICY_REVIEW","reason":"ADAPTATION_POLICY_INVALID","stage":null},
+    {"name":"unapproved policy","set":{"policy.approvalRef":""},"decision":"POLICY_REVIEW","reason":"ADAPTATION_POLICY_INVALID","stage":null},
+    {"name":"rank gap","set":{"policy.stages.2.rank":3},"decision":"POLICY_REVIEW","reason":"STAGE_RANKS_MUST_BE_CONTIGUOUS","stage":null},
+    {"name":"no upward transition review","set":{"policy.transitions":[]},"decision":"POLICY_REVIEW","reason":"TRANSITION_REVIEW_REQUIRED","stage":null},
+    {"name":"no downward transition review","set":{"policy.transitions":[],"history.1.rpe":7},"decision":"POLICY_REVIEW","reason":"TRANSITION_REVIEW_REQUIRED","stage":null},
+    {"name":"two-step transition rejected","set":{"policy.transitions.0.to":"S2"},"decision":"POLICY_REVIEW","reason":"STAGE_TRANSITIONS_INVALID","stage":null},
+    {"name":"invalid muscle category","set":{"muscleAssessment.category":"UNKNOWN"},"decision":"HISTORY_REVIEW","reason":"MUSCLE_ASSESSMENT_REQUIRED","stage":null}
+  ]
+}

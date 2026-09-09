@@ -209,6 +209,13 @@ class BackendFitrusRepository implements FitrusRepository {
   }
 
   static AlgorithmRuleSet _parseRuleSet(Map<String, dynamic> json) {
+    final research = json['research'] as Map<String, dynamic>?;
+    if (json['version'] != algorithmVersion ||
+        research?['mode'] != 'simulation_only' ||
+        research?['measurementDefinition'] != 'unverified' ||
+        research?['protocolEvidence'] != 'PILOT') {
+      throw const FormatException('지원되지 않거나 불완전한 계산 규칙입니다.');
+    }
     final base = json['base'] as Map<String, dynamic>;
     final age = json['age'] as Map<String, dynamic>;
     final sex = json['sex'] as Map<String, dynamic>;
@@ -216,6 +223,20 @@ class BackendFitrusRepository implements FitrusRepository {
     final female = bodyFat['female'] as Map<String, dynamic>;
     final male = bodyFat['male'] as Map<String, dynamic>;
     final output = json['output'] as Map<String, dynamic>;
+    final muscle = json['muscle'] as Map<String, dynamic>?;
+    final muscleFemale = muscle?['female'] as Map<String, dynamic>?;
+    final muscleMale = muscle?['male'] as Map<String, dynamic>?;
+    final protocols = muscle?['protocols'] as Map<String, dynamic>?;
+    ProtocolPreset protocol(String key) {
+      final value = protocols?[key] as Map<String, dynamic>?;
+      if (value == null) throw const FormatException('근육량 프로토콜이 누락됐습니다.');
+      return ProtocolPreset(
+        durationSec: value['durationSec'] as int,
+        frequencyHz: value['frequencyHz'] as int,
+        intensityPct: (value['intensityPct'] as num).toDouble(),
+      );
+    }
+
     return AlgorithmRuleSet(
       version: json['version'] as String,
       enabled: json['enabled'] as bool,
@@ -237,6 +258,17 @@ class BackendFitrusRepository implements FitrusRepository {
       outsideBodyFatFactor: (bodyFat['outsideRangeFactor'] as num).toDouble(),
       minimumPct: (output['minimumPct'] as num).toDouble(),
       maximumPct: (output['maximumPct'] as num).toDouble(),
+      femaleMuscleThresholds: MuscleThresholds(
+        lowMaximum: (muscleFemale!['lowMaximum'] as num).toDouble(),
+        mediumMaximum: (muscleFemale['mediumMaximum'] as num).toDouble(),
+      ),
+      maleMuscleThresholds: MuscleThresholds(
+        lowMaximum: (muscleMale!['lowMaximum'] as num).toDouble(),
+        mediumMaximum: (muscleMale['mediumMaximum'] as num).toDouble(),
+      ),
+      lowMuscleProtocol: protocol('low'),
+      mediumMuscleProtocol: protocol('medium'),
+      referenceMuscleProtocol: protocol('reference'),
     );
   }
 

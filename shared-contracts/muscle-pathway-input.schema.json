@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Explicit ASM/SMM research input v0.7",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile",
+    "safety",
+    "measurements"
+  ],
+  "properties": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "participantId",
+        "age",
+        "sex",
+        "heightCm"
+      ],
+      "properties": {
+        "participantId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "age": {
+          "type": "integer",
+          "minimum": 18,
+          "maximum": 100
+        },
+        "sex": {
+          "enum": [
+            "male",
+            "female"
+          ]
+        },
+        "heightCm": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 250
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acutePain",
+        "dizziness",
+        "clinicianHold"
+      ],
+      "properties": {
+        "acutePain": {
+          "type": "boolean"
+        },
+        "dizziness": {
+          "type": "boolean"
+        },
+        "clinicianHold": {
+          "type": "boolean"
+        }
+      }
+    },
+    "measurements": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "participantId",
+          "deviceId",
+          "measuredAt",
+          "qualityPassed",
+          "weightKg",
+          "bmi",
+          "bodyFatPct",
+          "fatMassKg",
+          "muscle"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "participantId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "deviceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "measuredAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+            "description": "Adapter must normalize valid timestamps to ISO UTC with milliseconds."
+          },
+          "qualityPassed": {
+            "type": "boolean"
+          },
+          "weightKg": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "bmi": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "bodyFatPct": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 100
+          },
+          "fatMassKg": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "muscle": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "method",
+              "massKg",
+              "definitionRef"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "ASM",
+                  "SMM",
+                  "UNKNOWN"
+                ]
+              },
+              "method": {
+                "enum": [
+                  "BIA",
+                  "DXA",
+                  "UNKNOWN"
+                ]
+              },
+              "massKg": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "definitionRef": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Declared source definition, not proof of validated equivalence."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

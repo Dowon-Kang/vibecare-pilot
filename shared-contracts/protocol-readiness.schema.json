@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecare.local/contracts/protocol-readiness.schema.json",
+  "title": "Research protocol readiness input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evaluatedAt",
+    "profile",
+    "acquisition",
+    "safety",
+    "measurements",
+    "protocolCatalog",
+    "calibration",
+    "engineeringAcceptance"
+  ],
+  "properties": {
+    "requestedProtocolId": { "type": "string", "minLength": 1 },
+    "evaluatedAt": { "type": "string", "format": "date-time" },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["participantId", "sex", "age", "heightCm"],
+      "properties": {
+        "participantId": { "type": "string", "minLength": 1 },
+        "sex": { "enum": ["female", "male"] },
+        "age": { "type": "integer", "minimum": 18, "maximum": 100 },
+        "heightCm": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "acquisition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "standardized",
+        "measurementDefinitionVerified",
+        "protocolRef"
+      ],
+      "properties": {
+        "standardized": { "const": true },
+        "measurementDefinitionVerified": { "const": true },
+        "protocolRef": { "type": "string", "minLength": 1 }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acutePain", "dizziness", "clinicianHold"],
+      "properties": {
+        "acutePain": { "type": "boolean" },
+        "dizziness": { "type": "boolean" },
+        "clinicianHold": { "type": "boolean" }
+      }
+    },
+    "measurements": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/measurement" }
+    },
+    "protocolCatalog": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/protocol" }
+    },
+    "calibration": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/calibration" }]
+    },
+    "engineeringAcceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approvalRef",
+        "frequencyTolerancePct",
+        "displacementTolerancePct",
+        "accelerationTolerancePct"
+      ],
+      "properties": {
+        "approvalRef": { "type": "string", "minLength": 1 },
+        "frequencyTolerancePct": { "type": "number", "exclusiveMinimum": 0 },
+        "displacementTolerancePct": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "accelerationTolerancePct": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "participantId",
+        "deviceId",
+        "measuredAt",
+        "qualityPassed",
+        "weightKg",
+        "bmi",
+        "bodyFatPct",
+        "fatMassKg",
+        "muscle"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "participantId": { "type": "string", "minLength": 1 },
+        "deviceId": { "type": "string", "minLength": 1 },
+        "measuredAt": { "type": "string", "format": "date-time" },
+        "qualityPassed": { "const": true },
+        "weightKg": { "type": "number", "exclusiveMinimum": 0 },
+        "bmi": { "type": "number", "exclusiveMinimum": 0 },
+        "bodyFatPct": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100
+        },
+        "fatMassKg": { "type": "number", "exclusiveMinimum": 0 },
+        "muscle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "method", "definitionRef", "massKg"],
+          "properties": {
+            "kind": { "enum": ["ASM", "SMM"] },
+            "method": { "enum": ["BIA", "DXA"] },
+            "definitionRef": { "type": "string", "minLength": 1 },
+            "massKg": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "deviceId",
+        "targetCategory",
+        "sourceRef",
+        "approvalId",
+        "platformMode",
+        "waveform",
+        "posture",
+        "frequencyHz",
+        "peakToPeakDisplacementMm",
+        "boutDurationSec",
+        "restDurationSec",
+        "bouts"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "deviceId": { "type": "string", "minLength": 1 },
+        "targetCategory": {
+          "enum": ["LOW", "NOT_LOW", "MIDDLE", "REFERENCE"]
+        },
+        "sourceRef": { "type": "string", "minLength": 1 },
+        "approvalId": { "type": "string", "minLength": 1 },
+        "platformMode": { "enum": ["VERTICAL", "SIDE_ALTERNATING"] },
+        "waveform": { "const": "SINUSOIDAL" },
+        "posture": { "type": "string", "minLength": 1 },
+        "frequencyHz": { "type": "number", "exclusiveMinimum": 0 },
+        "peakToPeakDisplacementMm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "boutDurationSec": { "type": "integer", "minimum": 1 },
+        "restDurationSec": { "type": "integer", "minimum": 1 },
+        "bouts": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "calibrationId",
+        "deviceId",
+        "validUntil",
+        "measuredFrequencyHz",
+        "measuredPeakToPeakDisplacementMm",
+        "measuredPeakAccelerationG"
+      ],
+      "properties": {
+        "calibrationId": { "type": "string", "minLength": 1 },
+        "deviceId": { "type": "string", "minLength": 1 },
+        "validUntil": { "type": "string", "format": "date-time" },
+        "measuredFrequencyHz": { "type": "number", "exclusiveMinimum": 0 },
+        "measuredPeakToPeakDisplacementMm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "measuredPeakAccelerationG": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    }
+  }
+}

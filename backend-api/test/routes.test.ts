@@ -32,7 +32,7 @@ async function request(path: string, body?: unknown, user = 'A', key?: string) {
   }, env);
 }
 const payload = { measurementIds: ['M1','M2','M3','M4'], sourceDeviceId: 'BIA', deviceId: 'SIM',
-  algorithmVersion: 'pilot-0.3.0', safety: { acutePain: false, dizziness: false, clinicianHold: false } };
+  algorithmVersion: 'pilot-0.6.0', safety: { acutePain: false, dizziness: false, clinicianHold: false } };
 async function authorize() {
   const r = await request('/v1/recommendations/authorize', payload);
   expect(r.status).toBe(201);
@@ -42,7 +42,7 @@ async function authorize() {
 
 beforeEach(async () => {
   db = new DatabaseSync(':memory:');
-  for (const name of ['0001_initial.sql','0002_measurements_and_rules.sql','0003_session_safety.sql','0004_feedback_adjustments.sql']) {
+  for (const name of ['0001_initial.sql','0002_measurements_and_rules.sql','0003_session_safety.sql','0004_feedback_adjustments.sql','0005_parameter_feedback.sql','0006_muscle_driven_rules.sql','0007_research_safety.sql']) {
     db.exec(readFileSync(new URL('../migrations/' + name, import.meta.url), 'utf8'));
   }
   const pinHash = await hashPin('987654', 'c3ludGhldGljLXNhbHQ');
@@ -53,6 +53,25 @@ beforeEach(async () => {
   for(let i=1;i<=4;i++) db.prepare(`INSERT INTO bia_measurements(id,participant_id,device_id,measured_at,quality_passed,weight_kg,bmi,body_fat_pct,fat_mass_kg,skeletal_muscle_mass_kg,raw_json) VALUES(?,?,?,?,1,45,20,25,11.25,18,'{}')`).run('M'+i,'A','BIA','2026-09-01T00:00:0'+i+'Z');
 });
 afterEach(() => db.close());
+
+it('does not issue any permit when physical mode is requested without calibration',async()=>{
+  env.DEVICE_MODE='real';
+  try {
+    const r=await request('/v1/recommendations/authorize',payload);
+    expect(r.status).toBe(409);
+    expect(await r.json()).toMatchObject({authorized:false,error:'CALIBRATION_REQUIRED',result:{realDeviceSendAllowed:false}});
+    expect(db.prepare('SELECT count(*) AS n FROM execution_authorizations').get()?.n).toBe(0);
+  } finally {env.DEVICE_MODE='mock';}
+});
+it('a strongly uncomfortable frequency prevents reuse of a previously issued permit',async()=>{
+  const earlier=await authorize();
+  const started=await request('/v1/device-sessions',await authorize(),'A','frequency-feedback-001');
+  const id=(await started.json() as {sessionId:string}).sessionId;
+  await request(`/v1/device-sessions/${id}/stop`,{reason:'completed'});
+  const feedback={sessionId:id,rpe:2,pain:0,dizziness:false,frequencyRating:'strong'};
+  expect(await (await request('/v1/session-feedback',feedback)).json()).toMatchObject({adjustment:{requiresReview:true,reasonCode:'FEEDBACK_HOLD'}});
+  expect((await request('/v1/device-sessions',earlier,'A','frequency-feedback-002')).status).toBe(409);
+});
 
 describe('authorization and session safety', () => {
   it('never returns another participant command for a reused key', async () => {
@@ -117,13 +136,16 @@ describe('authorization and session safety', () => {
 it('persists post-session feedback, reduces the next cap and does not compound a retry', async () => {
   const start = await request('/v1/device-sessions',await authorize(),'A','feedback-session-001');
   const id = (await start.json() as {sessionId:string}).sessionId;
-  const feedback = {sessionId:id,rpe:8,pain:0,dizziness:false};
+  const feedback = {sessionId:id,rpe:8,pain:0,dizziness:false,
+    intensityRating:'strong',durationRating:'suitable',frequencyRating:'weak'};
   expect((await request('/v1/session-feedback',feedback)).status).toBe(409);
   await request(`/v1/device-sessions/${id}/stop`,{reason:'completed'});
   const saved = await request('/v1/session-feedback',feedback);
-  expect(await saved.json()).toMatchObject({saved:true,adjustment:{intensityCap:38,requiresReview:false}});
-  expect(await (await request('/v1/session-feedback',feedback)).json()).toMatchObject({adjustment:{intensityCap:38}});
-  expect(await (await request('/v1/recommendations/authorize',payload)).json()).toMatchObject({result:{recommendation:{intensityPct:38}}});
+  expect(await saved.json()).toMatchObject({saved:true,adjustment:{intensityCap:45,requiresReview:false}});
+  expect(db.prepare('SELECT intensity_rating,duration_rating,frequency_rating FROM session_feedback WHERE session_id=?').get(id))
+    .toMatchObject({intensity_rating:'strong',duration_rating:'suitable',frequency_rating:'weak'});
+  expect(await (await request('/v1/session-feedback',feedback)).json()).toMatchObject({adjustment:{intensityCap:45}});
+  expect(await (await request('/v1/recommendations/authorize',payload)).json()).toMatchObject({result:{recommendation:{intensityPct:45}}});
   expect((await request('/v1/session-feedback',feedback,'B')).status).toBe(404);
 });
 it('pain feedback blocks another authorization and invalidates an earlier permit', async () => {

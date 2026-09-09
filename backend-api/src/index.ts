@@ -57,7 +57,14 @@ const feedbackSchema = z.object({
   rpe: z.number().int().min(0).max(10),
   pain: z.number().int().min(0).max(10),
   dizziness: z.boolean(),
+  intensityRating: z.enum(['weak', 'suitable', 'strong']).optional(),
+  durationRating: z.enum(['weak', 'suitable', 'strong']).optional(),
+  frequencyRating: z.enum(['weak', 'suitable', 'strong']).optional(),
   discomfort: z.string().max(500).nullable().optional(),
+  earlyStopped:z.boolean().optional(),
+  actualDurationSec:z.number().nonnegative().nullable().optional(),
+  measuredPeakG:z.number().nonnegative().nullable().optional(),
+  measuredRmsG:z.number().nonnegative().nullable().optional(),
 });
 
 const jsonBody = async (c: AppContext) => c.req.json().catch(() => null);
@@ -307,7 +314,7 @@ app.post('/v1/recommendations/authorize', async (c) => {
   const adjustment = await readFeedbackAdjustment(c, participantId);
   if (adjustment && result.recommendation) {
     if (adjustment.requiresReview || adjustment.intensityCap < ruleSet.output.minimumPct) {
-      result = {...result, status:'BLOCKED', recommendation:null, warnings:[...result.warnings, adjustment.reason]};
+      result = {...result, status:'BLOCKED', executionStatus:'BLOCKED', reasonCodes:[...result.reasonCodes,'FEEDBACK_HOLD'], recommendation:null, warnings:[...result.warnings, adjustment.reason]};
     } else {
       result = {...result, recommendation:{...result.recommendation, intensityPct:Math.min(result.recommendation.intensityPct, adjustment.intensityCap)}};
     }
@@ -351,6 +358,8 @@ app.post('/v1/recommendations/authorize', async (c) => {
     ),
   ]);
   if (result.status !== 'READY') return c.json({ authorized: false, recommendationId, result }, 409);
+  const mode = c.env.DEVICE_MODE ?? (c.env.REAL_DEVICE_ENABLED === 'true' ? 'real' : 'mock');
+  if (mode !== 'mock') return c.json({authorized:false, error:'CALIBRATION_REQUIRED', recommendationId, result},409);
   const authorizationId = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 60_000).toISOString();
   await c.env.DB.prepare(
@@ -358,7 +367,7 @@ app.post('/v1/recommendations/authorize', async (c) => {
       (id, participant_id, device_id, algorithm_version, recommendation_json, expires_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
   ).bind(authorizationId, participantId, parsed.data.deviceId, result.algorithmVersion, JSON.stringify(result), expiresAt).run();
-  return c.json({ authorized: true, authorizationId, recommendationId, expiresAt, result }, 201);
+  return c.json({ authorized: true, mode:'mock', authorizationId, recommendationId, expiresAt, result }, 201);
 });
 
 app.post('/v1/device-sessions', async (c) => {
@@ -470,7 +479,7 @@ app.post('/v1/device-sessions/:id/stop', async (c) => {
 async function readFeedbackAdjustment(c: AppContext, participantId: string) {
   const row = await c.env.DB.prepare('SELECT * FROM feedback_adjustments WHERE participant_id = ?').bind(participantId).first<Record<string,unknown>>();
   return row ? {intensityCap:Number(row.intensity_cap), requiresReview:Number(row.requires_review) === 1,
-    reason:String(row.reason), policyVersion:String(row.policy_version), sourceSessionId:String(row.source_session_id)} : null;
+    reason:String(row.reason), reasonCode:String(row.reason_code), policyVersion:String(row.policy_version), sourceSessionId:String(row.source_session_id)} : null;
 }
 app.get('/v1/feedback-adjustment', async c => {
   const participantId = await accessParticipantId(c);
@@ -486,21 +495,35 @@ app.post('/v1/session-feedback', async c => {
   if (!session) return c.json({error:'SESSION_NOT_FOUND'},404);
   if (!['STOPPED','COMPLETED'].includes(String(session.status))) return c.json({error:'SESSION_NOT_FINISHED'},409);
   const existing = await c.env.DB.prepare('SELECT * FROM session_feedback WHERE session_id=?').bind(session.id).first<Record<string,unknown>>();
+  const earlyStopped = session.status === 'STOPPED' || parsed.data.earlyStopped === true;
+  const execution = {earlyStopped, actualDurationSec:parsed.data.actualDurationSec ?? null,
+    measuredPeakG:parsed.data.measuredPeakG ?? null, measuredRmsG:parsed.data.measuredRmsG ?? null, source:'participant_report'};
   if (existing) {
-    if (existing.rpe !== parsed.data.rpe || existing.pain !== parsed.data.pain || Number(existing.dizziness) !== Number(parsed.data.dizziness) || (existing.discomfort ?? null) !== (parsed.data.discomfort ?? null)) return c.json({error:'FEEDBACK_ALREADY_SAVED'},409);
+    if (existing.execution_json && existing.execution_json !== JSON.stringify(execution)) return c.json({error:'FEEDBACK_ALREADY_SAVED'},409);
+    if (existing.rpe !== parsed.data.rpe || existing.pain !== parsed.data.pain || Number(existing.dizziness) !== Number(parsed.data.dizziness) ||
+      (existing.intensity_rating ?? null) !== (parsed.data.intensityRating ?? null) ||
+      (existing.duration_rating ?? null) !== (parsed.data.durationRating ?? null) ||
+      (existing.frequency_rating ?? null) !== (parsed.data.frequencyRating ?? null) ||
+      (existing.discomfort ?? null) !== (parsed.data.discomfort ?? null)) return c.json({error:'FEEDBACK_ALREADY_SAVED'},409);
     return c.json({saved:true,adjustment:await readFeedbackAdjustment(c,participantId)});
   }
   const commandRow = await c.env.DB.prepare('SELECT command_json FROM device_sessions WHERE id=?').bind(session.id).first<{command_json:string}>();
   const command = JSON.parse(commandRow!.command_json) as {intensityPct:number};
   const previous = await readFeedbackAdjustment(c,participantId);
-  const adjustment = feedbackAdjustment(parsed.data,command.intensityPct,previous?.intensityCap,previous?.requiresReview);
+  const adjustment = feedbackAdjustment({...parsed.data,earlyStopped},command.intensityPct,previous?.intensityCap,previous?.requiresReview);
   await c.env.DB.batch([
-    c.env.DB.prepare('INSERT INTO session_feedback(session_id,rpe,pain,dizziness,discomfort) VALUES(?,?,?,?,?)').bind(session.id,parsed.data.rpe,parsed.data.pain,Number(parsed.data.dizziness),parsed.data.discomfort ?? null),
+    c.env.DB.prepare(`INSERT INTO session_feedback(
+      session_id,rpe,pain,dizziness,intensity_rating,duration_rating,frequency_rating,discomfort,execution_json
+    ) VALUES(?,?,?,?,?,?,?,?,?)`).bind(
+      session.id,parsed.data.rpe,parsed.data.pain,Number(parsed.data.dizziness),
+      parsed.data.intensityRating ?? null,parsed.data.durationRating ?? null,
+      parsed.data.frequencyRating ?? null,parsed.data.discomfort ?? null,JSON.stringify(execution)),
     c.env.DB.prepare(`INSERT INTO feedback_adjustments(participant_id,source_session_id,intensity_cap,requires_review,reason,policy_version,updated_at) VALUES(?,?,?,?,?,?,?)
       ON CONFLICT(participant_id) DO UPDATE SET source_session_id=excluded.source_session_id,
       intensity_cap=MIN(feedback_adjustments.intensity_cap,excluded.intensity_cap),
       requires_review=MAX(feedback_adjustments.requires_review,excluded.requires_review),reason=excluded.reason,
       policy_version=excluded.policy_version,updated_at=excluded.updated_at`).bind(participantId,session.id,adjustment.intensityCap,Number(adjustment.requiresReview),adjustment.reason,adjustment.policyVersion,new Date().toISOString()),
+    c.env.DB.prepare('UPDATE feedback_adjustments SET reason_code=? WHERE participant_id=?').bind(adjustment.reasonCode,participantId),
   ]);
   return c.json({saved:true,adjustment:await readFeedbackAdjustment(c,participantId)});
 });
