@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'dart:convert';
-import '../models/session_feedback.dart';
+import '../models/models.dart';
 
 class FeedbackRepository {
   FeedbackRepository([this.dio]);
@@ -32,9 +32,9 @@ class FeedbackRepository {
       if (!_saved.containsKey(key)) {
         _mock[participantId] =
             (_mock[participantId] ?? const FeedbackAdjustment()).next(
-              feedback,
-              used,
-            );
+          feedback,
+          used,
+        );
         _saved[key] = serialized;
       }
       return _mock[participantId]!;

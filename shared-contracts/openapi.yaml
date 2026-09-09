@@ -101,6 +101,11 @@ paths:
                   minLength: 1
                   description: BIA measurement source device. Legacy callers may omit it to use deviceId. deviceId identifies the target simulator.
                 algorithmVersion: { type: string }
+                muscleMassBasis:
+                  type: string
+                  enum: [ASM, SMM]
+                  default: SMM
+                  description: Research-only interpretation of the provider's unverified skeletalMuscleMassKg field.
                 requestedIntensityPct:
                   type: integer
                   minimum: 1

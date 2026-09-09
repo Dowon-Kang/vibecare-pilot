@@ -67,6 +67,7 @@ class BackendDeviceGateway implements DeviceGateway {
         'deviceId': deviceId,
         'sourceDeviceId': sourceDeviceId,
         'algorithmVersion': result.algorithmVersion,
+        'muscleMassBasis': result.muscleAssessment?.basis.name.toUpperCase(),
         'requestedIntensityPct': intensityPct,
       },
     );

@@ -1,4 +1,3 @@
-import '../models/session_feedback.dart';
 import '../services/feedback_repository.dart';
 import 'dart:async';
 
@@ -65,6 +64,9 @@ class PilotState {
     this.snapshot,
     this.safety = const SafetyCheck(),
     this.result,
+    this.asmResult,
+    this.smmResult,
+    this.muscleMassBasis = MuscleMassBasis.smm,
     this.selectedIntensityPct,
     this.isIntensityManual = false,
     this.pendingAuthorization,
@@ -81,6 +83,9 @@ class PilotState {
   final MeasurementSnapshot? snapshot;
   final SafetyCheck safety;
   final AlgorithmResult? result;
+  final AlgorithmResult? asmResult;
+  final AlgorithmResult? smmResult;
+  final MuscleMassBasis muscleMassBasis;
   final int? selectedIntensityPct;
   final bool isIntensityManual;
   final DeviceAuthorization? pendingAuthorization;
@@ -103,6 +108,9 @@ class PilotState {
     Object? snapshot = _unset,
     SafetyCheck? safety,
     Object? result = _unset,
+    Object? asmResult = _unset,
+    Object? smmResult = _unset,
+    MuscleMassBasis? muscleMassBasis,
     Object? selectedIntensityPct = _unset,
     bool? isIntensityManual,
     Object? pendingAuthorization = _unset,
@@ -111,36 +119,44 @@ class PilotState {
     int? remainingSec,
     bool? isBusy,
     Object? error = _unset,
-  }) => PilotState(
-    feedbackSession: identical(feedbackSession, _unset)
-        ? this.feedbackSession
-        : feedbackSession as DeviceSession?,
-    feedbackAdjustment: feedbackAdjustment ?? this.feedbackAdjustment,
-    profile: identical(profile, _unset)
-        ? this.profile
-        : profile as ParticipantProfile?,
-    snapshot: identical(snapshot, _unset)
-        ? this.snapshot
-        : snapshot as MeasurementSnapshot?,
-    safety: safety ?? this.safety,
-    result: identical(result, _unset)
-        ? this.result
-        : result as AlgorithmResult?,
-    selectedIntensityPct: identical(selectedIntensityPct, _unset)
-        ? this.selectedIntensityPct
-        : selectedIntensityPct as int?,
-    isIntensityManual: isIntensityManual ?? this.isIntensityManual,
-    pendingAuthorization: identical(pendingAuthorization, _unset)
-        ? this.pendingAuthorization
-        : pendingAuthorization as DeviceAuthorization?,
-    deviceState: deviceState ?? this.deviceState,
-    session: identical(session, _unset)
-        ? this.session
-        : session as DeviceSession?,
-    remainingSec: remainingSec ?? this.remainingSec,
-    isBusy: isBusy ?? this.isBusy,
-    error: identical(error, _unset) ? this.error : error as String?,
-  );
+  }) =>
+      PilotState(
+        feedbackSession: identical(feedbackSession, _unset)
+            ? this.feedbackSession
+            : feedbackSession as DeviceSession?,
+        feedbackAdjustment: feedbackAdjustment ?? this.feedbackAdjustment,
+        profile: identical(profile, _unset)
+            ? this.profile
+            : profile as ParticipantProfile?,
+        snapshot: identical(snapshot, _unset)
+            ? this.snapshot
+            : snapshot as MeasurementSnapshot?,
+        safety: safety ?? this.safety,
+        result: identical(result, _unset)
+            ? this.result
+            : result as AlgorithmResult?,
+        asmResult: identical(asmResult, _unset)
+            ? this.asmResult
+            : asmResult as AlgorithmResult?,
+        smmResult: identical(smmResult, _unset)
+            ? this.smmResult
+            : smmResult as AlgorithmResult?,
+        muscleMassBasis: muscleMassBasis ?? this.muscleMassBasis,
+        selectedIntensityPct: identical(selectedIntensityPct, _unset)
+            ? this.selectedIntensityPct
+            : selectedIntensityPct as int?,
+        isIntensityManual: isIntensityManual ?? this.isIntensityManual,
+        pendingAuthorization: identical(pendingAuthorization, _unset)
+            ? this.pendingAuthorization
+            : pendingAuthorization as DeviceAuthorization?,
+        deviceState: deviceState ?? this.deviceState,
+        session: identical(session, _unset)
+            ? this.session
+            : session as DeviceSession?,
+        remainingSec: remainingSec ?? this.remainingSec,
+        isBusy: isBusy ?? this.isBusy,
+        error: identical(error, _unset) ? this.error : error as String?,
+      );
 }
 
 class PilotController extends Notifier<PilotState> {
@@ -148,6 +164,34 @@ class PilotController extends Notifier<PilotState> {
   Timer? _countdown;
   static const sourceDeviceId = 'FITRUS-PLUS-01';
   static const targetDeviceId = 'VIBECARE-SIM-01';
+
+  ({AlgorithmResult asm, AlgorithmResult smm}) _calculateBoth({
+    required ParticipantProfile profile,
+    required MeasurementSnapshot snapshot,
+    required SafetyCheck safety,
+    required FeedbackAdjustment adjustment,
+  }) {
+    AlgorithmResult calculate(MuscleMassBasis basis) => adjustment.apply(
+          calculateRecommendation(
+            profile: profile,
+            measurements: snapshot.selectedMeasurements,
+            safety: safety,
+            muscleMassBasis: basis,
+            ruleSet: snapshot.ruleSet,
+          ),
+          snapshot.ruleSet.minimumPct,
+        );
+    return (
+      asm: calculate(MuscleMassBasis.asm),
+      smm: calculate(MuscleMassBasis.smm),
+    );
+  }
+
+  AlgorithmResult _selectedResult(
+    ({AlgorithmResult asm, AlgorithmResult smm}) results,
+    MuscleMassBasis basis,
+  ) =>
+      basis == MuscleMassBasis.asm ? results.asm : results.smm;
 
   @override
   PilotState build() {
@@ -170,31 +214,28 @@ class PilotController extends Notifier<PilotState> {
           .read(authRepositoryProvider)
           .login(participantCode: participantCode, pin: pin);
       await ref.read(sessionStoreProvider).save(session);
-      final snapshot = await ref
-          .read(fitrusRepositoryProvider)
-          .loadSnapshot(
+      final snapshot = await ref.read(fitrusRepositoryProvider).loadSnapshot(
             participant: session.participant,
             deviceId: sourceDeviceId,
           );
       final adjustment = await ref
           .read(feedbackRepositoryProvider)
           .load(session.participant.id);
-      state = state.copyWith(feedbackAdjustment: adjustment);
-      final result = calculateRecommendation(
-        profile: session.participant,
-        measurements: snapshot.selectedMeasurements,
-        safety: const SafetyCheck(),
-        ruleSet: snapshot.ruleSet,
-      );
-      final adjustedResult = state.feedbackAdjustment.apply(
-        result,
-        snapshot.ruleSet.minimumPct,
-      );
-      state = state.copyWith(
+      final results = _calculateBoth(
         profile: session.participant,
         snapshot: snapshot,
-        result: adjustedResult,
-        selectedIntensityPct: adjustedResult.recommendation?.intensityPct,
+        safety: const SafetyCheck(),
+        adjustment: adjustment,
+      );
+      final selectedResult = _selectedResult(results, state.muscleMassBasis);
+      state = state.copyWith(
+        feedbackAdjustment: adjustment,
+        profile: session.participant,
+        snapshot: snapshot,
+        result: selectedResult,
+        asmResult: results.asm,
+        smmResult: results.smm,
+        selectedIntensityPct: selectedResult.recommendation?.intensityPct,
         isIntensityManual: false,
         pendingAuthorization: null,
         safety: const SafetyCheck(),
@@ -219,25 +260,22 @@ class PilotController extends Notifier<PilotState> {
       final snapshot = await ref
           .read(fitrusRepositoryProvider)
           .loadSnapshot(participant: profile, deviceId: sourceDeviceId);
-      state = state.copyWith(
-        feedbackAdjustment: await ref
-            .read(feedbackRepositoryProvider)
-            .load(profile.id),
-      );
-      final result = calculateRecommendation(
+      final adjustment =
+          await ref.read(feedbackRepositoryProvider).load(profile.id);
+      final results = _calculateBoth(
         profile: profile,
-        measurements: snapshot.selectedMeasurements,
-        safety: state.safety,
-        ruleSet: snapshot.ruleSet,
-      );
-      final adjustedResult = state.feedbackAdjustment.apply(
-        result,
-        snapshot.ruleSet.minimumPct,
-      );
-      state = state.copyWith(
         snapshot: snapshot,
-        result: adjustedResult,
-        selectedIntensityPct: adjustedResult.recommendation?.intensityPct,
+        safety: state.safety,
+        adjustment: adjustment,
+      );
+      final selectedResult = _selectedResult(results, state.muscleMassBasis);
+      state = state.copyWith(
+        feedbackAdjustment: adjustment,
+        snapshot: snapshot,
+        result: selectedResult,
+        asmResult: results.asm,
+        smmResult: results.smm,
+        selectedIntensityPct: selectedResult.recommendation?.intensityPct,
         isIntensityManual: false,
         pendingAuthorization: null,
         deviceState: DeviceConnectionState.disconnected,
@@ -262,20 +300,19 @@ class PilotController extends Notifier<PilotState> {
       dizziness: dizziness ?? state.safety.dizziness,
       clinicianHold: hold ?? state.safety.clinicianHold,
     );
-    final result = calculateRecommendation(
+    final results = _calculateBoth(
       profile: profile,
-      measurements: snapshot.selectedMeasurements,
+      snapshot: snapshot,
       safety: next,
-      ruleSet: snapshot.ruleSet,
+      adjustment: state.feedbackAdjustment,
     );
-    final adjustedResult = state.feedbackAdjustment.apply(
-      result,
-      snapshot.ruleSet.minimumPct,
-    );
+    final selectedResult = _selectedResult(results, state.muscleMassBasis);
     state = state.copyWith(
       safety: next,
-      result: adjustedResult,
-      selectedIntensityPct: adjustedResult.recommendation?.intensityPct,
+      result: selectedResult,
+      asmResult: results.asm,
+      smmResult: results.smm,
+      selectedIntensityPct: selectedResult.recommendation?.intensityPct,
       isIntensityManual: false,
       pendingAuthorization: null,
       deviceState: DeviceConnectionState.disconnected,
@@ -293,23 +330,40 @@ class PilotController extends Notifier<PilotState> {
       return;
     }
     final next = profile.copyWith(age: age?.clamp(18, 100), sex: sex);
-    final result = calculateRecommendation(
+    final results = _calculateBoth(
       profile: next,
-      measurements: snapshot.selectedMeasurements,
+      snapshot: snapshot,
       safety: state.safety,
-      ruleSet: snapshot.ruleSet,
+      adjustment: state.feedbackAdjustment,
     );
-    final adjustedResult = state.feedbackAdjustment.apply(
-      result,
-      snapshot.ruleSet.minimumPct,
-    );
+    final selectedResult = _selectedResult(results, state.muscleMassBasis);
     state = state.copyWith(
       profile: next,
-      result: adjustedResult,
-      selectedIntensityPct: adjustedResult.recommendation?.intensityPct,
+      result: selectedResult,
+      asmResult: results.asm,
+      smmResult: results.smm,
+      selectedIntensityPct: selectedResult.recommendation?.intensityPct,
       isIntensityManual: false,
       pendingAuthorization: null,
       deviceState: DeviceConnectionState.disconnected,
+    );
+  }
+
+  void selectMuscleMassBasis(MuscleMassBasis basis) {
+    if (state.isRunning || state.isBusy || state.feedbackSession != null) {
+      return;
+    }
+    final selected =
+        basis == MuscleMassBasis.asm ? state.asmResult : state.smmResult;
+    if (selected == null) return;
+    state = state.copyWith(
+      muscleMassBasis: basis,
+      result: selected,
+      selectedIntensityPct: selected.recommendation?.intensityPct,
+      isIntensityManual: false,
+      pendingAuthorization: null,
+      deviceState: DeviceConnectionState.disconnected,
+      error: null,
     );
   }
 
@@ -396,9 +450,8 @@ class PilotController extends Notifier<PilotState> {
     }
     state = state.copyWith(isBusy: true, error: null);
     try {
-      final session = await ref
-          .read(deviceGatewayProvider)
-          .start(authorization);
+      final session =
+          await ref.read(deviceGatewayProvider).start(authorization);
       state = state.copyWith(
         session: session,
         pendingAuthorization: null,
@@ -462,9 +515,7 @@ class PilotController extends Notifier<PilotState> {
     }
     state = state.copyWith(isBusy: true, error: null);
     try {
-      final adjustment = await ref
-          .read(feedbackRepositoryProvider)
-          .save(
+      final adjustment = await ref.read(feedbackRepositoryProvider).save(
             profile.id,
             finished.id,
             finished.command.intensityPct,
@@ -472,17 +523,19 @@ class PilotController extends Notifier<PilotState> {
               earlyStopped: _earlyStops[finished.id] ?? true,
             ),
           );
-      final base = calculateRecommendation(
+      final results = _calculateBoth(
         profile: profile,
-        measurements: snapshot.selectedMeasurements,
+        snapshot: snapshot,
         safety: const SafetyCheck(),
-        ruleSet: snapshot.ruleSet,
+        adjustment: adjustment,
       );
-      final result = adjustment.apply(base, snapshot.ruleSet.minimumPct);
+      final result = _selectedResult(results, state.muscleMassBasis);
       state = state.copyWith(
         feedbackSession: null,
         feedbackAdjustment: adjustment,
         result: result,
+        asmResult: results.asm,
+        smmResult: results.smm,
         selectedIntensityPct: result.recommendation?.intensityPct,
         isIntensityManual: false,
         safety: const SafetyCheck(),

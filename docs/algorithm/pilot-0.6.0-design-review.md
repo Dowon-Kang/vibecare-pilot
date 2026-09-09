@@ -19,7 +19,7 @@
 | 증상·BMI 게이트 | CONFIRMED | 세 calculate 함수 | BMI 18.5는 WBV 안전 임계값으로 검증되지 않음 |
 | 실제 출력 어댑터 있음 | 반증 CONFIRMED | index.ts device-sessions mode 검사; MockDeviceGateway | 서버는 real mode 501; 승인 endpoint는 그 전에 허가를 발급했던 불일치 |
 | 서버 규칙이 없으면 Dart가 실패함 | 반증 CONFIRMED | fitrus_repository.dart parseRuleSet | muscle 누락 시 로컬 기본값을 섞는 fallback 발견 |
-| 피드백이 세 변수에 독립 반영됨 | PARTIAL/CONFIRMED | feedback.ts; session_feedback.dart | 저장은 세 항목, 감산은 RPE만 사용; 시간/주파수 평가는 자동 조정 근거 아님 |
+| 피드백이 세 변수에 독립 반영됨 | PARTIAL/CONFIRMED | `backend-api/src/feedback.ts`; `mobile-app/lib/models/models.dart` | 저장은 세 항목, 감산은 RPE만 사용; 시간/주파수 평가는 자동 조정 근거 아님 |
 
 입력: profile(id, sex, age, heightCm), 정확히 4개 측정(id, participantId, deviceId, time, quality, kg/%, BMI), 증상 3문항, 버전 규칙. 출력: 평균, 연구 등급, 미리보기 T/f/I, 계산 상태, 실행 상태, 이유 코드, 버전. 원시 측정→파생 평균→미리보기→서버 허가→Mock 세션 경계가 있다.
 

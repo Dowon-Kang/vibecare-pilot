@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/pilot_controller.dart';
 import '../models/models.dart';
-import '../models/session_feedback.dart';
 import '../services/device_gateway.dart';
 import 'overview_card.dart';
 
@@ -52,80 +51,81 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   }
 
   Widget _login(PilotState state) => Scaffold(
-    body: SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const _BrandMark(),
-                const SizedBox(height: 22),
-                Text(
-                  '오늘의 진동 운동을\n안전하게 시작해요',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontSize: 28,
-                    height: 1.2,
-                  ),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _BrandMark(),
+                    const SizedBox(height: 22),
+                    Text(
+                      '오늘의 진동 운동을\n안전하게 시작해요',
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontSize: 28,
+                                height: 1.2,
+                              ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '최근 측정값을 확인하고 알맞은 강도로 장치에 전달합니다.',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: _participantCode,
+                      enabled: !state.isBusy,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: '참여자 코드',
+                        prefixIcon: Icon(Icons.badge_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _pin,
+                      enabled: !state.isBusy,
+                      obscureText: true,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      onSubmitted: (_) => _doLogin(),
+                      decoration: const InputDecoration(
+                        labelText: '6자리 PIN',
+                        prefixIcon: Icon(Icons.lock_outline),
+                      ),
+                    ),
+                    if (state.error != null) ...[
+                      _ErrorBanner(message: state.error!),
+                      const SizedBox(height: 12),
+                    ],
+                    FilledButton(
+                      onPressed: state.isBusy ? null : _doLogin,
+                      child: state.isBusy
+                          ? const SizedBox.square(
+                              dimension: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('로그인'),
+                    ),
+                    const SizedBox(height: 12),
+                    if (apiBaseUrl.isEmpty)
+                      const Text(
+                        '시연용 계정 · USER-001 / 123456\n현재 Mock 모드는 실제 진동을 발생시키지 않습니다.',
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  '최근 측정값을 확인하고 알맞은 강도로 장치에 전달합니다.',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: _participantCode,
-                  enabled: !state.isBusy,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: '참여자 코드',
-                    prefixIcon: Icon(Icons.badge_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _pin,
-                  enabled: !state.isBusy,
-                  obscureText: true,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  onSubmitted: (_) => _doLogin(),
-                  decoration: const InputDecoration(
-                    labelText: '6자리 PIN',
-                    prefixIcon: Icon(Icons.lock_outline),
-                  ),
-                ),
-                if (state.error != null) ...[
-                  _ErrorBanner(message: state.error!),
-                  const SizedBox(height: 12),
-                ],
-                FilledButton(
-                  onPressed: state.isBusy ? null : _doLogin,
-                  child: state.isBusy
-                      ? const SizedBox.square(
-                          dimension: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('로그인'),
-                ),
-                const SizedBox(height: 12),
-                if (apiBaseUrl.isEmpty)
-                  const Text(
-                    '시연용 계정 · USER-001 / 123456\n현재 Mock 모드는 실제 진동을 발생시키지 않습니다.',
-                  ),
-              ],
+              ),
             ),
           ),
         ),
-      ),
-    ),
-  );
+      );
 
   Future<void> _doLogin() => ref
       .read(pilotControllerProvider.notifier)
@@ -153,8 +153,8 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
             onPressed: state.isBusy || state.isRunning
                 ? null
                 : ref
-                      .read(pilotControllerProvider.notifier)
-                      .refreshMeasurements,
+                    .read(pilotControllerProvider.notifier)
+                    .refreshMeasurements,
             icon: const Icon(Icons.sync),
           ),
           IconButton(
@@ -189,6 +189,9 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                   onDetails: () => _showMeasurementDetails(snapshot),
                   onSettings: _showSettings,
                   onCommand: _showCalculationEvidence,
+                  onMuscleBasisChanged: ref
+                      .read(pilotControllerProvider.notifier)
+                      .selectMuscleMassBasis,
                 ),
               if (state.session == null && state.feedbackSession == null) ...[
                 const SizedBox(height: 8),
@@ -242,11 +245,9 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                   title: '사용한 원본 4건',
                   child: Column(
                     children: [
-                      for (
-                        var i = 0;
-                        i < currentSnapshot.selectedMeasurements.length;
-                        i++
-                      )
+                      for (var i = 0;
+                          i < currentSnapshot.selectedMeasurements.length;
+                          i++)
                         _MeasurementTile(
                           index: i + 1,
                           measurement: currentSnapshot.selectedMeasurements[i],
@@ -406,18 +407,18 @@ class _BrandMark extends StatelessWidget {
   const _BrandMark();
   @override
   Widget build(BuildContext context) => Align(
-    alignment: Alignment.centerLeft,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAF5F2),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: const Padding(
-        padding: EdgeInsets.all(12),
-        child: Icon(Icons.vibration, size: 30, color: Color(0xFF087F6B)),
-      ),
-    ),
-  );
+        alignment: Alignment.centerLeft,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0xFFEAF5F2),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Padding(
+            padding: EdgeInsets.all(12),
+            child: Icon(Icons.vibration, size: 30, color: Color(0xFF087F6B)),
+          ),
+        ),
+      );
 }
 
 class _SystemStatusStrip extends StatelessWidget {
@@ -430,81 +431,94 @@ class _SystemStatusStrip extends StatelessWidget {
     final deviceLabel = state.isRunning
         ? '시연 진행 중'
         : state.isTransmitted
-        ? '설정 준비됨'
-        : isMock
-        ? '장치 미연결'
-        : _deviceLabel(state.deviceState);
+            ? '설정 준비됨'
+            : isMock
+                ? '장치 미연결'
+                : _deviceLabel(state.deviceState);
     return Semantics(
       container: true,
       label: '데이터 ${isMock ? '샘플' : '동기화됨'}, 장치 $deviceLabel',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: _StatusItem(
-                icon: isMock
-                    ? Icons.science_outlined
-                    : Icons.cloud_done_outlined,
-                label: isMock ? '샘플 데이터' : '데이터 수신됨',
-              ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _StatusItem(
+              icon: isMock ? Icons.science_outlined : Icons.cloud_done_outlined,
+              label: isMock ? '샘플 데이터' : '데이터 수신됨',
+              positive: true,
             ),
-            Container(width: 1, height: 22, color: const Color(0xFFD1D1D6)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatusItem(
-                icon: state.isRunning
-                    ? Icons.vibration
-                    : state.isTransmitted
-                    ? Icons.check_circle_outline
-                    : Icons.portable_wifi_off,
-                label: deviceLabel,
-              ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _StatusItem(
+              icon: state.isRunning
+                  ? Icons.vibration
+                  : state.isTransmitted
+                      ? Icons.check_circle_outline
+                      : Icons.portable_wifi_off,
+              label: deviceLabel,
+              positive: state.isRunning || state.isTransmitted,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _StatusItem extends StatelessWidget {
-  const _StatusItem({required this.icon, required this.label});
+  const _StatusItem({
+    required this.icon,
+    required this.label,
+    required this.positive,
+  });
   final IconData icon;
   final String label;
+  final bool positive;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Icon(icon, size: 19, color: const Color(0xFF087F6B)),
-      const SizedBox(width: 7),
-      Flexible(
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+  Widget build(BuildContext context) => Container(
+        constraints: const BoxConstraints(minHeight: 38),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: positive ? const Color(0xFFE7F2EF) : const Color(0xFFEDEDF2),
+          borderRadius: BorderRadius.circular(19),
         ),
-      ),
-    ],
-  );
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 17,
+              color:
+                  positive ? const Color(0xFF087F6B) : const Color(0xFF6C6C70),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 String _deviceLabel(DeviceConnectionState state) => switch (state) {
-  DeviceConnectionState.connecting => '연결 중',
-  DeviceConnectionState.ready => '장치 준비됨',
-  DeviceConnectionState.authorized => '설정 준비됨',
-  DeviceConnectionState.starting => '시작 확인 중',
-  DeviceConnectionState.running => '실행 중',
-  DeviceConnectionState.stopping => '중지 확인 중',
-  DeviceConnectionState.completed => '사용 완료',
-  DeviceConnectionState.error => '연결 확인 필요',
-  DeviceConnectionState.disconnected => '장치 미연결',
-};
+      DeviceConnectionState.connecting => '연결 중',
+      DeviceConnectionState.ready => '장치 준비됨',
+      DeviceConnectionState.authorized => '설정 준비됨',
+      DeviceConnectionState.starting => '시작 확인 중',
+      DeviceConnectionState.running => '실행 중',
+      DeviceConnectionState.stopping => '중지 확인 중',
+      DeviceConnectionState.completed => '사용 완료',
+      DeviceConnectionState.error => '연결 확인 필요',
+      DeviceConnectionState.disconnected => '장치 미연결',
+    };
 
 class _RunningCard extends StatelessWidget {
   const _RunningCard({required this.state});
@@ -580,13 +594,13 @@ class _PulseDot extends StatelessWidget {
   const _PulseDot();
   @override
   Widget build(BuildContext context) => Container(
-    width: 12,
-    height: 12,
-    decoration: const BoxDecoration(
-      shape: BoxShape.circle,
-      color: Color(0xFF159570),
-    ),
-  );
+        width: 12,
+        height: 12,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Color(0xFF159570),
+        ),
+      );
 }
 
 class _FeedbackCard extends ConsumerStatefulWidget {
@@ -607,8 +621,7 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
-    final canSubmit =
-        _intensityRating != null &&
+    final canSubmit = _intensityRating != null &&
         _durationRating != null &&
         _frequencyRating != null &&
         _pain != null &&
@@ -688,22 +701,21 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
             FilledButton(
               key: const ValueKey('feedback-submit-button'),
               onPressed: canSubmit
-                  ? () => ref
-                        .read(pilotControllerProvider.notifier)
-                        .submitFeedback(
-                          SessionFeedback(
-                            rpe: switch (_intensityRating!) {
-                              FeedbackRating.weak => 2,
-                              FeedbackRating.suitable => 4,
-                              FeedbackRating.strong => 8,
-                            },
-                            pain: _pain!,
-                            dizziness: _dizziness!,
-                            intensityRating: _intensityRating!,
-                            durationRating: _durationRating!,
-                            frequencyRating: _frequencyRating!,
-                          ),
-                        )
+                  ? () =>
+                      ref.read(pilotControllerProvider.notifier).submitFeedback(
+                            SessionFeedback(
+                              rpe: switch (_intensityRating!) {
+                                FeedbackRating.weak => 2,
+                                FeedbackRating.suitable => 4,
+                                FeedbackRating.strong => 8,
+                              },
+                              pain: _pain!,
+                              dizziness: _dizziness!,
+                              intensityRating: _intensityRating!,
+                              durationRating: _durationRating!,
+                              frequencyRating: _frequencyRating!,
+                            ),
+                          )
                   : null,
               child: state.isBusy
                   ? const SizedBox.square(
@@ -738,36 +750,36 @@ class _FeedbackChoice<T extends Object> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 8),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 6),
-        SegmentedButton<T>(
-          segments: [
-            for (final entry in values.entries)
-              ButtonSegment(
-                value: entry.key,
-                label: Text(
-                  entry.value,
-                  key: ValueKey('feedback-$id-${entry.key}'),
-                ),
+        padding: const EdgeInsets.only(top: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            SegmentedButton<T>(
+              segments: [
+                for (final entry in values.entries)
+                  ButtonSegment(
+                    value: entry.key,
+                    label: Text(
+                      entry.value,
+                      key: ValueKey('feedback-$id-${entry.key}'),
+                    ),
+                  ),
+              ],
+              selected: selected == null ? <T>{} : {selected as T},
+              emptySelectionAllowed: true,
+              showSelectedIcon: true,
+              onSelectionChanged: (selection) {
+                if (selection.isNotEmpty) onChanged(selection.single);
+              },
+              style: ButtonStyle(
+                minimumSize: WidgetStateProperty.all(const Size(0, 46)),
               ),
+            ),
           ],
-          selected: selected == null ? <T>{} : {selected as T},
-          emptySelectionAllowed: true,
-          showSelectedIcon: true,
-          onSelectionChanged: (selection) {
-            if (selection.isNotEmpty) onChanged(selection.single);
-          },
-          style: ButtonStyle(
-            minimumSize: WidgetStateProperty.all(const Size(0, 46)),
-          ),
         ),
-      ],
-    ),
-  );
+      );
 }
 
 class _IntensityControlCard extends ConsumerWidget {
@@ -870,8 +882,7 @@ class _PrimaryActionBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(pilotControllerProvider.notifier);
-    final canSend =
-        state.result?.canRequestAuthorization == true &&
+    final canSend = state.result?.canRequestAuthorization == true &&
         state.selectedIntensityPct != null &&
         !state.isBusy;
     final VoidCallback? action;
@@ -890,10 +901,10 @@ class _PrimaryActionBar extends ConsumerWidget {
       label = state.isBusy
           ? '중지 확인 중…'
           : state.deviceState == DeviceConnectionState.error
-          ? '중지 다시 요청'
-          : apiBaseUrl.isEmpty
-          ? '시연 중지'
-          : '즉시 중지';
+              ? '중지 다시 요청'
+              : apiBaseUrl.isEmpty
+                  ? '시연 중지'
+                  : '즉시 중지';
       helper = '중지 응답이 확인될 때까지 실행 기록을 유지합니다.';
     } else if (state.isTransmitted) {
       action = state.isBusy ? null : controller.startSession;
@@ -908,15 +919,15 @@ class _PrimaryActionBar extends ConsumerWidget {
       label = state.isBusy
           ? '설정 보내는 중…'
           : apiBaseUrl.isEmpty
-          ? '시연 설정 준비하기'
-          : '장치로 설정 보내기';
+              ? '시연 설정 준비하기'
+              : '장치로 설정 보내기';
       helper = !state.safety.isComplete
           ? '오늘 상태 3문항에 모두 답해 주세요.'
           : state.result?.status == RecommendationStatus.ready
-          ? apiBaseUrl.isEmpty
-                ? '선택 강도 ${state.selectedIntensityPct ?? 0}% · 실제 출력 없음'
-                : '선택 강도 ${state.selectedIntensityPct ?? 0}%를 장치로 보냅니다.'
-          : '안전 검토가 끝나야 장치로 보낼 수 있습니다.';
+              ? apiBaseUrl.isEmpty
+                  ? '선택 강도 ${state.selectedIntensityPct ?? 0}% · 실제 출력 없음'
+                  : '선택 강도 ${state.selectedIntensityPct ?? 0}%를 장치로 보냅니다.'
+              : '안전 검토가 끝나야 장치로 보낼 수 있습니다.';
     }
 
     return Material(
@@ -943,8 +954,8 @@ class _PrimaryActionBar extends ConsumerWidget {
                   state.isRunning
                       ? 'stop-button'
                       : state.isTransmitted
-                      ? 'start-button'
-                      : 'send-button',
+                          ? 'start-button'
+                          : 'send-button',
                 ),
                 onPressed: action,
                 icon: state.isBusy && !state.isRunning
@@ -996,8 +1007,7 @@ class _ProfileSettings extends ConsumerWidget {
               children: [
                 IconButton.filledTonal(
                   key: const ValueKey('age-minus'),
-                  onPressed:
-                      apiBaseUrl.isNotEmpty ||
+                  onPressed: apiBaseUrl.isNotEmpty ||
                           state.isBusy ||
                           state.isRunning ||
                           profile.age <= 18
@@ -1018,8 +1028,7 @@ class _ProfileSettings extends ConsumerWidget {
                 ),
                 IconButton.filledTonal(
                   key: const ValueKey('age-plus'),
-                  onPressed:
-                      apiBaseUrl.isNotEmpty ||
+                  onPressed: apiBaseUrl.isNotEmpty ||
                           state.isBusy ||
                           state.isRunning ||
                           profile.age >= 100
@@ -1051,8 +1060,8 @@ class _ProfileSettings extends ConsumerWidget {
             selected: {profile.sex},
             onSelectionChanged:
                 apiBaseUrl.isNotEmpty || state.isBusy || state.isRunning
-                ? null
-                : (value) => controller.updateProfile(sex: value.single),
+                    ? null
+                    : (value) => controller.updateProfile(sex: value.single),
             showSelectedIcon: false,
             style: ButtonStyle(
               minimumSize: WidgetStateProperty.all(const Size(0, 48)),
@@ -1143,67 +1152,70 @@ class _SafetySettings extends ConsumerWidget {
     bool? value,
     ValueChanged<bool> onChanged,
   ) {
-    final choices = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final answer in [true, false])
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Semantics(
+    final choices = Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F0F4),
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final answer in [true, false])
+            Semantics(
               selected: value == answer,
-              child: OutlinedButton(
-                key: ValueKey('safety-$id-${answer ? 'yes' : 'no'}'),
-                onPressed: state.isBusy || state.isRunning
-                    ? null
-                    : () => onChanged(answer),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(58, 44),
-                  padding: const EdgeInsets.symmetric(horizontal: 9),
-                  backgroundColor: value == answer
-                      ? answer
+              child: SizedBox(
+                width: 66,
+                height: 38,
+                child: TextButton(
+                  key: ValueKey('safety-$id-${answer ? 'yes' : 'no'}'),
+                  onPressed: state.isBusy || state.isRunning
+                      ? null
+                      : () => onChanged(answer),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    backgroundColor: value == answer
+                        ? answer
                             ? Theme.of(context).colorScheme.errorContainer
-                            : const Color(0xFFE1F1EC)
-                      : const Color(0xFFF2F2F7),
-                  foregroundColor: value == answer && answer
-                      ? Theme.of(context).colorScheme.onErrorContainer
-                      : null,
-                  side: BorderSide.none,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(9),
+                            : Colors.white
+                        : Colors.transparent,
+                    foregroundColor: value == answer && answer
+                        ? Theme.of(context).colorScheme.onErrorContainer
+                        : value == answer
+                            ? const Color(0xFF087F6B)
+                            : const Color(0xFF6C6C70),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (value == answer) ...[
-                      const Icon(Icons.check, size: 17),
-                      const SizedBox(width: 3),
-                    ],
-                    Text(answer ? '예' : '아니요'),
-                  ],
+                  child: Text(
+                    answer ? '예' : '아니요',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
     return Padding(
       padding: const EdgeInsets.only(top: 5),
       child: LayoutBuilder(
         builder: (context, constraints) =>
             MediaQuery.textScalerOf(context).scale(16) > 21
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [Text(title), choices],
-              )
-            : Row(
-                children: [
-                  Expanded(
-                    child: Text(title, style: const TextStyle(fontSize: 16)),
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [Text(title), choices],
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child:
+                            Text(title, style: const TextStyle(fontSize: 16)),
+                      ),
+                      choices,
+                    ],
                   ),
-                  choices,
-                ],
-              ),
       ),
     );
   }
@@ -1215,21 +1227,21 @@ class _DetailSection extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.white,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-    clipBehavior: Clip.antiAlias,
-    child: Padding(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    ),
-  );
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 12),
+              child,
+            ],
+          ),
+        ),
+      );
 }
 
 class _MeasurementTile extends StatelessWidget {
@@ -1238,11 +1250,11 @@ class _MeasurementTile extends StatelessWidget {
   final BiaMeasurement measurement;
   @override
   Widget build(BuildContext context) => ExpansionTile(
-    tilePadding: EdgeInsets.zero,
-    title: Text('$index회 · ${_dateTime(measurement.measuredAt)}'),
-    subtitle: Text(measurement.deviceId),
-    children: [_MetricGrid(values: measurement.values)],
-  );
+        tilePadding: EdgeInsets.zero,
+        title: Text('$index회 · ${_dateTime(measurement.measuredAt)}'),
+        subtitle: Text(measurement.deviceId),
+        children: [_MetricGrid(values: measurement.values)],
+      );
 }
 
 class _MetricGrid extends StatelessWidget {
@@ -1250,39 +1262,39 @@ class _MetricGrid extends StatelessWidget {
   final BiaValues values;
   @override
   Widget build(BuildContext context) => Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: [
-      for (final entry in values.metrics.entries)
-        SizedBox(
-          width: 138,
-          child: Container(
-            padding: const EdgeInsets.all(11),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF2F2F7),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _metricLabel(entry.key),
-                  style: Theme.of(context).textTheme.bodySmall,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final entry in values.metrics.entries)
+            SizedBox(
+              width: 138,
+              child: Container(
+                padding: const EdgeInsets.all(11),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F2F7),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  entry.value == null
-                      ? '계산 불가'
-                      : '${_number(entry.value!)} ${_metricUnit(entry.key)}'
-                            .trim(),
-                  style: Theme.of(context).textTheme.titleMedium,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _metricLabel(entry.key),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      entry.value == null
+                          ? '계산 불가'
+                          : '${_number(entry.value!)} ${_metricUnit(entry.key)}'
+                              .trim(),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-    ],
-  );
+        ],
+      );
 }
 
 class _VitalsList extends StatelessWidget {
@@ -1290,26 +1302,26 @@ class _VitalsList extends StatelessWidget {
   final List<VitalMeasurement> items;
   @override
   Widget build(BuildContext context) => Column(
-    children: [
-      for (final item in items)
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.monitor_heart_outlined),
-          title: Text(_vitalLabel(item.kind)),
-          subtitle: Text(_dateTime(item.measuredAt)),
-          trailing: Text(
-            item.values.entries
-                .map(
-                  (entry) =>
-                      '${_number(entry.value)} ${item.units[entry.key] ?? ''}'
-                          .trim(),
-                )
-                .join(' / '),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ),
-    ],
-  );
+        children: [
+          for (final item in items)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.monitor_heart_outlined),
+              title: Text(_vitalLabel(item.kind)),
+              subtitle: Text(_dateTime(item.measuredAt)),
+              trailing: Text(
+                item.values.entries
+                    .map(
+                      (entry) =>
+                          '${_number(entry.value)} ${item.units[entry.key] ?? ''}'
+                              .trim(),
+                    )
+                    .join(' / '),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+        ],
+      );
 }
 
 class _ErrorBanner extends StatelessWidget {
@@ -1317,22 +1329,22 @@ class _ErrorBanner extends StatelessWidget {
   final String message;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.errorContainer,
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: Row(
-      children: [
-        Icon(
-          Icons.error_outline,
-          color: Theme.of(context).colorScheme.onErrorContainer,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(14),
         ),
-        const SizedBox(width: 10),
-        Expanded(child: Text(message)),
-      ],
-    ),
-  );
+        child: Row(
+          children: [
+            Icon(
+              Icons.error_outline,
+              color: Theme.of(context).colorScheme.onErrorContainer,
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
+          ],
+        ),
+      );
 }
 
 String _number(double value) =>
@@ -1376,9 +1388,9 @@ String _metricUnit(String key) =>
     '';
 
 String _vitalLabel(VitalKind kind) => switch (kind) {
-  VitalKind.bloodPressure => '혈압',
-  VitalKind.heartRate => '심박수',
-  VitalKind.stress => '스트레스',
-  VitalKind.stressV2 => '스트레스 2',
-  VitalKind.bodyTemperature => '체온',
-};
+      VitalKind.bloodPressure => '혈압',
+      VitalKind.heartRate => '심박수',
+      VitalKind.stress => '스트레스',
+      VitalKind.stressV2 => '스트레스 2',
+      VitalKind.bodyTemperature => '체온',
+    };

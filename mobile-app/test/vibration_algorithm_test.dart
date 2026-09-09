@@ -50,6 +50,26 @@ void main() {
     expect(result.recommendation?.intensityPct, 30);
   });
 
+  test('같은 필드를 ASM으로 해석하면 별도 추천을 계산한다', () {
+    final result = calculateRecommendation(
+      profile: const ParticipantProfile(
+        id: 'USER-001',
+        age: 72,
+        sex: ParticipantSex.female,
+        heightCm: 154,
+      ),
+      measurements: measurements,
+      safety: const SafetyCheck.confirmedClear(),
+      muscleMassBasis: MuscleMassBasis.asm,
+    );
+    expect(result.muscleAssessment?.basis, MuscleMassBasis.asm);
+    expect(result.muscleAssessment?.indexName, 'ASMI');
+    expect(result.muscleAssessment?.level, MuscleLevel.medium);
+    expect(result.recommendation?.frequencyHz, 16);
+    expect(result.recommendation?.durationSec, 240);
+    expect(result.recommendation?.intensityPct, 40);
+  });
+
   test('어지럼은 추천과 실행을 차단한다', () {
     final result = calculateRecommendation(
       profile: const ParticipantProfile(

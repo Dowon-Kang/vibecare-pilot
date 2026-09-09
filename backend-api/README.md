@@ -9,7 +9,7 @@ Flutter와 FITRUS·데이터베이스·기기 게이트웨이 사이의 보안 �
 ```powershell
 npm test
 npm run typecheck
-npx wrangler d1 migrations apply vibecare-dev --local --config cloudflare-local-runtime.jsonc
+npx wrangler d1 migrations apply vibecare-dev --local --config local-runtime.jsonc
 ```
 
 `.dev.vars.example`을 `.dev.vars`로 복사한 뒤 개발 전용 FITRUS 키와 32자 이상의 임의 `AUTH_TOKEN_SECRET`을 등록한다. 실제 비밀값은 Git에 추가하지 않는다.

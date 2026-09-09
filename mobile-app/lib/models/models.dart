@@ -4,6 +4,11 @@ enum RecommendationStatus { ready, review, blocked }
 
 enum MuscleLevel { low, medium, reference }
 
+/// How the vendor's ambiguous `skeletalMuscleMassKg` field is interpreted.
+///
+/// This is a research assumption until FITRUS confirms the field definition.
+enum MuscleMassBasis { asm, smm }
+
 enum VitalKind { bloodPressure, heartRate, stress, stressV2, bodyTemperature }
 
 class BodyFatRange {
@@ -135,27 +140,27 @@ class BiaValues {
   final double? visceralFatLevel;
 
   List<double> get requiredValues => [
-    weightKg,
-    bmi,
-    bodyFatPct,
-    fatMassKg,
-    skeletalMuscleMassKg,
-  ];
+        weightKg,
+        bmi,
+        bodyFatPct,
+        fatMassKg,
+        skeletalMuscleMassKg,
+      ];
 
   Map<String, double?> get metrics => {
-    'weightKg': weightKg,
-    'bmi': bmi,
-    'bodyFatPct': bodyFatPct,
-    'fatMassKg': fatMassKg,
-    'skeletalMuscleMassKg': skeletalMuscleMassKg,
-    'basalMetabolicRateKcal': basalMetabolicRateKcal,
-    'bodyWaterPct': bodyWaterPct,
-    'proteinKg': proteinKg,
-    'mineralKg': mineralKg,
-    'ecwRatio': ecwRatio,
-    'waistCm': waistCm,
-    'visceralFatLevel': visceralFatLevel,
-  };
+        'weightKg': weightKg,
+        'bmi': bmi,
+        'bodyFatPct': bodyFatPct,
+        'fatMassKg': fatMassKg,
+        'skeletalMuscleMassKg': skeletalMuscleMassKg,
+        'basalMetabolicRateKcal': basalMetabolicRateKcal,
+        'bodyWaterPct': bodyWaterPct,
+        'proteinKg': proteinKg,
+        'mineralKg': mineralKg,
+        'ecwRatio': ecwRatio,
+        'waistCm': waistCm,
+        'visceralFatLevel': visceralFatLevel,
+      };
 }
 
 class BiaMeasurement {
@@ -211,9 +216,9 @@ class MeasurementSnapshot {
 class SafetyCheck {
   const SafetyCheck({this.acutePain, this.dizziness, this.clinicianHold});
   const SafetyCheck.confirmedClear()
-    : acutePain = false,
-      dizziness = false,
-      clinicianHold = false;
+      : acutePain = false,
+        dizziness = false,
+        clinicianHold = false;
 
   final bool? acutePain;
   final bool? dizziness;
@@ -223,10 +228,10 @@ class SafetyCheck {
   bool get hasSymptoms =>
       acutePain == true || dizziness == true || clinicianHold == true;
   int get answeredCount => [
-    acutePain,
-    dizziness,
-    clinicianHold,
-  ].where((value) => value != null).length;
+        acutePain,
+        dizziness,
+        clinicianHold,
+      ].where((value) => value != null).length;
 }
 
 class Adjustment {
@@ -257,7 +262,8 @@ class Recommendation {
 
 class MuscleAssessment {
   const MuscleAssessment({
-    required this.totalSmmi,
+    required this.basis,
+    required this.indexKgM2,
     required this.level,
     required this.meanSkeletalMuscleMassKg,
     this.sdKg = 0,
@@ -267,7 +273,11 @@ class MuscleAssessment {
     this.unstable = false,
   });
 
-  final double totalSmmi;
+  final MuscleMassBasis basis;
+  final double indexKgM2;
+  // Compatibility alias for older callers. Prefer [indexKgM2].
+  double get totalSmmi => indexKgM2;
+  String get indexName => basis == MuscleMassBasis.asm ? 'ASMI' : 'SMMI';
   final MuscleLevel level;
   final double meanSkeletalMuscleMassKg;
   final double sdKg, cvPct, minimumKg, maximumKg;
@@ -299,28 +309,176 @@ class AlgorithmResult {
   // READY is only eligibility for a simulated session, never a physical permit.
   bool get realDeviceSendAllowed => false;
   Map<String, String> get evidence => const {
-    'muscleIndex': 'INDIRECT',
-    'thresholds': 'INDIRECT',
-    'protocol': 'PILOT',
-    'averaging': 'PILOT',
-    'boundaryReview': 'PILOT',
-    'physicalEquation': 'EVIDENCE',
-  };
+        'muscleIndex': 'INDIRECT',
+        'thresholds': 'INDIRECT',
+        'protocol': 'PILOT',
+        'averaging': 'PILOT',
+        'boundaryReview': 'PILOT',
+        'physicalEquation': 'EVIDENCE',
+      };
   String get executionStatus => status == RecommendationStatus.blocked
       ? 'BLOCKED'
       : measurementIds.length != 4
-      ? 'INSUFFICIENT_DATA'
-      : status == RecommendationStatus.review
-      ? 'REVIEW'
-      : 'CALIBRATION_REQUIRED';
+          ? 'INSUFFICIENT_DATA'
+          : status == RecommendationStatus.review
+              ? 'REVIEW'
+              : 'CALIBRATION_REQUIRED';
   List<String> get reasonCodes => [
-    if (status == RecommendationStatus.blocked) 'SAFETY_HOLD',
-    if (measurementIds.length != 4) 'INSUFFICIENT_DATA',
-    if (status == RecommendationStatus.review) 'INPUT_OR_SAFETY_REVIEW',
-    if (muscleAssessment?.unstable == true) 'MUSCLE_TIER_UNSTABLE',
-    'SMM_DEFINITION_UNVERIFIED',
-    'PILOT_PROTOCOL',
-    'CALIBRATION_REQUIRED',
-    'SIMULATION_ONLY',
-  ];
+        if (status == RecommendationStatus.blocked) 'SAFETY_HOLD',
+        if (measurementIds.length != 4) 'INSUFFICIENT_DATA',
+        if (status == RecommendationStatus.review) 'INPUT_OR_SAFETY_REVIEW',
+        if (muscleAssessment?.unstable == true) 'MUSCLE_TIER_UNSTABLE',
+        'MUSCLE_DEFINITION_UNVERIFIED',
+        'PILOT_PROTOCOL',
+        'CALIBRATION_REQUIRED',
+        'SIMULATION_ONLY',
+      ];
+}
+
+enum FeedbackRating { weak, suitable, strong }
+
+class SessionFeedback {
+  const SessionFeedback({
+    required this.rpe,
+    required this.pain,
+    required this.dizziness,
+    required this.intensityRating,
+    required this.durationRating,
+    required this.frequencyRating,
+    this.discomfort = '',
+    this.earlyStopped = false,
+    this.actualDurationSec,
+    this.measuredPeakG,
+    this.measuredRmsG,
+  });
+
+  final int rpe, pain;
+  final bool dizziness;
+  final FeedbackRating intensityRating;
+  final FeedbackRating durationRating;
+  final FeedbackRating frequencyRating;
+  final String discomfort;
+  final bool earlyStopped;
+  final double? actualDurationSec, measuredPeakG, measuredRmsG;
+
+  SessionFeedback withExecution({required bool earlyStopped}) =>
+      SessionFeedback(
+        rpe: rpe,
+        pain: pain,
+        dizziness: dizziness,
+        intensityRating: intensityRating,
+        durationRating: durationRating,
+        frequencyRating: frequencyRating,
+        discomfort: discomfort,
+        earlyStopped: earlyStopped,
+        actualDurationSec: actualDurationSec,
+        measuredPeakG: measuredPeakG,
+        measuredRmsG: measuredRmsG,
+      );
+
+  Map<String, Object?> toJson(String sessionId) => {
+        'sessionId': sessionId,
+        'rpe': rpe,
+        'pain': pain,
+        'dizziness': dizziness,
+        'intensityRating': intensityRating.name,
+        'durationRating': durationRating.name,
+        'frequencyRating': frequencyRating.name,
+        'discomfort': discomfort,
+        'earlyStopped': earlyStopped,
+        'actualDurationSec': actualDurationSec,
+        'measuredPeakG': measuredPeakG,
+        'measuredRmsG': measuredRmsG,
+      };
+}
+
+class FeedbackAdjustment {
+  const FeedbackAdjustment({
+    this.intensityCap,
+    this.requiresReview = false,
+    this.reason = '측정값에 따라 자동 계산합니다.',
+    this.reasonCode = 'FEEDBACK_MAINTAINED',
+    this.policyVersion = 'feedback-0.2.0',
+  });
+
+  final int? intensityCap;
+  final bool requiresReview;
+  final String reason;
+  final String reasonCode, policyVersion;
+
+  static FeedbackAdjustment fromJson(Map<String, dynamic>? json) => json == null
+      ? const FeedbackAdjustment()
+      : FeedbackAdjustment(
+          intensityCap: json['intensityCap'] as int,
+          requiresReview: json['requiresReview'] as bool,
+          reason: json['reason'] as String,
+          reasonCode: json['reasonCode'] as String? ?? 'LEGACY_POLICY',
+          policyVersion: json['policyVersion'] as String? ?? 'feedback-0.1.0',
+        );
+
+  FeedbackAdjustment next(SessionFeedback feedback, int usedIntensity) {
+    if (feedback.rpe < 0 ||
+        feedback.rpe > 10 ||
+        feedback.pain < 0 ||
+        feedback.pain > 10) {
+      throw ArgumentError('설문 범위 오류');
+    }
+    final reduce =
+        feedback.rpe >= 7 || feedback.intensityRating == FeedbackRating.strong;
+    final candidate = reduce ? (usedIntensity * .9).floor() : usedIntensity;
+    final cap = intensityCap == null || candidate < intensityCap!
+        ? candidate
+        : intensityCap!;
+    final hold = requiresReview ||
+        feedback.pain > 0 ||
+        feedback.dizziness ||
+        feedback.earlyStopped ||
+        feedback.durationRating == FeedbackRating.strong ||
+        feedback.frequencyRating == FeedbackRating.strong;
+    return FeedbackAdjustment(
+      intensityCap: cap,
+      requiresReview: hold,
+      reasonCode: hold
+          ? 'FEEDBACK_HOLD'
+          : reduce
+              ? 'FEEDBACK_INTENSITY_REDUCED'
+              : 'FEEDBACK_MAINTAINED',
+      reason: hold
+          ? '증상·중단 또는 시간·주파수 불편 보고가 있어 담당자 확인 전 사용을 보류합니다.'
+          : reduce
+              ? '지난 사용이 힘들었다는 응답을 반영해 강도를 10% 낮춰습니다.'
+              : '지난 사용 강도를 유지합니다. 자동으로 높이지 않습니다.',
+    );
+  }
+
+  AlgorithmResult apply(AlgorithmResult result, double minimum) {
+    final recommendation = result.recommendation;
+    if (recommendation == null) return result;
+    final hold =
+        requiresReview || (intensityCap != null && intensityCap! < minimum);
+    final intensity =
+        intensityCap == null || recommendation.intensityPct < intensityCap!
+            ? recommendation.intensityPct
+            : intensityCap!;
+    return AlgorithmResult(
+      status: hold ? RecommendationStatus.blocked : result.status,
+      average: result.average,
+      warnings: [
+        ...result.warnings,
+        if (intensityCap != null)
+          hold && !requiresReview ? '설문 반영 강도가 허용 최저값보다 낮아 사용을 보류합니다.' : reason,
+      ],
+      adjustments: result.adjustments,
+      recommendation: hold
+          ? null
+          : Recommendation(
+              durationSec: recommendation.durationSec,
+              frequencyHz: recommendation.frequencyHz,
+              intensityPct: intensity,
+            ),
+      algorithmVersion: result.algorithmVersion,
+      muscleAssessment: result.muscleAssessment,
+      measurementIds: result.measurementIds,
+    );
+  }
 }

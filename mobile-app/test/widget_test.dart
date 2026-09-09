@@ -40,6 +40,18 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('ASM과 SMM 해석 결과를 보고 선택하면 추천이 바뀐다', (tester) async {
+    _size(tester, const Size(390, 844));
+    await _login(tester);
+    expect(find.text('50%'), findsOneWidget);
+    await _tap(tester, 'muscle-basis-asm');
+    expect(find.text('40%'), findsWidgets);
+    expect(find.textContaining('ASMI'), findsWidgets);
+    await _tap(tester, 'muscle-basis-smm');
+    expect(find.text('50%'), findsOneWidget);
+    expect(find.textContaining('SMMI'), findsWidgets);
+  });
+
   testWidgets('세 질문에 직접 답한 후 명령 준비, 시작, 중지가 가능하다', (tester) async {
     _size(tester, const Size(390, 844));
     await _login(tester);

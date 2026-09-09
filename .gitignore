@@ -54,6 +54,7 @@ next-env.d.ts
 
 # Codex local work log; product evidence belongs in docs/evidence.
 /state/
+/.local-archive/
 
 # Local secret notes must never be committed.
 *.local.txt

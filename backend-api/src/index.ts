@@ -37,6 +37,7 @@ const authorizeSchema = z.object({
   deviceId: z.string().min(1),
   sourceDeviceId: z.string().min(1).optional(),
   algorithmVersion: z.string().min(1),
+  muscleMassBasis: z.enum(['ASM', 'SMM']).default('SMM'),
   requestedIntensityPct: z.number().int().min(1).max(100).optional(),
 });
 const fitrusKindSchema = z.enum([
@@ -309,6 +310,7 @@ app.post('/v1/recommendations/authorize', async (c) => {
     },
     measurements: rows.results.map(canonicalMeasurement),
     safety: parsed.data.safety,
+    muscleMassBasis: parsed.data.muscleMassBasis,
     ruleSet,
   });
   const adjustment = await readFeedbackAdjustment(c, participantId);

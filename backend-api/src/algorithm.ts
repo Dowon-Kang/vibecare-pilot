@@ -2,6 +2,7 @@ import { ruleSchema } from './rule-schema';
 import { muscleResearch, executionStatus, researchReasons, evidenceLabels, type ExecutionStatus } from '../../shared-contracts/muscle-research';
 
 export type Sex = 'female' | 'male';
+export type MuscleMassBasis = 'ASM' | 'SMM';
 
 export type CanonicalMeasurement = {
   id: string;
@@ -19,6 +20,7 @@ export type AlgorithmInput = {
   profile: { participantId: string; age: number; sex: Sex; heightCm: number };
   measurements: CanonicalMeasurement[];
   safety: { acutePain: boolean; dizziness: boolean; clinicianHold: boolean };
+  muscleMassBasis?: MuscleMassBasis;
   ruleSet?: AlgorithmRuleSet;
 };
 
@@ -77,6 +79,7 @@ export type RecommendationResult = {
   realDeviceSendAllowed: false;
   reasonCodes: string[];
   evidence: typeof evidenceLabels;
+  muscleMassBasis: MuscleMassBasis;
   muscleStatistics: ReturnType<typeof muscleResearch>['statistics'] | null;
   status: 'READY' | 'REVIEW' | 'BLOCKED';
   average: null | {
@@ -102,6 +105,7 @@ const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0)
 
 export function calculateRecommendation(input: AlgorithmInput): RecommendationResult {
   const { profile, measurements, safety } = input;
+  const muscleMassBasis = input.muscleMassBasis ?? 'SMM';
   const ruleSet = input.ruleSet ?? defaultRuleSet;
   const warnings: string[] = [];
   if (!ruleSchema.safeParse(ruleSet).success) warnings.push('사용 가능한 유효한 계산 규칙이 없습니다.');
@@ -161,6 +165,7 @@ export function calculateRecommendation(input: AlgorithmInput): RecommendationRe
       realDeviceSendAllowed: false,
       reasonCodes: researchReasons(safetyWarnings.length ? 'BLOCKED' : 'REVIEW', measurements.length),
       evidence: evidenceLabels, muscleStatistics: null,
+      muscleMassBasis,
       status: safetyWarnings.length ? 'BLOCKED' : 'REVIEW',
       average,
       recommendation: null,
@@ -172,8 +177,19 @@ export function calculateRecommendation(input: AlgorithmInput): RecommendationRe
   }
 
   const thresholds = ruleSet.muscle[profile.sex];
-  const assessment = muscleResearch(measurements.map(m=>m.skeletalMuscleMassKg), profile.heightCm, thresholds);
-  const {totalSmmi, level} = assessment;
+  const muscleValues = measurements.map(m=>m.skeletalMuscleMassKg);
+  const assessment = muscleResearch(muscleValues, profile.heightCm, thresholds);
+  const {totalSmmi} = assessment;
+  // AWGS 2025 height-adjusted ASM cut-offs for BIA. This branch remains an
+  // explicit assumption until the provider confirms that its field is ASM.
+  const asmCutoff = profile.sex === 'female' ? 5.7 : profile.age >= 65 ? 7.0 : 7.6;
+  const level: 'low' | 'medium' | 'reference' = muscleMassBasis === 'ASM'
+    ? totalSmmi < asmCutoff ? 'low' : 'medium'
+    : assessment.level;
+  const heightSquared = (profile.heightCm / 100) ** 2;
+  const unstable = muscleMassBasis === 'ASM'
+    ? new Set(muscleValues.map(value => value / heightSquared < asmCutoff ? 'low' : 'medium')).size > 1
+    : assessment.unstable;
   const protocol = ruleSet.muscle.protocols[level];
   const ageFactor = profile.age >= ruleSet.age.threshold ? ruleSet.age.factor : 1;
   const intensityPct = Math.round(Math.min(
@@ -187,14 +203,14 @@ export function calculateRecommendation(input: AlgorithmInput): RecommendationRe
     ...(!safetyComplete ? ['안전 문진을 완료해 주세요.'] : []),
     ...(mean(measurements.map(m=>m.bmi)) < 18.5 ? ['평균 BMI가 18.5 미만이므로 전문가 검토가 필요합니다.'] : []),
     ...(profile.age < 60 ? ['60세 이상 연구 대상 범위 밖입니다.'] : []),
-    ...(assessment.unstable ? ['반복 측정의 근육지수 등급이 달라 재측정과 검토가 필요합니다.'] : []),
+    ...(unstable ? ['반복 측정의 근육지수 등급이 달라 재측정과 검토가 필요합니다.'] : []),
   ];
 
   return {
     status: reviewWarnings.length ? 'REVIEW' : 'READY',
     executionStatus: executionStatus(reviewWarnings.length ? 'REVIEW' : 'READY', measurements.length),
     realDeviceSendAllowed: false,
-    reasonCodes: researchReasons(reviewWarnings.length ? 'REVIEW' : 'READY', measurements.length, assessment.unstable),
+    reasonCodes: researchReasons(reviewWarnings.length ? 'REVIEW' : 'READY', measurements.length, unstable),
     evidence: evidenceLabels, muscleStatistics: assessment.statistics,
     average,
     recommendation: {
@@ -203,6 +219,7 @@ export function calculateRecommendation(input: AlgorithmInput): RecommendationRe
       intensityPct,
     },
     factors: { age: ageFactor, muscleProtocol: protocol.intensityPct / ruleSet.base.intensityPct },
+    muscleMassBasis,
     muscleAssessment: { totalSmmi, level },
     warnings: reviewWarnings,
     algorithmVersion: ruleSet.version,

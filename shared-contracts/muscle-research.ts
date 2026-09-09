@@ -31,5 +31,5 @@ export function researchReasons(status:'READY'|'REVIEW'|'BLOCKED', count:number,
     ...(count!==4 ? ['INSUFFICIENT_DATA'] : []),
     ...(status==='REVIEW' ? ['INPUT_OR_SAFETY_REVIEW'] : []),
     ...(unstable ? ['MUSCLE_TIER_UNSTABLE'] : []),
-    'SMM_DEFINITION_UNVERIFIED','PILOT_PROTOCOL','CALIBRATION_REQUIRED','SIMULATION_ONLY'];
+    'MUSCLE_DEFINITION_UNVERIFIED','PILOT_PROTOCOL','CALIBRATION_REQUIRED','SIMULATION_ONLY'];
 }

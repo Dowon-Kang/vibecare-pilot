@@ -54,6 +54,18 @@ describe('pilot-0.6.0 muscle-driven parity', () => {
     expect(result.recommendation).toEqual({durationSec: 180, frequencyHz: 12, intensityPct: 30});
   });
 
+  it('calculates the explicit ASM interpretation independently from SMM', () => {
+    const result = calculateRecommendation({
+      profile: { participantId: 'USER-001', age: 72, sex: 'female', heightCm: 154 },
+      measurements,
+      safety,
+      muscleMassBasis: 'ASM',
+    });
+    expect(result.muscleMassBasis).toBe('ASM');
+    expect(result.muscleAssessment).toEqual({totalSmmi: 7.63, level: 'medium'});
+    expect(result.recommendation).toEqual({durationSec: 240, frequencyHz: 16, intensityPct: 40});
+  });
+
   it('blocks dizziness before making a recommendation', () => {
     const result = calculateRecommendation({
       profile: { participantId: 'USER-001', age: 72, sex: 'female', heightCm: 154 },

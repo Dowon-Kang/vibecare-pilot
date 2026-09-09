@@ -6,9 +6,9 @@
 ## A. 저장소 품질 게이트
 
 - [x] 공개 문서 진입점: `docs/README.md`
-- [x] GitHub Actions: 웹 lint/build, 백엔드 typecheck/test, Flutter analyze/test, TS/Dart 동등성
+- [x] GitHub Actions: 백엔드 typecheck/test, Flutter analyze/test
 - [x] 실제 환경값 제외: `.env*`, `.dev.vars`, `*.local.txt`, 로컬 상태·빌드 산출물 ignore
-- [x] 패키지 버전 잠금: 루트·백엔드 `package-lock.json`, Flutter `pubspec.lock`
+- [x] 패키지 버전 잠금: 백엔드 `package-lock.json`, Flutter `pubspec.lock`
 - [x] AWS 인계 범위와 미구현 항목 분리
 - [ ] 원격 GitHub Actions 최초 실행 결과 확인
 - [ ] branch protection에서 `quality-gates` 필수화
@@ -17,15 +17,13 @@
 
 | 검사 | 마지막 결과 | 합격 기준 |
 |---|---:|---:|
-| 백엔드 전체 Vitest | 1,192/1,192 | 실패 0 |
-| Flutter 전체 테스트 | 295/295 | 실패 0 |
-| 적응 선택기 TS/Dart | 932/932 전체 JSON 일치 | 불일치 0 |
+| 백엔드 전체 Vitest | 49/49 통과 | 실패 0 |
+| Flutter 전체 테스트 | 정리 후 재검증 필요 | 실패 0 |
 | 백엔드 TypeScript | 통과 | 오류 0 |
-| 프로젝트 lint | 통과 | 오류 0 |
-| Flutter analyze | 통과 | 오류 0 |
-| JSON Schema | 두 스키마 유효, 정상 fixture 적합 | 오류 0 |
+| Flutter analyze | 남은 `lib/`·`test/` 오류 0 | 오류 0 |
+| API 계약 | OpenAPI·핵심 JSON Schema 유지 | 참조 오류 0 |
 
-수치는 [최신 알고리즘 검증 문서](docs/algorithm/adaptive-research-v2.md)의 실행 기록 기준이다. 임상 안전성 수치가 아니다.
+수치는 실행한 자동 검사 기준이며 임상 안전성 수치가 아니다.
 
 ## C. 데이터와 FITRUS
 
@@ -46,13 +44,10 @@
 - [x] 평균·표본 SD·CV·최솟값·최댓값 계산
 - [x] ASM/ASMI와 SMM/SMMI 분리, 상호 변환 금지
 - [x] 현재/과거 통증·어지럼·사용보류 실패 폐쇄
-- [x] 참여자·장치·정책·현재 단계·이력 완전성·시각 검사
-- [x] 상향/하향 모두 명시적 1단계 전이와 독립 검토 요구
-- [x] 정현파 peak/RMS 계산과 주파수 제곱·변위 선형성 검사
-- [x] 모든 연구 출력 `command=null`, `realDeviceSendAllowed=false`
+- [x] ASM/SMM 두 해석을 동시 계산하고 선택 즉시 추천 갱신
+- [x] 실장비 허가 `realDeviceSendAllowed=false`
 - [ ] FITRUS 정의 동등성 검증
 - [ ] 신뢰된 정책·이력 Repository와 안전보류 해제 감사
-- [ ] 앱/API에 최신 연구 모듈을 Mock 전용으로 연결
 - [ ] 근육량→특정 시간·Hz·물리량의 전향 검증
 - [ ] 나이·성별·체지방 개인화 계수의 추정·외부 검증
 

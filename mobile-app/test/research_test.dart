@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibecare_pilot/algorithm/vibration_algorithm.dart';
 import 'package:vibecare_pilot/models/models.dart';
-import 'package:vibecare_pilot/models/session_feedback.dart';
 import 'package:vibecare_pilot/services/feedback_repository.dart';
 import 'package:vibecare_pilot/services/mock_device_gateway.dart';
 
@@ -107,19 +106,19 @@ void main() {
 }
 
 List<BiaMeasurement> rows(List<double> masses, double bmi) => [
-  for (var i = 0; i < masses.length; i++)
-    BiaMeasurement(
-      id: 'M$i',
-      participantId: 'TEST',
-      deviceId: 'BIA',
-      measuredAt: DateTime.utc(2026, 9, 1),
-      qualityPassed: true,
-      values: BiaValues(
-        weightKg: bmi * 4,
-        bmi: bmi,
-        bodyFatPct: 25,
-        fatMassKg: bmi,
-        skeletalMuscleMassKg: masses[i],
-      ),
-    ),
-];
+      for (var i = 0; i < masses.length; i++)
+        BiaMeasurement(
+          id: 'M$i',
+          participantId: 'TEST',
+          deviceId: 'BIA',
+          measuredAt: DateTime.utc(2026, 9, 1),
+          qualityPassed: true,
+          values: BiaValues(
+            weightKg: bmi * 4,
+            bmi: bmi,
+            bodyFatPct: 25,
+            fatMassKg: bmi,
+            skeletalMuscleMassKg: masses[i],
+          ),
+        ),
+    ];
