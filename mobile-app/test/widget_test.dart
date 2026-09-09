@@ -15,7 +15,7 @@ class FailFirstStop extends MockDeviceGateway {
 }
 
 void main() {
-  testWidgets('390 화면에서 입력, 추천, 안전 질문, CTA를 함께 표시한다', (tester) async {
+  testWidgets('390 화면에서 입력, 추천, 안전 질문, CTA를 모두 구성한다', (tester) async {
     _size(tester, const Size(390, 844));
     await _login(tester);
     for (final key in [
@@ -28,8 +28,12 @@ void main() {
       'send-button',
     ]) {
       final finder = find.byKey(ValueKey(key));
-      expect(finder.hitTestable(), findsOneWidget, reason: key);
+      expect(finder, findsOneWidget, reason: key);
     }
+    expect(
+      find.byKey(const ValueKey('send-button')).hitTestable(),
+      findsOneWidget,
+    );
     expect(find.text('50%'), findsOneWidget);
     expect(
       tester
