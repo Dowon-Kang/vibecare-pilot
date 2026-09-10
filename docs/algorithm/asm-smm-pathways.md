@@ -36,4 +36,4 @@ FITRUS의 `골격근량` 필드가 사지근육량인지 전신 골격근량인�
 - 서버 재계산: `backend-api/src/algorithm.ts`
 - API 요청 필드: `muscleMassBasis = ASM | SMM`
 
-이 기준과 진동 preset의 연결은 임상 처방이 아니라 검증 전 연구 가설이다. `READY`도 Mock 시연 가능 상태만 뜻하며 실제 장비 출력은 허용하지 않는다.
+두 경로와 위 preset은 현재 `pilot-0.6.0` Mock 시뮬레이션에서만 활성화한다. 이 연결은 검증 전 연구가설이지 임상 처방이나 물리 기기 실행 규칙이 아니다. `READY`도 Mock 시연 가능 상태만 뜻하며 실제 장비 출력은 허용하지 않는다.

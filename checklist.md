@@ -1,6 +1,6 @@
 # VibeCare 검증 체크리스트
 
-기준일: 2026-09-09
+기준일: 2026-09-10
 상태: [x] 코드와 검증 증거 있음 · [~] 일부 구현 · [ ] 미구현/외부 차단
 
 ## A. 저장소 품질 게이트
@@ -10,17 +10,18 @@
 - [x] 실제 환경값 제외: `.env*`, `.dev.vars`, `*.local.txt`, 로컬 상태·빌드 산출물 ignore
 - [x] 패키지 버전 잠금: 백엔드 `package-lock.json`, Flutter `pubspec.lock`
 - [x] AWS 인계 범위와 미구현 항목 분리
-- [ ] 변경된 format/debug APK 게이트의 원격 GitHub Actions 결과 확인
+- [x] 기준 커밋 `13a16c0`의 원격 `quality-gates` 통과: [run 34443151436](https://github.com/Dowon-Kang/vibecare-pilot/actions/runs/34443151436)
 - [ ] branch protection에서 `quality-gates` 필수화
 
 ## B. 현재 정량 검증
 
 | 검사 | 마지막 결과 | 합격 기준 |
 |---|---:|---:|
-| 백엔드 전체 Vitest | 49/49 통과 | 실패 0 |
-| Flutter 전체 테스트 | 정리 후 재검증 필요 | 실패 0 |
+| 백엔드 전체 Vitest | 56/56 통과 | 실패 0 |
+| Flutter 전체 테스트 | 전체 통과 | 실패 0 |
 | 백엔드 TypeScript | 통과 | 오류 0 |
-| Flutter analyze | 남은 `lib/`·`test/` 오류 0 | 오류 0 |
+| Flutter format/analyze | 통과 | 오류 0 |
+| Flutter debug APK | CI 빌드 통과 | 빌드 실패 0 |
 | API 계약 | OpenAPI·핵심 JSON Schema 유지 | 참조 오류 0 |
 
 수치는 실행한 자동 검사 기준이며 임상 안전성 수치가 아니다.
@@ -45,6 +46,8 @@
 - [x] ASM/ASMI와 SMM/SMMI 분리, 상호 변환 금지
 - [x] 현재/과거 통증·어지럼·사용보류 실패 폐쇄
 - [x] ASM/SMM 두 해석을 동시 계산하고 선택 즉시 추천 갱신
+- [x] 연령·성별·체지방 강도 곱셈계수 미사용(`pilot-0.6.0`에서 모두 `1.0`)
+- [~] 앱·백엔드·공유 fixture의 핵심 결과 parity; 공개 계약 전체 자동 parity는 미완료
 - [x] 실장비 허가 `realDeviceSendAllowed=false`
 - [ ] FITRUS 정의 동등성 검증
 - [ ] 신뢰된 정책·이력 Repository와 안전보류 해제 감사
@@ -70,8 +73,8 @@
 - [x] 측정 소유권·규칙 버전·서버 재계산·멱등키 검사
 - [x] Mock 세션·ACK·중지·피드백 감사 흐름
 - [x] 실제 장치 모드는 의도적으로 차단
-- [~] 현재 Hono Web Fetch API와 D1 SQL 기준선
-- [ ] Repository interface와 AWS DB adapter
+- [x] Hono Web Fetch API와 공급사 중립 `SqlDatabase` 포트
+- [~] D1은 `SqlDatabase` 포트로 사용 중; AWS DB adapter는 미구현
 - [ ] ECS/Lambda 선택, HTTPS, CORS, IAM, Secrets Manager/SSM
 - [ ] 운영 migration·백업·롤백·CloudWatch 경보
 - [ ] 부하·장애·보안 시험과 보존기간 적용

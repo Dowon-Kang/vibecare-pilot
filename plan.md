@@ -1,6 +1,6 @@
 # VibeCare 구현 계획
 
-기준일: 2026-09-09
+기준일: 2026-09-10
 주 대상: 고령자가 사용하는 발판형 전신진동 연구 앱
 현재 릴리스 성격: Mock 중심 연구 프로토타입. 의료 처방·실장비 운영 제품 아님.
 
@@ -47,7 +47,12 @@ Flutter mobile-app
 |---|---|---|
 | `pilot-0.6.0` | 현재 Flutter·서버의 ASM/SMM Mock 계산 | 연결됨 |
 
-설계 기준은 [근거·수식·안전 명세](docs/algorithm/evidence-based-wbv-algorithm-spec.md)를 따른다. 나이·성별은 근육 기준 선택에만 사용하고, 체지방은 데이터 일관성과 향후 분석 변수로 사용한다. 근거 없는 일괄 감산이나 체지방 증가에 따른 자동 증량은 실장비 규칙으로 사용하지 않는다.
+설계 기준은 [근거·수식·안전 명세](docs/algorithm/evidence-based-wbv-algorithm-spec.md)를 따른다.
+
+- `pilot-0.6.0`은 근육지수 등급으로 Mock preset(시간·Hz·강도)을 선택한다.
+- 성별은 근육지수 경계 선택에 사용하지만, 나이·성별·체지방을 강도에 곱하는 보정은 사용하지 않는다. 현재 네 곱셈계수는 모두 `1.0`이다.
+- 나이는 연구 코호트 범위 확인, 체지방은 입력 일관성 검사와 향후 분석 변수로만 사용한다. 근거 없는 일괄 감산이나 체지방 증가에 따른 자동 증량은 실장비 규칙으로 사용하지 않는다.
+- 앱·백엔드·공유 fixture의 핵심 결과 parity는 검증됐지만 공개 계약 전체 필드의 자동 parity는 **부분 완료**다.
 
 ## 4. 구현 단계
 
@@ -72,18 +77,21 @@ Flutter mobile-app
 - ASM/SMM 선택값을 추천·실행 허가·감사 기록에 동일하게 저장
 - 입력·평균·분류·피드백·물리량·근거 수준 표시
 
-완료 조건: 기존 앱 기본 흐름과 구분된 Mock 화면에서 READY/REVIEW/HOLD와 이유 코드가 재현되고 실제 명령은 생성되지 않는다.
+완료 조건: Mock 화면에서 UI 추천 상태 `READY/REVIEW/BLOCKED`와 별도 연구 실행 상태·이유 코드가 재현된다. `READY`에서는 Mock 명령만 만들 수 있고 실제 장치 명령은 생성되지 않는다.
 
 ### Phase 3 — AWS 저장·실행 기반
 
 구현 대상:
 
-- D1 직접 접근을 Repository interface로 분리
+- 라우트에서 D1 구체 타입을 제거하고 도입한 `SqlDatabase` 포트를 유지
+- `SqlDatabase`의 prepare/bind/first/all/run/batch 계약을 구현하는 AWS DB adapter 작성
 - RDS PostgreSQL 등 확정 DB adapter와 migration 작성
 - 컨테이너 또는 Lambda 진입점, Secrets Manager/SSM, CloudWatch
 - 정책·보류해제·추천·세션의 변경 불가 감사 이력
 
 완료 조건: [AWS 인계 기준](deployment/aws/README.md), OpenAPI 계약, 장애·롤백·백업 시험이 모두 통과한다.
+
+현재 상태: `SqlDatabase` 포트 분리는 완료됐고 D1이 이를 구현한다. RDS PostgreSQL 등 AWS adapter, migration과 운영 인프라는 미구현이다.
 
 ### Phase 4 — 실제 장치 어댑터
 
@@ -99,7 +107,7 @@ Flutter mobile-app
 
 구현 대상:
 
-- 근육지수, 나이, 성별, 체지방, 노출 물리량, RPE, 통증, 세 체감 수집
+- 근육지수, 나이, 성별, 체지방, 노출 물리량, RPE, 통증, 강도·시간·주파수 체감 수집
 - 참여자 단위 학습/검증 분리와 사전 정의된 분석계획
 - 고정 프로토콜 대비 효과·유해사건·중도탈락률 평가
 - 임상·공학 독립 검토와 정책 버전 승인

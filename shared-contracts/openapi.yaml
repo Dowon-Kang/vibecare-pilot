@@ -41,8 +41,27 @@ paths:
   /v1/auth/refresh:
     post:
       security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string, minLength: 20 }
       responses:
-        '200': { description: Rotated access token }
+        '200':
+          description: New 15-minute access token; the refresh token itself is not rotated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accessToken, expiresInSec]
+                properties:
+                  accessToken: { type: string }
+                  expiresInSec: { type: integer, const: 900 }
+        '400': { description: Invalid JSON, missing token, or authentication secret unavailable }
         '401': { description: Invalid or revoked refresh token }
   /v1/algorithm-rules/current:
     get:
@@ -132,9 +151,22 @@ paths:
           name: Idempotency-Key
           required: true
           schema: { type: string, minLength: 16 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [authorizationId, deviceId]
+              properties:
+                authorizationId: { type: string, minLength: 1 }
+                deviceId: { type: string, minLength: 1 }
       responses:
         '201': { description: Mock session started and ACK recorded }
         '200': { description: Same participant and identical request replayed with the same key }
+        '400': { description: Missing or short Idempotency-Key, or invalid request body }
+        '401': { description: Missing or invalid access token }
+        '404': { description: Execution authorization not found for this participant and device }
         '409': { description: 'Expired or used authorization, conflicting key, busy target device, or changed algorithm' }
         '503': { description: Algorithm unavailable }
         '501': { description: Real device protocol is not configured }
@@ -145,8 +177,26 @@ paths:
           name: id
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventType]
+              properties:
+                eventType:
+                  type: string
+                  enum: [ACK, RUNNING, STOPPING, COMPLETED, ERROR, DISCONNECTED]
+                payload:
+                  type: object
+                  additionalProperties: true
+                  default: {}
       responses:
         '202': { description: Simulator event accepted; COMPLETED closes the session }
+        '400': { description: Invalid event type or payload }
+        '401': { description: Missing or invalid access token }
+        '404': { description: Session not found for the authenticated participant }
         '409': { description: Session already terminal }
   /v1/device-sessions/{id}/stop:
     post:
@@ -155,8 +205,20 @@ paths:
           name: id
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 100 }
       responses:
         '200': { description: STOPPED or COMPLETED confirmed; terminal calls are idempotent }
+        '400': { description: Missing or invalid stop reason }
+        '401': { description: Missing or invalid access token }
+        '404': { description: Session not found for the authenticated participant }
   /v1/feedback-adjustment:
     get:
       description: Returns the participant's current conservative feedback adjustment, or null when no completed-session feedback exists.
@@ -200,12 +262,19 @@ paths:
                 intensityRating: { type: string, enum: [weak, suitable, strong] }
                 durationRating: { type: string, enum: [weak, suitable, strong] }
                 frequencyRating: { type: string, enum: [weak, suitable, strong] }
+                discomfort:
+                  type: [string, 'null']
+                  maxLength: 500
+                  description: Optional participant-entered discomfort note
                 earlyStopped: { type: boolean }
                 actualDurationSec: { type: [number, 'null'], minimum: 0 }
                 measuredPeakG: { type: [number, 'null'], minimum: 0 }
                 measuredRmsG: { type: [number, 'null'], minimum: 0 }
       responses:
         '200': { description: Feedback stored }
+        '400': { description: Invalid feedback values }
+        '401': { description: Missing or invalid access token }
+        '404': { description: Session not found for the authenticated participant }
         '409': { description: Conflicting feedback or non-terminal session }
 components:
   securitySchemes:

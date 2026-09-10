@@ -13,7 +13,7 @@
 - [HYPOTHESIS] 근육량 등급은 초기 안전 단계와 감독 수준을 정하는 층화 변수로 사용하고, 이후 단계는 실제 내약성 이력으로 한 단계씩 조정한다.
 - [UNRESOLVED] 장치의 `intensityPct`와 실제 변위·가속도 대응표가 없으므로 현재 실제 출력은 항상 금지한다.
 
-따라서 현재 `12Hz·3분·30% / 16Hz·4분·40% / 20Hz·5분·50%` 규칙은 임상 또는 연구 실행 규칙에서 제외하고, 화면과 회귀 테스트용 합성 데이터로만 보존해야 한다.
+따라서 `12Hz·3분·30% / 16Hz·4분·40% / 20Hz·5분·50%` 규칙은 현재 `pilot-0.6.0`의 Mock 시뮬레이션에서만 활성화한다. 이는 화면·회귀 테스트에서 흐름을 검증하기 위한 연구가설이며, 임상 처방이나 물리 기기 실행 규칙이 아니다.
 
 ## 2. 현재 알고리즘의 냉정한 평가
 
@@ -62,7 +62,7 @@
 | 근육 | massKg, method, definitionRef | kg, BIA/DXA, 버전 ID | 예 | 공급사 계약 |
 | 획득 | standardized, protocolRef | bool, 버전 ID | 예 | 연구 운영자 |
 | 안전 | acutePain, dizziness, clinicianHold | bool | 예 | 당일 문진/서버 |
-| 이력 | stageId, completed, RPE, 세 체감 | ID, bool, 0–10, enum | 적응 시 | 서버 감사로그 |
+| 이력 | stageId, completed, RPE, 강도·시간·주파수 체감 | ID, bool, 0–10, enum | 적응 시 | 서버 감사로그 |
 | 장치 | calibrationId, loadKg, frequencyHz | ID, kg, Hz | 실행 전 | 공학 교정 |
 | 장치 | Dpp, peakG, rmsG, waveform | mm, g, g, enum | 실행 전 | 3축 실측 |
 
@@ -275,7 +275,7 @@ READY ──ACK──▶ RUNNING ──완료──▶ FEEDBACK_REQUIRED
 - 50세/60세/65세 적용 범위 경계
 - 근력 누락 상태에서 근감소증 확정 금지
 - 현재 및 과거 통증·어지럼 우선 차단
-- RPE 상한, 세 체감 중 하나만 STRONG
+- RPE 상한, 강도·시간·주파수 체감 중 하나만 `STRONG`
 - q회 미만, 다른 단계·장치·정책 이력
 - 한 번에 두 단계 이동과 미승인 transition 금지
 - 최고/최저 단계 경계
@@ -290,12 +290,12 @@ READY ──ACK──▶ RUNNING ──완료──▶ FEEDBACK_REQUIRED
 
 | 모듈 | 책임 | 현재 위치 |
 |---|---|---|
-| MeasurementGate | 4건·소유권·교차검증 | `mobile-app/lib/algorithm/vibration_algorithm.dart`, `backend-api/src/algorithm.ts` |
-| MuscleAssessment | ASM/SMM 별도 지수·적용범위 | 같은 두 알고리즘 파일 |
-| FeedbackPolicy | 불편 응답의 감산·보류 | `mobile-app/lib/models/models.dart`, `backend-api/src/feedback.ts` |
+| MeasurementGate | 최신 유효 4건 조회·소유권·교차검증 | `backend-api/src/measurement-store.ts`, `backend-api/src/routes/measurement-routes.ts`, `backend-api/src/routes/recommendation-routes.ts`, `mobile-app/lib/algorithm/vibration_algorithm.dart` |
+| MuscleAssessment | ASM/SMM 별도 지수·적용범위 | `backend-api/src/algorithm.ts`, `mobile-app/lib/algorithm/vibration_algorithm.dart`, `mobile-app/lib/models/measurement_models.dart` |
+| FeedbackPolicy | 불편 응답의 감산·보류 | `backend-api/src/feedback.ts`, `backend-api/src/feedback-store.ts`, `mobile-app/lib/models/feedback_models.dart`, `mobile-app/lib/services/feedback_repository.dart` |
 | Flutter preview | 앱 미리보기 순수 함수 | `mobile-app/lib/algorithm/vibration_algorithm.dart` |
-| Server authority | 소유권·정책·최종 Mock 허가 | `backend-api/src/` |
-| DeviceGateway | ACK·중지·중복 방지 | 현재 Mock 중심; 실장치 명세 미확보 |
+| Server authority | 소유권·정책·최종 Mock 허가 | `backend-api/src/routes/recommendation-routes.ts`, `backend-api/src/routes/session-routes.ts`, `backend-api/src/session-store.ts` |
+| DeviceGateway | ACK·중지·중복 방지 | `mobile-app/lib/services/device_gateway.dart`, `mobile-app/lib/services/device_state_machine.dart`, `mobile-app/lib/services/mock_device_gateway.dart`, `mobile-app/lib/services/backend_device_gateway.dart`; 실장치 어댑터는 없음 |
 
 현재 연결된 알고리즘은 `pilot-0.6.0`뿐이다. 화면은 알고리즘 버전과 `SIMULATION / CALIBRATION_REQUIRED / READY`를 명확히 보여야 한다.
 

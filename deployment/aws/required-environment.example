@@ -1,7 +1,9 @@
+# Contract example only. No AWS runtime or database adapter consumes this file yet.
 # Supply real secrets through AWS Secrets Manager or SSM, never Git.
 ENVIRONMENT=production
 APP_VERSION=replace-with-release-id
 PORT=8080
+# Planned RDS/PostgreSQL adapter input. SqlDatabase currently has only a D1 implementation.
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/vibecare
 FITRUS_API_BASE_URL=https://api.thefitrus.com/fitrus-ml/measure
 FITRUS_API_KEY=replace-through-aws-secret

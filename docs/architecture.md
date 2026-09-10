@@ -14,7 +14,7 @@ flowchart TD
     G --> H[오늘 통증·어지럼 확인]
     H --> I{안전 문진 통과?}
     I -- 아니오 --> J[BLOCKED: 추천·전송 차단]
-    I -- 예 --> K[추천과 PILOT 보정 사유 표시]
+    I -- 예 --> K[근육지수 등급과 Mock preset 표시]
     K --> L{상태가 READY?}
     L -- 아니오 --> F
     L -- 예 --> M[Mock 실행 허가 요청]
@@ -55,6 +55,8 @@ sequenceDiagram
 
 FITRUS 프록시의 URL·인증 경계는 준비되어 있지만 공급사 성공 응답 계약과 정규화가 미완료다. 실제 REST/BLE 기기 어댑터도 없다. 두 외부 연동은 현재 흐름이 아니라 후속 작업이다.
 
+`pilot-0.6.0`은 연령·성별·체지방 강도 곱셈 보정을 사용하지 않는다(관련 계수는 모두 `1.0`). 성별은 근육지수 경계 선택, 나이는 코호트 검토, 체지방은 일관성 검사와 향후 연구 변수에 사용한다.
+
 ## 백엔드 경계
 
 ```mermaid
@@ -72,7 +74,7 @@ flowchart LR
         SESSION[시뮬레이션 세션·합성 ACK·피드백 API]
     end
 
-    subgraph Storage[데이터 저장소: 현재 D1, AWS 전환 예정]
+    subgraph Storage[SqlDatabase 포트: 현재 D1, AWS adapter 미구현]
         RAW[(BIA 원본)]
         RULES[(버전 규칙)]
         AUDIT[(추천·명령 감사로그)]
@@ -107,3 +109,13 @@ stateDiagram-v2
 ```
 
 현재 `DeviceGateway` 구현은 앱 내부 `MockDeviceGateway`와 서버 시뮬레이터를 호출하는 `BackendDeviceGateway`다. 어느 쪽도 물리 장치와 통신하지 않는다. REST/BLE 실장비 구현은 장치 명세·교정표·안전 승인을 확보한 뒤 같은 인터페이스 뒤에 별도 어댑터로 추가한다.
+
+## 상태 어휘와 책임
+
+| 범위 | 대표 상태 | 책임 |
+|---|---|---|
+| UI 추천 | `READY`, `REVIEW`, `BLOCKED` | 입력과 안전 문진 결과를 표시한다. `READY`는 Mock 시연 자격이다. |
+| 연구 실행 검토 | `CALIBRATION_REQUIRED`, `INSUFFICIENT_DATA` | 물리 실행을 막는 근거·교정·데이터 부족을 기록한다. |
+| 장치 세션 | 연결, 허가, 전송, ACK 대기, 실행, 중지, 완료, 오류 | 현재는 Mock 또는 서버 시뮬레이션 수명주기만 관리한다. |
+
+문헌의 `HOLD` 개념은 앱 추천 상태의 `BLOCKED`에 대응하지만 공개 API 상태값으로 혼용하지 않는다.

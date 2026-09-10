@@ -16,6 +16,16 @@
 - 실행 중 연결 해제 거부
 - 백그라운드 이동 시 실행 세션 중지 요청 또는 미사용 허가 폐기·연결 해제
 
+코드와 계약 근거:
+
+- 앱 인터페이스·명령 모델: `mobile-app/lib/services/device_gateway.dart`
+- 공통 상태 전이: `mobile-app/lib/services/device_state_machine.dart`
+- 로컬 Mock: `mobile-app/lib/services/mock_device_gateway.dart`
+- 서버 시뮬레이터 연결: `mobile-app/lib/services/backend_device_gateway.dart`
+- 명령·이벤트 계약: `shared-contracts/device-command.schema.json`, `shared-contracts/device-event.schema.json`
+- 서버 세션 라우트·저장: `backend-api/src/routes/session-routes.ts`, `backend-api/src/session-store.ts`
+- 회귀 테스트: `mobile-app/test/device_gateway_state_test.dart`, `mobile-app/test/authenticated_client_test.dart`, `backend-api/test/routes.test.ts`
+
 ## 실제 어댑터 구현 전 필수 외부 입력
 
 1. 통신 방식과 프레이밍: BLE GATT UUID/특성/MTU 또는 REST URL·인증·본문

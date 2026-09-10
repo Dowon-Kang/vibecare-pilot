@@ -13,13 +13,13 @@
 | 주장 | 상태 | 증거 파일/함수 | 한계 |
 |---|---|---|---|
 | 4건 골격근량·키·성별이 기본 조건을 결정 | CONFIRMED | backend-api/src/algorithm.ts calculateRecommendation; mobile-app/lib/algorithm/vibration_algorithm.dart | 임상 검증 없음 |
-| 최신 동일인·동일기기 선택 | CONFIRMED | backend-api/src/index.ts latestValidSql; Dart selectLatestValidMeasurements | 당시 시간 정렬·중복·숫자 검증만; 측정환경 기록 없음 |
-| FITRUS 실측 입력이 앱까지 연결됨 | UNKNOWN | backend-api/src/fitrus-client.ts; index.ts normalized:false | 공급사 성공 응답 정규화 미구현; Mock와 구분 |
+| 최신 동일인·동일기기 선택 | CONFIRMED | `backend-api/src/measurement-store.ts`의 `latestValidSql`; `backend-api/src/routes/measurement-routes.ts`; Dart `selectLatestValidMeasurements` | 시간 정렬·중복·숫자 검증은 구현됨; 측정환경 기록은 없음 |
+| FITRUS 실측 입력이 앱까지 연결됨 | UNKNOWN | `backend-api/src/fitrus-client.ts`; `backend-api/src/routes/measurement-routes.ts`의 `normalized: false` | 공급사 성공 응답 정규화 미구현; Mock과 구분 |
 | 서버와 Dart가 모든 입력에서 일치 | PARTIAL | 공통 JSON fixture를 양쪽 테스트에서 사용 | 대표값과 경계값은 검사하지만 전체 응답 직렬화 동등성은 미검증 |
 | 증상·BMI 게이트 | CONFIRMED | 서버와 Dart의 `calculateRecommendation` | BMI 18.5는 WBV 안전 임계값으로 검증되지 않음 |
-| 실제 출력 어댑터 있음 | NOT IMPLEMENTED | `index.ts` mode 검사; `MockDeviceGateway`; `BackendDeviceGateway` | 서버 real mode는 허가 발급 전에 거부하며 두 Gateway 모두 물리 장치와 통신하지 않음 |
+| 실제 출력 어댑터 있음 | NOT IMPLEMENTED | `backend-api/src/routes/recommendation-routes.ts`; `mobile-app/lib/services/mock_device_gateway.dart`; `backend_device_gateway.dart` | 서버 real mode는 허가 발급 전에 거부하며 두 Gateway 모두 물리 장치와 통신하지 않음 |
 | 서버 규칙이 없으면 Dart가 실패함 | CONFIRMED | `fitrus_repository.dart`의 `parseRuleSet` | 계약 누락을 로컬 기본값으로 보완하지 않음 |
-| 피드백이 세 변수에 독립 반영됨 | PARTIAL/CONFIRMED | `backend-api/src/feedback.ts`; `mobile-app/lib/models/models.dart` | 저장은 세 항목, 감산은 RPE만 사용; 시간/주파수 평가는 자동 조정 근거 아님 |
+| 피드백이 세 변수에 독립 반영됨 | PARTIAL/CONFIRMED | `backend-api/src/feedback.ts`; `backend-api/src/feedback-store.ts`; `mobile-app/lib/models/feedback_models.dart` | 저장은 세 항목, 감산은 RPE만 사용; 시간/주파수 평가는 자동 조정 근거 아님 |
 
 입력: profile(id, sex, age, heightCm), 정확히 4개 측정(id, participantId, deviceId, time, quality, kg/%, BMI), 증상 3문항, 버전 규칙. 출력: 평균, 연구 등급, 미리보기 T/f/I, 계산 상태, 실행 상태, 이유 코드, 버전. 원시 측정→파생 평균→미리보기→서버 허가→Mock 세션 경계가 있다.
 
@@ -73,7 +73,7 @@ q=μ/(heightCm/100)² [kg/m²]. 내부 계산에는 반올림하지 않는다. �
 
 ### C 기본 프로토콜
 
-P(LOW)=(180s,12Hz,30%), P(MEDIUM)=(240s,16Hz,40%), P(REFERENCE)=(300s,20Hz,50%). **기존 연구가설 보존용 시뮬레이션 숫자**다. dose란 명칭을 쓰지 않는다. 선택 이유와 버전, 근거 라벨을 응답에 포함. 연령·성별·체지방 곱셈계수는 1. 60세 미만은 코호트 밖 REVIEW. 이 숫자를 장치에 곧바로 적용할 수 없다.
+P(LOW)=(180s,12Hz,30%), P(MEDIUM)=(240s,16Hz,40%), P(REFERENCE)=(300s,20Hz,50%). 이 값은 현재 `pilot-0.6.0` Mock 시뮬레이션에서만 활성화된 **기존 연구가설 보존용 조건**이다. 임상 처방이나 물리 기기 실행 규칙이 아니며 dose라는 명칭을 쓰지 않는다. 선택 이유와 버전, 근거 라벨을 응답에 포함한다. 연령·성별·체지방 곱셈계수는 1이다. 60세 미만은 코호트 밖 `REVIEW`다.
 
 ### D 안전·실행
 
