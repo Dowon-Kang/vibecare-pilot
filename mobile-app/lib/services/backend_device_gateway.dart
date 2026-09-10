@@ -10,7 +10,7 @@ import 'device_state_machine.dart';
 ///
 /// This gateway never talks directly to a vibration device. The backend API
 /// recalculates the recommendation, issues a one-time authorization and then
-/// starts either its configured device adapter or the server-side simulator.
+/// starts only the server-side simulator. Physical device mode is rejected.
 class BackendDeviceGateway implements DeviceGateway {
   BackendDeviceGateway(
     this._dio, {
@@ -66,7 +66,7 @@ class BackendDeviceGateway implements DeviceGateway {
         !result.canRequestAuthorization ||
         local == null ||
         deviceId == null) {
-      throw StateError('READY 상태와 연결된 서버가 필요합니다.');
+      throw StateError('시뮬레이션 준비 상태와 연결된 서버가 필요합니다.');
     }
     final response = await _dio.post<Map<String, dynamic>>(
       '/v1/recommendations/authorize',
@@ -91,6 +91,8 @@ class BackendDeviceGateway implements DeviceGateway {
     if (json['authorized'] != true ||
         json['mode'] != 'mock' ||
         serverResult?['realDeviceSendAllowed'] != false ||
+        serverResult?['physicalExecution'] != 'PROHIBITED' ||
+        serverResult?['simulationEligibility'] != 'ELIGIBLE' ||
         serverRecommendation == null) {
       throw StateError('서버가 실행을 허가하지 않았습니다.');
     }
@@ -118,6 +120,7 @@ class BackendDeviceGateway implements DeviceGateway {
         expiresAt: DateTime.parse(json['expiresAt'] as String),
         idempotencyKey:
             'mobile-${participant.id}-${now.microsecondsSinceEpoch}',
+        executionMode: 'SIMULATOR_ONLY',
       ),
     );
   }

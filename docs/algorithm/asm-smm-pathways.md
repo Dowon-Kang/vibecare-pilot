@@ -1,4 +1,4 @@
-# ASM / SMM 선택 설계
+# ASM / SMM 정의 고정 설계
 
 FITRUS의 `골격근량` 필드가 사지근육량인지 전신 골격근량인지 공식 자료로 확인되지 않았다. 앱은 값을 임의 변환하지 않고 같은 4건 평균을 두 가지 **명시적 가정**으로 계산해 사용자가 비교·선택하게 한다.
 
@@ -34,6 +34,6 @@ FITRUS의 `골격근량` 필드가 사지근육량인지 전신 골격근량인�
 - 선택 상태와 두 결과: `mobile-app/lib/controllers/pilot_controller.dart`
 - 비교 UI: `mobile-app/lib/screens/overview_card.dart`
 - 서버 재계산: `backend-api/src/algorithm.ts`
-- API 요청 필드: `muscleMassBasis = ASM | SMM`
+- API 요청 필드: `muscleMassBasis = ASM | SMM`. 저장된 `muscleDefinition`과 같아야 하며 사용자가 임의로 바꿀 수 없다.
 
-두 경로와 위 preset은 현재 `pilot-0.6.0` Mock 시뮬레이션에서만 활성화한다. 이 연결은 검증 전 연구가설이지 임상 처방이나 물리 기기 실행 규칙이 아니다. `READY`도 Mock 시연 가능 상태만 뜻하며 실제 장비 출력은 허용하지 않는다.
+두 경로와 위 후보는 현재 `pilot-0.7.0` Mock 시뮬레이션에서만 활성화한다. 이 연결은 `HYPOTHESIS_UNVALIDATED` 연구가설이지 임상 처방이나 물리 기기 실행 규칙이 아니다. 정의가 `UNKNOWN`이면 두 경로 모두 차단하며 실제 장비 출력은 항상 금지한다.

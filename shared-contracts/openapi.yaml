@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: VibeCare API
-  version: 0.6.0
+  version: 0.7.0
   description: Canonical mobile API. FITRUS credentials never cross this boundary.
 servers:
   - url: https://api.example.invalid
@@ -87,6 +87,17 @@ paths:
               properties:
                 deviceId: { type: string }
                 measuredAt: { type: string, format: date-time }
+                muscleProvenance:
+                  description: Required when kind=bodyFat. UNKNOWN, empty references, or a method/evidence/definition triple absent from the active rule's applicableMethods cannot become simulation-eligible.
+                  type: object
+                  required: [muscleDefinition, definitionRef, muscleMeasurementMethod, methodEvidenceRef, muscleMassUnit, acquisitionProtocol]
+                  properties:
+                    muscleDefinition: { type: string, enum: [UNKNOWN, ASM, SMM] }
+                    definitionRef: { type: string, minLength: 1 }
+                    muscleMeasurementMethod: { type: string, minLength: 1 }
+                    methodEvidenceRef: { type: string, minLength: 1 }
+                    muscleMassUnit: { const: kg }
+                    acquisitionProtocol: { type: string, minLength: 1 }
                 payload: { type: object, additionalProperties: true }
       responses:
         '201': { description: Raw provider response retained; normalization status returned }
@@ -107,14 +118,14 @@ paths:
         '200': { description: Display-only vital history }
   /v1/recommendations/authorize:
     post:
-      description: pilot-0.6.0 is simulation-only. READY means simulator eligibility, never physical clearance. Real mode is denied before a permit is issued.
+      description: pilot-0.7.0 accepts only four provenance-matched ASM or SMM measurements. It may issue a mock simulator authorization; physicalExecution is always PROHIBITED.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [measurementIds, safety, deviceId, algorithmVersion]
+              required: [measurementIds, safety, deviceId, algorithmVersion, muscleMassBasis]
               properties:
                 measurementIds:
                   type: array
@@ -132,16 +143,28 @@ paths:
                 muscleMassBasis:
                   type: string
                   enum: [ASM, SMM]
-                  default: SMM
-                  description: Research-only interpretation of the provider's unverified skeletalMuscleMassKg field.
+                  description: Must exactly match the confirmed muscleDefinition stored on all four measurements. UNKNOWN and mismatches fail closed.
                 requestedIntensityPct:
                   type: integer
                   minimum: 1
                   maximum: 100
                   description: Optional manual intensity. The server accepts only values between its configured minimum and calculated recommendation.
       responses:
-        '201': { description: 'One-time 60-second mock authorization; mode=mock, result.realDeviceSendAllowed=false; result includes executionStatus, reasonCodes, evidence and muscleStatistics' }
-        '409': { description: 'REVIEW, BLOCKED, CALIBRATION_REQUIRED, stale measurement set, intensity outside range, or algorithm version mismatch' }
+        '201':
+          description: One-time 60-second mock authorization.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authorized, mode, authorizationId, recommendationId, expiresAt, result]
+                properties:
+                  authorized: { const: true }
+                  mode: { const: mock }
+                  authorizationId: { type: string }
+                  recommendationId: { type: string }
+                  expiresAt: { type: string, format: date-time }
+                  result: { $ref: '#/components/schemas/AlgorithmResult' }
+        '409': { description: 'UNKNOWN/mixed/mismatched muscle definition, mixed method/unit/acquisition protocol, stale/future data under the labelled engineering policy, tier instability, safety block, physical mode, intensity range, or algorithm version mismatch.' }
         '400': { description: Invalid input or missing explicit safety answers }
         '503': { description: Algorithm unavailable }
   /v1/device-sessions:
@@ -282,6 +305,65 @@ components:
       type: http
       scheme: bearer
   schemas:
+    AlgorithmResult:
+      type: object
+      required: [status, executionStatus, dataDecision, simulationEligibility, physicalExecution, realDeviceSendAllowed, reasonCodes, warnings, algorithmVersion, muscleMassBasis, muscleStatistics, average, muscleAssessment, recommendation, factors]
+      properties:
+        status: { type: string, enum: [READY, REVIEW, BLOCKED] }
+        executionStatus: { type: string, enum: [SIMULATION_READY, REVIEW, BLOCKED] }
+        dataDecision: { type: string, enum: [ACCEPTED, REVIEW_REQUIRED, BLOCKED] }
+        simulationEligibility: { type: string, enum: [ELIGIBLE, INELIGIBLE] }
+        physicalExecution: { const: PROHIBITED }
+        realDeviceSendAllowed: { const: false }
+        algorithmVersion: { const: pilot-0.7.0 }
+        muscleMassBasis: { type: string, enum: [ASM, SMM] }
+        reasonCodes: { type: array, items: { type: string } }
+        warnings: { type: array, items: { type: string } }
+        muscleStatistics:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [count, meanKg, sampleSdKg, cvPct, minimumKg, maximumKg, rangeKg]
+              properties:
+                count: { const: 4 }
+                meanKg: { type: number }
+                sampleSdKg: { type: number, minimum: 0 }
+                cvPct: { type: number, minimum: 0 }
+                minimumKg: { type: number }
+                maximumKg: { type: number }
+                rangeKg: { type: number, minimum: 0 }
+        average:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [weightKg, bmi, bodyFatPct, fatMassKg, skeletalMuscleMassKg]
+              properties:
+                weightKg: { type: number }
+                bmi: { type: number }
+                bodyFatPct: { type: number }
+                fatMassKg: { type: number }
+                skeletalMuscleMassKg: { type: number }
+        muscleAssessment:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [heightAdjustedIndex, level, unstable]
+              properties:
+                heightAdjustedIndex: { type: number }
+                level: { type: string, enum: [low, medium, reference] }
+                unstable: { type: boolean }
+        recommendation:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [purpose, evidence, durationSec, frequencyHz, intensityPct]
+              properties:
+                purpose: { const: SIMULATION_CANDIDATE }
+                evidence: { const: HYPOTHESIS_UNVALIDATED }
+                durationSec: { type: integer, minimum: 1 }
+                frequencyHz: { type: integer, minimum: 1 }
+                intensityPct: { type: number, minimum: 0, maximum: 100 }
+        factors: { type: 'null' }
     SafetyCheck:
       description: All three answers must be explicitly provided; null or omitted is not false. Any true answer blocks execution.
       type: object

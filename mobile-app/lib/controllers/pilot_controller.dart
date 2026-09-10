@@ -64,7 +64,16 @@ class PilotController extends Notifier<PilotState> {
       safety: safety,
       adjustment: adjustment,
     );
-    final selected = _selectedResult(results, current.muscleMassBasis);
+    final definitions = snapshot.selectedMeasurements
+        .map((item) => item.muscleDefinition)
+        .toSet();
+    final confirmedBasis = definitions.length == 1
+        ? definitions.single
+        : MuscleMassBasis.unknown;
+    final selectedBasis = confirmedBasis == MuscleMassBasis.unknown
+        ? current.muscleMassBasis
+        : confirmedBasis;
+    final selected = _selectedResult(results, selectedBasis);
     return current.copyWith(
       profile: profile,
       snapshot: snapshot,
@@ -73,6 +82,7 @@ class PilotController extends Notifier<PilotState> {
       result: selected,
       asmResult: results.asm,
       smmResult: results.smm,
+      muscleMassBasis: selectedBasis,
       selectedIntensityPct: selected.recommendation?.intensityPct,
       isIntensityManual: false,
       pendingAuthorization: null,
@@ -198,6 +208,16 @@ class PilotController extends Notifier<PilotState> {
 
   void selectMuscleMassBasis(MuscleMassBasis basis) {
     if (state.isRunning || state.isBusy || state.feedbackSession != null) {
+      return;
+    }
+    final definitions = state.snapshot?.selectedMeasurements
+        .map((item) => item.muscleDefinition)
+        .toSet();
+    final confirmed = definitions?.length == 1 ? definitions!.single : null;
+    if (confirmed == null ||
+        confirmed == MuscleMassBasis.unknown ||
+        basis != confirmed) {
+      state = state.copyWith(error: '공급사가 확인한 근육량 정의와 다른 기준으로 실행할 수 없습니다.');
       return;
     }
     final selected = basis == MuscleMassBasis.asm

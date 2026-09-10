@@ -10,18 +10,18 @@
 - [x] 실제 환경값 제외: `.env*`, `.dev.vars`, `*.local.txt`, 로컬 상태·빌드 산출물 ignore
 - [x] 패키지 버전 잠금: 백엔드 `package-lock.json`, Flutter `pubspec.lock`
 - [x] AWS 인계 범위와 미구현 항목 분리
-- [x] 기준 커밋 `13a16c0`의 원격 `quality-gates` 통과: [run 34443151436](https://github.com/Dowon-Kang/vibecare-pilot/actions/runs/34443151436)
+- [~] `pilot-0.7.0` 로컬 품질 게이트 통과, 최신 원격 `quality-gates`는 push 후 확인
 - [ ] branch protection에서 `quality-gates` 필수화
 
 ## B. 현재 정량 검증
 
 | 검사 | 마지막 결과 | 합격 기준 |
 |---|---:|---:|
-| 백엔드 전체 Vitest | 56/56 통과 | 실패 0 |
-| Flutter 전체 테스트 | 전체 통과 | 실패 0 |
+| 백엔드 전체 Vitest | 43/43 통과 | 실패 0 |
+| Flutter 전체 테스트 | 38/38 통과 | 실패 0 |
 | 백엔드 TypeScript | 통과 | 오류 0 |
 | Flutter format/analyze | 통과 | 오류 0 |
-| Flutter debug APK | CI 빌드 통과 | 빌드 실패 0 |
+| Flutter debug APK | 최신 main GitHub Actions에서 확인 | 빌드 실패 0 |
 | API 계약 | OpenAPI·핵심 JSON Schema 유지 | 참조 오류 0 |
 
 수치는 실행한 자동 검사 기준이며 임상 안전성 수치가 아니다.
@@ -33,7 +33,7 @@
 - [x] 공급 원본과 앱 표준 DTO의 책임 분리
 - [~] FITRUS 서버 전용 client와 오류 전달
 - [ ] 공식 요청 형식·인증 헤더·성공/오류 응답 fixture
-- [ ] bodyfat 근육 필드가 ASM인지 SMM인지, 산출법·단위 확인
+- [ ] bodyfat 근육 필드가 ASM인지 SMM인지, 산출법·단위·방법 근거 확인 후 `applicableMethods` 등록
 - [ ] 실제 응답의 표준 DTO 변환과 `normalized:true`
 - [ ] 호출 제한·타임아웃·개발/운영 endpoint 확인
 - [ ] 개인정보 보존기간·삭제·접근 감사 정책
@@ -45,10 +45,11 @@
 - [x] 평균·표본 SD·CV·최솟값·최댓값 계산
 - [x] ASM/ASMI와 SMM/SMMI 분리, 상호 변환 금지
 - [x] 현재/과거 통증·어지럼·사용보류 실패 폐쇄
-- [x] ASM/SMM 두 해석을 동시 계산하고 선택 즉시 추천 갱신
-- [x] 연령·성별·체지방 강도 곱셈계수 미사용(`pilot-0.6.0`에서 모두 `1.0`)
+- [x] `UNKNOWN`·ASM/SMM 기준 불일치·방법/단위/프로토콜 혼합 시 층화·인가 차단
+- [x] 공급사가 확인한 ASM/SMM 정의만 앱에서 활성화하고 임의 재해석 차단
+- [x] 연령·성별·체지방 진동량 곱셈 미사용(`pilot-0.7.0`)
 - [~] 앱·백엔드·공유 fixture의 핵심 결과 parity; 공개 계약 전체 자동 parity는 미완료
-- [x] 실장비 허가 `realDeviceSendAllowed=false`
+- [x] 모든 결과 `physicalExecution=PROHIBITED`, 모든 Mock 명령 `SIMULATOR_ONLY`
 - [ ] FITRUS 정의 동등성 검증
 - [ ] 신뢰된 정책·이력 Repository와 안전보류 해제 감사
 - [ ] 근육량→특정 시간·Hz·물리량의 전향 검증
@@ -63,7 +64,7 @@
 - [x] 320px 작은 화면·글자 2배·하단 CTA 위젯 검사
 - [x] 로딩·API 오류·전송 실패·중복 실행·중지 실패 상태
 - [ ] FITRUS 실데이터 화면 검증
-- [ ] 최신 adaptive 연구 화면과 이유 코드
+- [x] 연구 상태·가설 라벨·4건 SD/CV/범위와 이유 코드 표시
 - [ ] 실제 Android 기기 접근성 재검증
 - [ ] 앱 종료·재시작 후 진행 세션 복구
 

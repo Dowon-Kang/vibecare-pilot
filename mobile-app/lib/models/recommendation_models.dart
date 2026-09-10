@@ -19,11 +19,15 @@ class Recommendation {
     required this.durationSec,
     required this.frequencyHz,
     required this.intensityPct,
+    this.purpose = 'SIMULATION_CANDIDATE',
+    this.evidence = 'HYPOTHESIS_UNVALIDATED',
   });
 
   final int durationSec;
   final int frequencyHz;
   final int intensityPct;
+  final String purpose;
+  final String evidence;
 }
 
 class MuscleAssessment {
@@ -77,9 +81,9 @@ class AlgorithmResult {
   Map<String, String> get evidence => const {
     'muscleIndex': 'INDIRECT',
     'thresholds': 'INDIRECT',
-    'protocol': 'PILOT',
-    'averaging': 'PILOT',
-    'boundaryReview': 'PILOT',
+    'protocol': 'HYPOTHESIS_UNVALIDATED',
+    'averaging': 'ENGINEERING_POLICY',
+    'boundaryReview': 'ENGINEERING_POLICY',
     'physicalEquation': 'EVIDENCE',
   };
   String get executionStatus => status == RecommendationStatus.blocked
@@ -88,15 +92,24 @@ class AlgorithmResult {
       ? 'INSUFFICIENT_DATA'
       : status == RecommendationStatus.review
       ? 'REVIEW'
-      : 'CALIBRATION_REQUIRED';
+      : 'SIMULATION_READY';
   List<String> get reasonCodes => [
     if (status == RecommendationStatus.blocked) 'SAFETY_HOLD',
     if (measurementIds.length != 4) 'INSUFFICIENT_DATA',
     if (status == RecommendationStatus.review) 'INPUT_OR_SAFETY_REVIEW',
     if (muscleAssessment?.unstable == true) 'MUSCLE_TIER_UNSTABLE',
-    'MUSCLE_DEFINITION_UNVERIFIED',
-    'PILOT_PROTOCOL',
-    'CALIBRATION_REQUIRED',
+    if (muscleAssessment == null) 'MUSCLE_DEFINITION_UNVERIFIED',
     'SIMULATION_ONLY',
+    'HYPOTHESIS_UNVALIDATED',
+    'PHYSICAL_EXECUTION_PROHIBITED',
   ];
+
+  String get dataDecision => status == RecommendationStatus.ready
+      ? 'ACCEPTED'
+      : status == RecommendationStatus.blocked
+      ? 'BLOCKED'
+      : 'REVIEW_REQUIRED';
+  String get simulationEligibility =>
+      canRequestAuthorization ? 'ELIGIBLE' : 'INELIGIBLE';
+  String get physicalExecution => 'PROHIBITED';
 }

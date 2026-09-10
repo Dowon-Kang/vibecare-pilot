@@ -287,7 +287,6 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
     final state = ref.read(pilotControllerProvider);
     final environment = ref.read(appEnvironmentProvider);
     final result = state.result!;
-    final ruleSet = state.snapshot!.ruleSet;
     final command =
         state.pendingAuthorization?.command ?? state.session?.command;
     showModalBottomSheet<void>(
@@ -302,28 +301,29 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
             padding: const EdgeInsets.all(20),
             children: [
               Text('계산 근거', style: Theme.of(context).textTheme.titleLarge),
-              const Text('시연 전용 · 실출력 보정 필요. 추정 근육지수는 진단값이 아닙니다.'),
+              const Text(
+                '연구용 시뮬레이션 전용 · 진동 후보와 근육 등급의 연결은 아직 검증되지 않았으며 실제 장치 출력은 금지됩니다.',
+              ),
               if (result.muscleAssessment != null)
                 Text(
                   '4건 범위 ${result.muscleAssessment!.minimumKg.toStringAsFixed(2)}–${result.muscleAssessment!.maximumKg.toStringAsFixed(2)} kg · '
                   '표준편차 ${result.muscleAssessment!.sdKg.toStringAsFixed(3)} kg · 변동계수 ${result.muscleAssessment!.cvPct.toStringAsFixed(2)}%',
                 ),
-              Text('실제 실행 상태: ${result.executionStatus}'),
+              Text('시뮬레이션 상태: ${result.executionStatus}'),
+              Text('물리 출력: ${result.physicalExecution}'),
               Text('검토 코드: ${result.reasonCodes.join(', ')}'),
               const SizedBox(height: 4),
-              Text(
-                '알고리즘 ${result.algorithmVersion} · 현재는 임상 확정 전 PILOT 규칙입니다.',
-              ),
+              Text('알고리즘 ${result.algorithmVersion} · HYPOTHESIS_UNVALIDATED'),
               const SizedBox(height: 18),
               _DetailSection(
-                title: '최종 강도 계산',
+                title: '시뮬레이션 후보 산출',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '기본 ${ruleSet.baseIntensityPct.toStringAsFixed(0)}% '
-                      '${result.adjustments.map((item) => '× ${item.factor.toStringAsFixed(2)}').join(' ')} '
-                      '= ${result.recommendation?.intensityPct ?? '—'}%',
+                      '연구 분류 → ${result.recommendation?.intensityPct ?? '—'}% · '
+                      '${result.recommendation?.frequencyHz ?? '—'}Hz · '
+                      '${result.recommendation == null ? '—' : '${result.recommendation!.durationSec ~/ 60}분'}',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,

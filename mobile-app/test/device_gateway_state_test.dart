@@ -60,6 +60,11 @@ Future<DeviceAuthorization> _authorization(MockDeviceGateway gateway) async {
         deviceId: 'BIA',
         measuredAt: DateTime.utc(2026, 9, 1),
         qualityPassed: true,
+        muscleDefinition: MuscleMassBasis.smm,
+        muscleMeasurementMethod: 'BIA_TEST',
+        methodEvidenceRef: 'TEST-METHOD-EVIDENCE-V1',
+        definitionRef: 'SMM-TEST-V1',
+        acquisitionProtocolRef: 'TEST-STANDARD-V1',
         values: const BiaValues(
           weightKg: 60,
           bmi: 26.6666666667,

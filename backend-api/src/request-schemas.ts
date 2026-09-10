@@ -20,7 +20,7 @@ export const authorizeSchema = z.object({
   deviceId: z.string().min(1),
   sourceDeviceId: z.string().min(1).optional(),
   algorithmVersion: z.string().min(1),
-  muscleMassBasis: z.enum(['ASM', 'SMM']).default('SMM'),
+  muscleMassBasis: z.enum(['ASM', 'SMM']),
   requestedIntensityPct: z.number().int().min(1).max(100).optional(),
 });
 
@@ -36,6 +36,14 @@ export const fitrusKindSchema = z.enum([
 export const fitrusProxySchema = z.object({
   deviceId: z.string().min(1),
   measuredAt: z.iso.datetime().optional(),
+  muscleProvenance: z.object({
+    muscleDefinition: z.enum(['UNKNOWN', 'ASM', 'SMM']),
+    definitionRef: z.string().min(1),
+    muscleMeasurementMethod: z.string().min(1),
+    methodEvidenceRef: z.string().min(1),
+    muscleMassUnit: z.literal('kg'),
+    acquisitionProtocol: z.string().min(1),
+  }).optional(),
   payload: z.record(z.string(), z.unknown()),
 });
 

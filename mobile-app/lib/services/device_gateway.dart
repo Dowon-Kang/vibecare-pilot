@@ -24,6 +24,7 @@ class DeviceCommand {
     required this.issuedAt,
     required this.expiresAt,
     required this.idempotencyKey,
+    this.executionMode = 'SIMULATOR_ONLY',
   });
 
   final String authorizationId;
@@ -36,6 +37,7 @@ class DeviceCommand {
   final DateTime issuedAt;
   final DateTime expiresAt;
   final String idempotencyKey;
+  final String executionMode;
 
   Map<String, Object> toJson() => {
     'authorizationId': authorizationId,
@@ -48,6 +50,7 @@ class DeviceCommand {
     'issuedAt': issuedAt.toUtc().toIso8601String(),
     'expiresAt': expiresAt.toUtc().toIso8601String(),
     'idempotencyKey': idempotencyKey,
+    'executionMode': executionMode,
   };
 }
 

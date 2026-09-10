@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibecare_pilot/algorithm/vibration_algorithm.dart';
 import 'package:vibecare_pilot/models/models.dart';
@@ -7,48 +5,36 @@ import 'package:vibecare_pilot/services/feedback_repository.dart';
 import 'package:vibecare_pilot/services/mock_device_gateway.dart';
 
 void main() {
-  final fixture = jsonDecode(
-    File(
-      '../shared-contracts/fixtures/pilot-0.6.0-boundaries.json',
-    ).readAsStringSync(),
-  );
-  for (final c in fixture['cases']) {
-    test('shared precision: ${c['id']}', () {
-      final result = calculateRecommendation(
-        profile: ParticipantProfile(
-          id: 'TEST',
-          age: c['age'],
-          sex: ParticipantSex.values.byName(c['sex']),
-          heightCm: 200,
+  test('UNKNOWN 정의는 통계·추천·시뮬레이션 허가를 차단한다', () {
+    const profile = ParticipantProfile(
+      id: 'TEST',
+      age: 72,
+      sex: ParticipantSex.female,
+      heightCm: 200,
+    );
+    final unknown = [
+      for (final measurement in rows([28, 28, 28, 28], 20))
+        BiaMeasurement(
+          id: measurement.id,
+          participantId: measurement.participantId,
+          deviceId: measurement.deviceId,
+          measuredAt: measurement.measuredAt,
+          qualityPassed: true,
+          muscleDefinition: MuscleMassBasis.unknown,
+          values: measurement.values,
         ),
-        measurements: rows(
-          (c['muscles'] as List).map((v) => (v as num).toDouble()).toList(),
-          (c['bmi'] as num).toDouble(),
-        ),
-        safety: SafetyCheck(
-          acutePain: false,
-          dizziness: c['dizziness'] ?? false,
-          clinicianHold: false,
-        ),
-      );
-      expect(result.status.name.toUpperCase(), c['status']);
-      expect(result.executionStatus, c['executionStatus']);
-      expect(result.muscleAssessment?.level.name, c['tier']);
-      expect(result.realDeviceSendAllowed, isFalse);
-      if (c['tier'] != null) {
-        final p = {
-          'low': [180, 12, 30],
-          'medium': [240, 16, 40],
-          'reference': [300, 20, 50],
-        }[c['tier']];
-        expect([
-          result.recommendation!.durationSec,
-          result.recommendation!.frequencyHz,
-          result.recommendation!.intensityPct,
-        ], p);
-      }
-    });
-  }
+    ];
+    final result = calculateRecommendation(
+      profile: profile,
+      measurements: unknown,
+      safety: const SafetyCheck.confirmedClear(),
+    );
+    expect(result.status, RecommendationStatus.review);
+    expect(result.muscleAssessment, isNull);
+    expect(result.recommendation, isNull);
+    expect(result.simulationEligibility, 'INELIGIBLE');
+    expect(result.physicalExecution, 'PROHIBITED');
+  });
   test(
     'feedback is idempotent, rejects conflicting retries and never raises',
     () async {
@@ -113,6 +99,11 @@ List<BiaMeasurement> rows(List<double> masses, double bmi) => [
       deviceId: 'BIA',
       measuredAt: DateTime.utc(2026, 9, 1),
       qualityPassed: true,
+      muscleDefinition: MuscleMassBasis.smm,
+      muscleMeasurementMethod: 'BIA_TEST',
+      methodEvidenceRef: 'TEST-METHOD-EVIDENCE-V1',
+      definitionRef: 'SMM-TEST-V1',
+      acquisitionProtocolRef: 'TEST-STANDARD-V1',
       values: BiaValues(
         weightKg: bmi * 4,
         bmi: bmi,

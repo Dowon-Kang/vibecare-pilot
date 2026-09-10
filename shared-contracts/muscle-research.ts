@@ -1,35 +1,21 @@
-// Pure simulation domain; no device, network, clinical diagnosis or hidden rounding.
 export type MuscleTier = 'low' | 'medium' | 'reference';
-export type ExecutionStatus = 'READY' | 'REVIEW' | 'BLOCKED' | 'CALIBRATION_REQUIRED' | 'INSUFFICIENT_DATA';
-export const evidenceLabels = {
-  muscleIndex: 'INDIRECT', thresholds: 'INDIRECT', protocol: 'PILOT',
-  averaging: 'PILOT', boundaryReview: 'PILOT', physicalEquation: 'EVIDENCE',
-} as const;
-export function muscleResearch(values: number[], heightCm: number,
-  thresholds: {lowMaximum:number; mediumMaximum:number}) {
-  const sum = values.reduce((a,b)=>a+b,0);
-  const mean = sum / values.length;
+export type MuscleStatistics = { count: 4; meanKg: number; sampleSdKg: number; cvPct: number; minimumKg: number; maximumKg: number; rangeKg: number };
+
+// Descriptive statistics only. CV is reported but has no unsupported cutoff.
+export function muscleResearch(values: number[], heightCm: number, thresholds: { lowMaximum: number; mediumMaximum: number }) {
+  if (values.length !== 4) throw new RangeError('Exactly four values are required');
+  const meanKg = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const sampleSdKg = Math.sqrt(values.reduce((sum, value) => sum + (value - meanKg) ** 2, 0) / (values.length - 1));
+  const minimumKg = Math.min(...values); const maximumKg = Math.max(...values);
   const heightSquared = (heightCm / 100) ** 2;
-  // Compare before division and rounding, including the exact <= boundary.
-  const tier = (total:number, count:number): MuscleTier => total <= thresholds.lowMaximum * heightSquared * count
-    ? 'low' : total <= thresholds.mediumMaximum * heightSquared * count ? 'medium' : 'reference';
-  const sd = Math.sqrt(values.reduce((a,b)=>a+(b-mean)**2,0)/(values.length-1));
-  return {
-    totalSmmi: Math.round(mean / heightSquared * 100) / 100,
-    level: tier(sum, values.length),
-    statistics: {meanKg:mean, sdKg:sd, cvPct:100*sd/mean, minimumKg:Math.min(...values), maximumKg:Math.max(...values)},
-    unstable: new Set(values.map(v=>tier(v,1))).size > 1,
+  const tier = (valueKg: number): MuscleTier => {
+    const index = valueKg / heightSquared;
+    return index <= thresholds.lowMaximum ? 'low' : index <= thresholds.mediumMaximum ? 'medium' : 'reference';
   };
-}
-export function executionStatus(status: 'READY'|'REVIEW'|'BLOCKED', count:number): ExecutionStatus {
-  if(status==='BLOCKED') return 'BLOCKED';
-  if(count!==4) return 'INSUFFICIENT_DATA';
-  return status==='REVIEW' ? 'REVIEW' : 'CALIBRATION_REQUIRED';
-}
-export function researchReasons(status:'READY'|'REVIEW'|'BLOCKED', count:number, unstable=false): string[] {
-  return [...(status==='BLOCKED' ? ['SAFETY_HOLD'] : []),
-    ...(count!==4 ? ['INSUFFICIENT_DATA'] : []),
-    ...(status==='REVIEW' ? ['INPUT_OR_SAFETY_REVIEW'] : []),
-    ...(unstable ? ['MUSCLE_TIER_UNSTABLE'] : []),
-    'MUSCLE_DEFINITION_UNVERIFIED','PILOT_PROTOCOL','CALIBRATION_REQUIRED','SIMULATION_ONLY'];
+  return {
+    heightAdjustedIndex: Math.round(meanKg / heightSquared * 100) / 100,
+    level: tier(meanKg),
+    statistics: { count: 4, meanKg, sampleSdKg, cvPct: 100 * sampleSdKg / meanKg, minimumKg, maximumKg, rangeKg: maximumKg - minimumKg } satisfies MuscleStatistics,
+    unstable: new Set(values.map(tier)).size > 1,
+  };
 }

@@ -55,7 +55,7 @@ sequenceDiagram
 
 FITRUS 프록시의 URL·인증 경계는 준비되어 있지만 공급사 성공 응답 계약과 정규화가 미완료다. 실제 REST/BLE 기기 어댑터도 없다. 두 외부 연동은 현재 흐름이 아니라 후속 작업이다.
 
-`pilot-0.6.0`은 연령·성별·체지방 강도 곱셈 보정을 사용하지 않는다(관련 계수는 모두 `1.0`). 성별은 근육지수 경계 선택, 나이는 코호트 검토, 체지방은 일관성 검사와 향후 연구 변수에 사용한다.
+`pilot-0.7.0`은 연령·성별·체지방 진동량 곱셈 보정을 사용하지 않는다. 성별은 확인된 ASM/SMM 정의별 연구 경계 선택, 체지방은 일관성 검사와 향후 연구 변수에 사용한다.
 
 ## 백엔드 경계
 
@@ -69,7 +69,7 @@ flowchart LR
     subgraph Backend[백엔드 API]
         AUTH[PIN 인증·잠금]
         ADAPTER[BIA 정규화 어댑터]
-        ENGINE[pilot-0.6.0 연구용 계산 엔진]
+        ENGINE[pilot-0.7.0 연구용 계산 엔진]
         AUTHORIZE[1회성 Mock 허가]
         SESSION[시뮬레이션 세션·합성 ACK·피드백 API]
     end
@@ -114,7 +114,7 @@ stateDiagram-v2
 
 | 범위 | 대표 상태 | 책임 |
 |---|---|---|
-| UI 추천 | `READY`, `REVIEW`, `BLOCKED` | 입력과 안전 문진 결과를 표시한다. `READY`는 Mock 시연 자격이다. |
+| UI 추천 | `SIMULATION_READY`, `REVIEW`, `BLOCKED` | 입력과 안전 문진 결과를 표시한다. 준비 상태도 Mock 시뮬레이션 자격일 뿐이다. |
 | 연구 실행 검토 | `CALIBRATION_REQUIRED`, `INSUFFICIENT_DATA` | 물리 실행을 막는 근거·교정·데이터 부족을 기록한다. |
 | 장치 세션 | 연결, 허가, 전송, ACK 대기, 실행, 중지, 완료, 오류 | 현재는 Mock 또는 서버 시뮬레이션 수명주기만 관리한다. |
 

@@ -1,0 +1,71 @@
+{
+  "version": "pilot-0.7.0",
+  "purpose": "SIMULATION_PARITY_ONLY",
+  "physicalExecution": "PROHIBITED",
+  "evaluatedAt": "2026-09-10T00:00:00Z",
+  "ruleSet": {
+    "version": "pilot-0.7.0", "activeFrom": "2026-09-10T00:00:00Z", "enabled": true,
+    "research": { "mode": "simulation_only", "protocolEvidence": "HYPOTHESIS_UNVALIDATED", "physicalExecution": "PROHIBITED" },
+    "measurementPolicy": { "maximumAgeDays": 30, "maximumFutureSkewMinutes": 5, "requiredUnit": "kg", "requireSameMethod": true, "requireSameAcquisitionProtocol": true, "policyBasis": "ENGINEERING_POLICY" },
+    "muscle": {
+      "definitions": {
+        "ASM": { "female": { "lowMaximum": 5.7, "mediumMaximum": 6.7 }, "male": { "lowMaximum": 7, "mediumMaximum": 8 }, "classificationEvidence": "HYPOTHESIS_UNVALIDATED", "applicableMethods": [] },
+        "SMM": { "female": { "lowMaximum": 5.75, "mediumMaximum": 6.75 }, "male": { "lowMaximum": 8.5, "mediumMaximum": 10.75 }, "classificationEvidence": "INDIRECT", "applicableMethods": [{ "method": "BIA", "methodEvidenceRef": "TEST-METHOD-EVIDENCE-V1", "definitionRef": "TEST-SMM-DEFINITION-V1" }] }
+      },
+      "simulatorCandidates": {
+        "low": { "durationSec": 180, "frequencyHz": 12, "intensityPct": 30, "evidence": "HYPOTHESIS_UNVALIDATED" },
+        "medium": { "durationSec": 240, "frequencyHz": 16, "intensityPct": 40, "evidence": "HYPOTHESIS_UNVALIDATED" },
+        "reference": { "durationSec": 300, "frequencyHz": 20, "intensityPct": 50, "evidence": "HYPOTHESIS_UNVALIDATED" }
+      }
+    },
+    "output": { "minimumPct": 20, "maximumPct": 70 }
+  },
+  "profile": { "participantId": "USER-001", "age": 72, "sex": "female", "heightCm": 150 },
+  "muscleMassBasis": "SMM",
+  "measurements": [
+    { "id": "M-1", "participantId": "USER-001", "deviceId": "FITRUS-01", "measuredAt": "2026-09-01T00:00:00Z", "qualityPassed": true, "muscleDefinition": "SMM", "definitionRef": "TEST-SMM-DEFINITION-V1", "muscleMeasurementMethod": "BIA", "methodEvidenceRef": "TEST-METHOD-EVIDENCE-V1", "muscleMassUnit": "kg", "acquisitionProtocol": "FITRUS-STANDARD-V1", "weightKg": 60, "bmi": 26.67, "bodyFatPct": 25, "fatMassKg": 15, "skeletalMuscleMassKg": 18.1 },
+    { "id": "M-2", "participantId": "USER-001", "deviceId": "FITRUS-01", "measuredAt": "2026-09-02T00:00:00Z", "qualityPassed": true, "muscleDefinition": "SMM", "definitionRef": "TEST-SMM-DEFINITION-V1", "muscleMeasurementMethod": "BIA", "methodEvidenceRef": "TEST-METHOD-EVIDENCE-V1", "muscleMassUnit": "kg", "acquisitionProtocol": "FITRUS-STANDARD-V1", "weightKg": 60, "bmi": 26.67, "bodyFatPct": 25, "fatMassKg": 15, "skeletalMuscleMassKg": 18.0 },
+    { "id": "M-3", "participantId": "USER-001", "deviceId": "FITRUS-01", "measuredAt": "2026-09-03T00:00:00Z", "qualityPassed": true, "muscleDefinition": "SMM", "definitionRef": "TEST-SMM-DEFINITION-V1", "muscleMeasurementMethod": "BIA", "methodEvidenceRef": "TEST-METHOD-EVIDENCE-V1", "muscleMassUnit": "kg", "acquisitionProtocol": "FITRUS-STANDARD-V1", "weightKg": 60, "bmi": 26.67, "bodyFatPct": 25, "fatMassKg": 15, "skeletalMuscleMassKg": 18.2 },
+    { "id": "M-4", "participantId": "USER-001", "deviceId": "FITRUS-01", "measuredAt": "2026-09-04T00:00:00Z", "qualityPassed": true, "muscleDefinition": "SMM", "definitionRef": "TEST-SMM-DEFINITION-V1", "muscleMeasurementMethod": "BIA", "methodEvidenceRef": "TEST-METHOD-EVIDENCE-V1", "muscleMassUnit": "kg", "acquisitionProtocol": "FITRUS-STANDARD-V1", "weightKg": 60, "bmi": 26.67, "bodyFatPct": 25, "fatMassKg": 15, "skeletalMuscleMassKg": 18.1 }
+  ],
+  "expected": {
+    "dataDecision": "ACCEPTED",
+    "simulationEligibility": "ELIGIBLE",
+    "physicalExecution": "PROHIBITED",
+    "executionStatus": "SIMULATION_READY",
+    "meanKg": 18.1,
+    "sampleSdKg": 0.08164965809277232,
+    "cvPct": 0.4511030833854824,
+    "rangeKg": 0.1999999999999993,
+    "candidatePurpose": "SIMULATION_CANDIDATE",
+    "candidateEvidence": "HYPOTHESIS_UNVALIDATED",
+    "durationSec": 300,
+    "frequencyHz": 20,
+    "intensityPct": 50
+  },
+  "expectedNormalizedResult": {
+    "status": "READY",
+    "executionStatus": "SIMULATION_READY",
+    "dataDecision": "ACCEPTED",
+    "simulationEligibility": "ELIGIBLE",
+    "physicalExecution": "PROHIBITED",
+    "realDeviceSendAllowed": false,
+    "reasonCodes": ["SIMULATION_ONLY", "HYPOTHESIS_UNVALIDATED", "PHYSICAL_EXECUTION_PROHIBITED"],
+    "warnings": [],
+    "algorithmVersion": "pilot-0.7.0",
+    "muscleMassBasis": "SMM",
+    "muscleStatistics": {
+      "count": 4,
+      "meanKg": 18.1,
+      "sampleSdKg": 0.08164965809277232,
+      "cvPct": 0.45110308338548244,
+      "minimumKg": 18,
+      "maximumKg": 18.2,
+      "rangeKg": 0.1999999999999993
+    },
+    "average": { "weightKg": 60, "bmi": 26.67, "bodyFatPct": 25, "fatMassKg": 15, "skeletalMuscleMassKg": 18.1 },
+    "muscleAssessment": { "heightAdjustedIndex": 8.04, "level": "reference", "unstable": false },
+    "recommendation": { "durationSec": 300, "frequencyHz": 20, "intensityPct": 50, "evidence": "HYPOTHESIS_UNVALIDATED", "purpose": "SIMULATION_CANDIDATE" },
+    "factors": null
+  }
+}

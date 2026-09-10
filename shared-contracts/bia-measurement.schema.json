@@ -10,6 +10,12 @@
     "measuredAt",
     "deviceId",
     "qualityPassed",
+    "muscleDefinition",
+    "definitionRef",
+    "muscleMeasurementMethod",
+    "methodEvidenceRef",
+    "muscleMassUnit",
+    "acquisitionProtocol",
     "values"
   ],
   "properties": {
@@ -32,6 +38,12 @@
     "qualityPassed": {
       "type": "boolean"
     },
+    "muscleDefinition": { "type": "string", "enum": ["UNKNOWN", "ASM", "SMM"] },
+    "definitionRef": { "type": "string", "minLength": 1 },
+    "muscleMeasurementMethod": { "type": "string", "minLength": 1 },
+    "methodEvidenceRef": { "type": "string", "minLength": 1 },
+    "muscleMassUnit": { "const": "kg" },
+    "acquisitionProtocol": { "type": "string", "minLength": 1 },
     "values": {
       "type": "object",
       "additionalProperties": false,

@@ -65,9 +65,19 @@ export function registerSessionRoutes(app: VibeCareApp): void {
     }
 
     const recommendation = JSON.parse(String(authorization.recommendation_json)) as {
-      recommendation: { durationSec: number; frequencyHz: number; intensityPct: number };
+      recommendation: { durationSec: number; frequencyHz: number; intensityPct: number; purpose: string; evidence: string } | null;
       algorithmVersion: string;
+      dataDecision: string;
+      simulationEligibility: string;
+      physicalExecution: string;
     };
+    if (recommendation.dataDecision !== 'ACCEPTED' ||
+      recommendation.simulationEligibility !== 'ELIGIBLE' ||
+      recommendation.physicalExecution !== 'PROHIBITED' ||
+      recommendation.recommendation?.purpose !== 'SIMULATION_CANDIDATE' ||
+      recommendation.recommendation.evidence !== 'HYPOTHESIS_UNVALIDATED') {
+      return context.json({ error: 'SIMULATION_AUTHORIZATION_INVALID' }, 409);
+    }
     const adjustment = await readFeedbackAdjustment(context, participantId);
     if (
       adjustment &&
@@ -80,10 +90,13 @@ export function registerSessionRoutes(app: VibeCareApp): void {
     const sessionId = crypto.randomUUID();
     const now = new Date().toISOString();
     const command = {
+      executionMode: 'SIMULATOR_ONLY',
       authorizationId: parsed.data.authorizationId,
       participantId,
       deviceId: parsed.data.deviceId,
-      ...recommendation.recommendation,
+      durationSec: recommendation.recommendation.durationSec,
+      frequencyHz: recommendation.recommendation.frequencyHz,
+      intensityPct: recommendation.recommendation.intensityPct,
       algorithmVersion: recommendation.algorithmVersion,
       issuedAt: now,
       expiresAt: authorization.expires_at,

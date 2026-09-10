@@ -1,243 +1,89 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vibecare.local/contracts/algorithm-rule-set.schema.json",
-  "title": "Algorithm Rule Set",
+  "title": "VibeCare simulator rule set",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "version",
-    "activeFrom",
-    "enabled",
-    "base",
-    "age",
-    "sex",
-    "bodyFat",
-    "muscle",
-    "output",
-    "research"
-  ],
+  "required": ["version", "activeFrom", "enabled", "research", "measurementPolicy", "muscle", "output"],
   "properties": {
-    "version": {
-      "const": "pilot-0.6.0"
-    },
-    "activeFrom": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "enabled": {
-      "type": "boolean"
-    },
-    "base": {
-      "type": "object",
-      "required": [
-        "durationSec",
-        "frequencyHz",
-        "intensityPct"
-      ],
+    "version": { "const": "pilot-0.7.0" },
+    "activeFrom": { "type": "string", "format": "date-time" },
+    "enabled": { "const": true },
+    "research": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "protocolEvidence", "physicalExecution"],
       "properties": {
-        "durationSec": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "frequencyHz": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "intensityPct": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 100
-        }
+        "mode": { "const": "simulation_only" },
+        "protocolEvidence": { "const": "HYPOTHESIS_UNVALIDATED" },
+        "physicalExecution": { "const": "PROHIBITED" }
       }
     },
-    "age": {
-      "type": "object",
-      "required": [
-        "threshold",
-        "factor"
-      ],
+    "measurementPolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["maximumAgeDays", "maximumFutureSkewMinutes", "requiredUnit", "requireSameMethod", "requireSameAcquisitionProtocol", "policyBasis"],
       "properties": {
-        "threshold": {
-          "type": "integer",
-          "minimum": 18,
-          "maximum": 100
-        },
-        "factor": {
-          "const": 1
-        }
-      }
-    },
-    "sex": {
-      "type": "object",
-      "required": [
-        "femaleFactor",
-        "maleFactor"
-      ],
-      "properties": {
-        "femaleFactor": {
-          "const": 1
-        },
-        "maleFactor": {
-          "const": 1
-        }
-      }
-    },
-    "bodyFat": {
-      "type": "object",
-      "required": [
-        "female",
-        "male",
-        "outsideRangeFactor"
-      ],
-      "properties": {
-        "female": {
-          "$ref": "#/$defs/range"
-        },
-        "male": {
-          "$ref": "#/$defs/range"
-        },
-        "outsideRangeFactor": {
-          "const": 1
-        }
+        "maximumAgeDays": { "type": "integer", "minimum": 1 },
+        "maximumFutureSkewMinutes": { "type": "integer", "minimum": 0 },
+        "requiredUnit": { "const": "kg" },
+        "requireSameMethod": { "const": true },
+        "requireSameAcquisitionProtocol": { "const": true },
+        "policyBasis": { "const": "ENGINEERING_POLICY" }
       }
     },
     "muscle": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "female",
-        "male",
-        "protocols"
-      ],
+      "type": "object", "additionalProperties": false,
+      "required": ["definitions", "simulatorCandidates"],
       "properties": {
-        "female": {
-          "$ref": "#/$defs/muscleThresholds"
-        },
-        "male": {
-          "$ref": "#/$defs/muscleThresholds"
-        },
-        "protocols": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "low",
-            "medium",
-            "reference"
-          ],
+        "definitions": {
+          "type": "object", "additionalProperties": false, "required": ["ASM", "SMM"],
           "properties": {
-            "low": {
-              "$ref": "#/$defs/protocol"
-            },
-            "medium": {
-              "$ref": "#/$defs/protocol"
-            },
-            "reference": {
-              "$ref": "#/$defs/protocol"
-            }
+            "ASM": { "$ref": "#/$defs/asmDefinition" },
+            "SMM": { "$ref": "#/$defs/smmDefinition" }
+          }
+        },
+        "simulatorCandidates": {
+          "type": "object", "additionalProperties": false, "required": ["low", "medium", "reference"],
+          "properties": {
+            "low": { "$ref": "#/$defs/candidate" },
+            "medium": { "$ref": "#/$defs/candidate" },
+            "reference": { "$ref": "#/$defs/candidate" }
           }
         }
       }
     },
     "output": {
-      "type": "object",
-      "required": [
-        "minimumPct",
-        "maximumPct"
-      ],
-      "properties": {
-        "minimumPct": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 100
-        },
-        "maximumPct": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 100
-        }
-      }
-    },
-    "research": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "mode",
-        "measurementDefinition",
-        "protocolEvidence"
-      ],
-      "properties": {
-        "mode": {
-          "const": "simulation_only"
-        },
-        "measurementDefinition": {
-          "const": "unverified"
-        },
-        "protocolEvidence": {
-          "const": "PILOT"
-        }
-      }
+      "type": "object", "additionalProperties": false, "required": ["minimumPct", "maximumPct"],
+      "properties": { "minimumPct": { "type": "number", "minimum": 0, "maximum": 100 }, "maximumPct": { "type": "number", "minimum": 0, "maximum": 100 } }
     }
   },
   "$defs": {
-    "range": {
-      "type": "object",
-      "required": [
-        "minimum",
-        "maximum"
-      ],
+    "thresholds": {
+      "type": "object", "additionalProperties": false, "required": ["lowMaximum", "mediumMaximum"],
+      "properties": { "lowMaximum": { "type": "number", "exclusiveMinimum": 0 }, "mediumMaximum": { "type": "number", "exclusiveMinimum": 0 } }
+    },
+    "sexThresholds": {
+      "type": "object", "additionalProperties": false, "required": ["female", "male", "classificationEvidence", "applicableMethods"],
       "properties": {
-        "minimum": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 100
-        },
-        "maximum": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 100
-        }
+        "female": { "$ref": "#/$defs/thresholds" }, "male": { "$ref": "#/$defs/thresholds" },
+        "classificationEvidence": { "enum": ["HYPOTHESIS_UNVALIDATED", "INDIRECT"] },
+        "applicableMethods": { "type": "array", "items": { "$ref": "#/$defs/applicableMethod" } }
       }
     },
-    "muscleThresholds": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "lowMaximum",
-        "mediumMaximum"
-      ],
-      "properties": {
-        "lowMaximum": {
-          "type": "number",
-          "exclusiveMinimum": 0
-        },
-        "mediumMaximum": {
-          "type": "number",
-          "exclusiveMinimum": 0
-        }
-      }
+    "applicableMethod": {
+      "type": "object", "additionalProperties": false, "required": ["method", "methodEvidenceRef", "definitionRef"],
+      "properties": { "method": { "type": "string", "minLength": 1 }, "methodEvidenceRef": { "type": "string", "minLength": 1 }, "definitionRef": { "type": "string", "minLength": 1 } }
     },
-    "protocol": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "durationSec",
-        "frequencyHz",
-        "intensityPct"
-      ],
+    "asmDefinition": {
+      "allOf": [{ "$ref": "#/$defs/sexThresholds" }, { "properties": { "classificationEvidence": { "const": "HYPOTHESIS_UNVALIDATED" } } }]
+    },
+    "smmDefinition": {
+      "allOf": [{ "$ref": "#/$defs/sexThresholds" }, { "properties": { "classificationEvidence": { "const": "INDIRECT" } } }]
+    },
+    "candidate": {
+      "type": "object", "additionalProperties": false, "required": ["durationSec", "frequencyHz", "intensityPct", "evidence"],
       "properties": {
-        "durationSec": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "frequencyHz": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "intensityPct": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 100
-        }
+        "durationSec": { "type": "integer", "minimum": 1 }, "frequencyHz": { "type": "integer", "minimum": 1 },
+        "intensityPct": { "type": "number", "minimum": 0, "maximum": 100 }, "evidence": { "const": "HYPOTHESIS_UNVALIDATED" }
       }
     }
   }

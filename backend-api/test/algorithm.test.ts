@@ -1,111 +1,101 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import {
-  applyRequestedIntensity,
-  defaultRuleSet,
-  calculateRecommendation,
-  type CanonicalMeasurement,
-} from '../src/algorithm';
-
-const values = [
-  ['M-001', 42, 17.7, 18.8, 7.9, 18.1],
-  ['M-002', 42.2, 17.8, 18.7, 7.9, 18],
-  ['M-003', 41.9, 17.7, 19.1, 8, 18.2],
-  ['M-004', 42.1, 17.8, 18.9, 8, 18.1],
-] as const;
-
-const measurements: CanonicalMeasurement[] = values.map(
-  ([id, weightKg, bmi, bodyFatPct, fatMassKg, skeletalMuscleMassKg]) => ({
-    id,
-    participantId: 'USER-001',
-    deviceId: 'FITRUS-PLUS-01',
-    qualityPassed: true,
-    weightKg,
-    bmi,
-    bodyFatPct,
-    fatMassKg,
-    skeletalMuscleMassKg,
-  }),
-);
+import { applyRequestedIntensity, calculateRecommendation, defaultRuleSet, type CanonicalMeasurement } from '../src/algorithm';
 
 const safety = { acutePain: false, dizziness: false, clinicianHold: false };
+const fixture = JSON.parse(readFileSync(new URL('../../shared-contracts/fixtures/pilot-0.7.0.json', import.meta.url), 'utf8'));
+const rows = (definition: 'UNKNOWN' | 'ASM' | 'SMM' = 'SMM'): CanonicalMeasurement[] => fixture.measurements.map((measurement: CanonicalMeasurement) => ({ ...measurement, muscleDefinition: definition }));
+const evaluate = (overrides: Partial<Parameters<typeof calculateRecommendation>[0]> = {}) => calculateRecommendation({
+  profile: fixture.profile, measurements: rows(), safety, muscleMassBasis: fixture.muscleMassBasis,
+  ruleSet: fixture.ruleSet, evaluatedAt: new Date(fixture.evaluatedAt), ...overrides,
+});
 
-describe('pilot-0.6.0 muscle-driven parity', () => {
-  it('returns the female fixture result', () => {
-    const result = calculateRecommendation({
-      profile: { participantId: 'USER-001', age: 72, sex: 'female', heightCm: 154 },
-      measurements,
-      safety,
+describe('pilot-0.7.0 provenance-first simulator algorithm', () => {
+  it('emits an explicitly unvalidated simulator candidate and prohibits physical execution', () => {
+    const result = evaluate();
+    expect(result).toMatchObject({ status: 'READY', executionStatus: 'SIMULATION_READY', dataDecision: 'ACCEPTED', simulationEligibility: 'ELIGIBLE', physicalExecution: 'PROHIBITED', realDeviceSendAllowed: false });
+    expect(result.recommendation).toMatchObject({ purpose: 'SIMULATION_CANDIDATE', evidence: 'HYPOTHESIS_UNVALIDATED' });
+    expect(result.executionStatus).toBe(fixture.expected.executionStatus);
+    expect(result.recommendation).toMatchObject({
+      purpose: fixture.expected.candidatePurpose,
+      evidence: fixture.expected.candidateEvidence,
+      durationSec: fixture.expected.durationSec,
+      frequencyHz: fixture.expected.frequencyHz,
+      intensityPct: fixture.expected.intensityPct,
     });
-    expect(result.average?.weightKg).toBe(42.05);
-    expect(result.average?.bodyFatPct).toBe(18.88);
-    expect(result.muscleAssessment).toEqual({totalSmmi: 7.63, level: 'reference'});
-    expect(result.recommendation).toEqual({durationSec: 300, frequencyHz: 20, intensityPct: 50});
-    expect(result.status).toBe('REVIEW');
+    expect(result.factors).toBeNull();
   });
 
-  it('uses the male low-muscle protocol for the same absolute muscle mass', () => {
-    const result = calculateRecommendation({
-      profile: { participantId: 'USER-001', age: 72, sex: 'male', heightCm: 154 },
-      measurements,
-      safety,
-    });
-    expect(result.muscleAssessment?.level).toBe('low');
-    expect(result.recommendation).toEqual({durationSec: 180, frequencyHz: 12, intensityPct: 30});
+  it('loads the shared fixture as the parity source', () => {
+    const result = evaluate();
+    expect(result).toEqual(fixture.expectedNormalizedResult);
   });
 
-  it('calculates the explicit ASM interpretation independently from SMM', () => {
-    const result = calculateRecommendation({
-      profile: { participantId: 'USER-001', age: 72, sex: 'female', heightCm: 154 },
-      measurements,
-      safety,
-      muscleMassBasis: 'ASM',
-    });
-    expect(result.muscleMassBasis).toBe('ASM');
-    expect(result.muscleAssessment).toEqual({totalSmmi: 7.63, level: 'medium'});
-    expect(result.recommendation).toEqual({durationSec: 240, frequencyHz: 16, intensityPct: 40});
+  it('reports exact four-row descriptive statistics without a CV cutoff', () => {
+    const statistics = evaluate().muscleStatistics!;
+    expect(statistics.count).toBe(4);
+    expect(statistics.meanKg).toBeCloseTo(18.1);
+    expect(statistics.sampleSdKg).toBeCloseTo(0.081649658, 8);
+    expect(statistics.cvPct).toBeCloseTo(0.4511031, 6);
+    expect(statistics).toMatchObject({ minimumKg: 18, maximumKg: 18.2 });
+    expect(statistics.rangeKg).toBeCloseTo(0.2);
   });
 
-  it('blocks dizziness before making a recommendation', () => {
-    const result = calculateRecommendation({
-      profile: { participantId: 'USER-001', age: 72, sex: 'female', heightCm: 154 },
-      measurements,
-      safety: { ...safety, dizziness: true },
-    });
-    expect(result.status).toBe('BLOCKED');
+  it.each([
+    ['unknown definition', rows('UNKNOWN'), 'SMM', 'MUSCLE_DEFINITION_UNKNOWN'],
+    ['basis mismatch', rows('ASM'), 'SMM', 'MUSCLE_BASIS_MISMATCH'],
+    ['mixed definition', rows('SMM').map((row, i) => ({ ...row, muscleDefinition: i ? 'SMM' as const : 'ASM' as const })), 'SMM', 'MUSCLE_DEFINITION_MIXED'],
+  ])('rejects %s', (_name, measurements, muscleMassBasis, reason) => {
+    const result = evaluate({ measurements, muscleMassBasis: muscleMassBasis as 'SMM' });
+    expect(result.simulationEligibility).toBe('INELIGIBLE');
+    expect(result.recommendation).toBeNull();
+    expect(result.reasonCodes).toContain(reason);
+  });
+
+  it.each([
+    ['missing definition reference', { definitionRef: '' }, 'MUSCLE_DEFINITION_REF_MISSING'],
+    ['missing method evidence reference', { methodEvidenceRef: '' }, 'METHOD_EVIDENCE_REF_MISSING'],
+    ['unsupported method evidence', { methodEvidenceRef: 'UNREGISTERED-EVIDENCE' }, 'METHOD_NOT_APPLICABLE'],
+    ['definition reference absent from method triple', { definitionRef: 'OTHER-DEFINITION' }, 'METHOD_NOT_APPLICABLE'],
+  ])('rejects %s', (_name, mutation, reason) => {
+    const measurements = rows(); measurements[0] = { ...measurements[0], ...mutation };
+    const result = evaluate({ measurements });
+    expect(result.reasonCodes).toContain(reason);
+    expect(result.simulationEligibility).toBe('INELIGIBLE');
+  });
+
+  it.each([
+    ['stale', { measuredAt: '2026-07-01T00:00:00Z' }, 'MEASUREMENT_STALE'],
+    ['future', { measuredAt: '2026-09-10T00:06:00Z' }, 'MEASUREMENT_FUTURE'],
+    ['mixed method', { muscleMeasurementMethod: 'DXA' }, 'METHOD_MIXED'],
+    ['mixed protocol', { acquisitionProtocol: 'OTHER' }, 'ACQUISITION_PROTOCOL_MIXED'],
+  ])('fails closed for %s measurements', (_name, mutation, reason) => {
+    const measurements = rows(); measurements[0] = { ...measurements[0], ...mutation };
+    expect(evaluate({ measurements }).reasonCodes).toContain(reason);
+  });
+
+  it('detects tier instability by boundary crossing rather than an invented CV threshold', () => {
+    const measurements = rows().map((row, index) => ({ ...row, skeletalMuscleMassKg: index ? 18 : 12 }));
+    const result = evaluate({ measurements });
+    expect(result.reasonCodes).toContain('MUSCLE_TIER_UNSTABLE');
     expect(result.recommendation).toBeNull();
   });
 
-  it('accepts only a manual intensity within the server-approved range', () => {
-    const result = calculateRecommendation({
-      profile: { participantId: 'USER-001', age: 72, sex: 'female', heightCm: 154 },
-      measurements,
-      safety,
-    });
+  it('does not multiply dose by age, sex, or body fat', () => {
+    const first = evaluate();
+    const second = evaluate({ profile: { participantId: 'USER-001', age: 30, sex: 'female', heightCm: 150 }, measurements: rows().map((row) => ({ ...row, bodyFatPct: 40, fatMassKg: 24 })) });
+    expect(second.recommendation).toEqual(first.recommendation);
+  });
 
+  it('allows only downward manual adjustment of an eligible simulator candidate', () => {
+    const result = evaluate();
     expect(applyRequestedIntensity(result, 30).recommendation?.intensityPct).toBe(30);
     expect(() => applyRequestedIntensity(result, 51)).toThrow(RangeError);
-    expect(() => applyRequestedIntensity(result, 19)).toThrow(RangeError);
   });
-});
 
-const fixture = JSON.parse(readFileSync(new URL('../../shared-contracts/fixtures/pilot-0.6.0.json', import.meta.url), 'utf8'));
-it('reads the shared contract fixture', () => {
-  const result = calculateRecommendation({profile: fixture.profile, safety, ruleSet: fixture.ruleSet,
-    measurements: fixture.measurements.map((m: {values: object}) => ({...m,...m.values}))});
-  expect(result.recommendation?.intensityPct).toBe(fixture.expected.femaleIntensityPct);
-  expect(result.average?.bmi).toBe(fixture.expected.averageBmi);
-  expect(result.status).toBe(fixture.expected.status);
-});
-it.each([NaN, Infinity, 0, -1, 101])('rejects invalid fat percent %s without an output', (value) => {
-  const result = calculateRecommendation({profile: fixture.profile, safety,
-    measurements: measurements.map(m => ({...m, bodyFatPct: value}))});
-  expect(result.status).toBe('REVIEW');
-  expect(result.recommendation).toBeNull();
-  expect(result.average).toBeNull();
-});
-it('rejects disabled and malformed rules outside HTTP too', () => {
-  for(const ruleSet of [{...defaultRuleSet,enabled:false}, {...defaultRuleSet,base:{...defaultRuleSet.base,frequencyHz:20.5}}]) {
-    expect(calculateRecommendation({profile:fixture.profile, safety, measurements, ruleSet}).recommendation).toBeNull();
-  }
+  it('rejects malformed or disabled rules', () => {
+    for (const ruleSet of [{ ...defaultRuleSet, enabled: false }, { ...defaultRuleSet, version: 'pilot-0.6.0' }]) {
+      expect(evaluate({ ruleSet: ruleSet as never }).recommendation).toBeNull();
+    }
+  });
 });

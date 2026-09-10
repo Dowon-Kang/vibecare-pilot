@@ -57,9 +57,11 @@ class MockDeviceGateway implements DeviceGateway {
     if (!safety.isComplete ||
         safety.hasSymptoms ||
         !result.canRequestAuthorization ||
+        result.physicalExecution != 'PROHIBITED' ||
+        result.simulationEligibility != 'ELIGIBLE' ||
         recommendation == null ||
         _deviceId == null) {
-      throw StateError('READY 상태와 연결된 Mock 기기가 필요합니다.');
+      throw StateError('시뮬레이션 준비 상태와 연결된 Mock 기기가 필요합니다.');
     }
     final now = DateTime.now();
     if (intensityPct < 20 || intensityPct > recommendation.intensityPct) {
@@ -84,6 +86,9 @@ class MockDeviceGateway implements DeviceGateway {
 
   @override
   Future<DeviceSession> start(DeviceAuthorization authorization) async {
+    if (authorization.command.executionMode != 'SIMULATOR_ONLY') {
+      throw StateError('물리 장치 명령은 Mock 게이트웨이에서 실행할 수 없습니다.');
+    }
     if (_activeSessionId != null || _starting) {
       throw StateError('중복 실행은 허용되지 않습니다.');
     }

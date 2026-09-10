@@ -1,5 +1,7 @@
 # 근육량 기반 전신진동 연구 알고리즘 명세
 
+> 이 문서는 실장비 승격을 위한 장기 목표와 과거 검토를 함께 담는다. 현재 구현의 단일 기준은 [pilot-0.7.0 설계](pilot-0.7.0-design.md)다.
+
 ## 1. Executive Summary
 
 이 시스템은 체성분만으로 개인의 “안전한 진동 처방”을 계산하지 않는다. 동일 조건에서 측정한 최근 BIA 4건을 검증하고, ASM 또는 전신 SMM을 서로 다른 근거로 평가한 뒤, 승인·교정된 전신진동(WBV) 연구 프로토콜 후보를 선택한다. 통증·어지럼·사용 보류, 데이터 정의 불일치, 장치 교정 부재 중 하나라도 있으면 실제 명령을 생성하지 않는다.
@@ -13,11 +15,11 @@
 - [HYPOTHESIS] 근육량 등급은 초기 안전 단계와 감독 수준을 정하는 층화 변수로 사용하고, 이후 단계는 실제 내약성 이력으로 한 단계씩 조정한다.
 - [UNRESOLVED] 장치의 `intensityPct`와 실제 변위·가속도 대응표가 없으므로 현재 실제 출력은 항상 금지한다.
 
-따라서 `12Hz·3분·30% / 16Hz·4분·40% / 20Hz·5분·50%` 규칙은 현재 `pilot-0.6.0`의 Mock 시뮬레이션에서만 활성화한다. 이는 화면·회귀 테스트에서 흐름을 검증하기 위한 연구가설이며, 임상 처방이나 물리 기기 실행 규칙이 아니다.
+따라서 `12Hz·3분·30% / 16Hz·4분·40% / 20Hz·5분·50%` 규칙은 현재 `pilot-0.7.0`의 Mock 시뮬레이션에서만 활성화한다. 이는 화면·회귀 테스트에서 흐름을 검증하기 위한 연구가설이며, 임상 처방이나 물리 기기 실행 규칙이 아니다.
 
 ## 2. 현재 알고리즘의 냉정한 평가
 
-현재 앱의 `pilot-0.6.0`은 SMMI 등급에 따라 세 가지 값을 반환한다. 예시 여성(72세, 150cm, 평균 SMM 18.1kg)은 `18.1 / 1.5² = 8.04kg/m²`이므로 기존 Janssen 분류에서 참조 등급이 되고 50%가 선택된다.
+현재 앱의 `pilot-0.7.0`은 정의가 확인된 경우에만 SMMI 연구 구간에 따라 세 가지 시뮬레이션 후보를 반환한다. 예시 여성(72세, 150cm, 평균 SMM 18.1kg)은 `18.1 / 1.5² = 8.04kg/m²`이므로 기존 Janssen 분류에서 참조 등급이 되고 50% 후보가 선택된다.
 
 | 질문 | 판정 | 이유 |
 |---|---|---|
@@ -297,7 +299,7 @@ READY ──ACK──▶ RUNNING ──완료──▶ FEEDBACK_REQUIRED
 | Server authority | 소유권·정책·최종 Mock 허가 | `backend-api/src/routes/recommendation-routes.ts`, `backend-api/src/routes/session-routes.ts`, `backend-api/src/session-store.ts` |
 | DeviceGateway | ACK·중지·중복 방지 | `mobile-app/lib/services/device_gateway.dart`, `mobile-app/lib/services/device_state_machine.dart`, `mobile-app/lib/services/mock_device_gateway.dart`, `mobile-app/lib/services/backend_device_gateway.dart`; 실장치 어댑터는 없음 |
 
-현재 연결된 알고리즘은 `pilot-0.6.0`뿐이다. 화면은 알고리즘 버전과 `SIMULATION / CALIBRATION_REQUIRED / READY`를 명확히 보여야 한다.
+현재 연결된 알고리즘은 `pilot-0.7.0`이다. 화면은 알고리즘 버전과 `SIMULATION_READY / REVIEW / BLOCKED`, `PHYSICAL_EXECUTION_PROHIBITED`를 명확히 보여야 한다.
 
 ## 18. Flutter–Backend–Device 데이터 흐름
 

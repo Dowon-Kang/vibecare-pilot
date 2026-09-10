@@ -11,7 +11,7 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
     if (!participantId) return context.json({ error: 'UNAUTHORIZED' }, 401);
     const kind = fitrusKindSchema.safeParse(context.req.param('kind'));
     const body = fitrusProxySchema.safeParse(await jsonBody(context));
-    if (!kind.success || !body.success) return context.json({ error: 'INVALID_REQUEST' }, 400);
+    if (!kind.success || !body.success || (kind.success && kind.data === 'bodyFat' && !body.data.muscleProvenance)) return context.json({ error: 'INVALID_REQUEST' }, 400);
     if (!context.env.FITRUS_API_KEY) {
       return context.json({ error: 'FITRUS_NOT_CONFIGURED' }, 503);
     }
@@ -26,8 +26,10 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
     const rawId = crypto.randomUUID();
     await context.env.DB.prepare(
       `INSERT INTO fitrus_raw_measurements
-        (id, participant_id, kind, source_device_id, request_id, response_json, measured_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        (id, participant_id, kind, source_device_id, request_id, response_json, measured_at,
+         muscle_definition, muscle_definition_ref, muscle_measurement_method,
+         muscle_method_evidence_ref, muscle_mass_unit, acquisition_protocol)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       rawId,
       participantId,
@@ -36,6 +38,12 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
       providerRequestId,
       JSON.stringify(response),
       body.data.measuredAt ?? new Date().toISOString(),
+      body.data.muscleProvenance?.muscleDefinition ?? null,
+      body.data.muscleProvenance?.definitionRef ?? null,
+      body.data.muscleProvenance?.muscleMeasurementMethod ?? null,
+      body.data.muscleProvenance?.methodEvidenceRef ?? null,
+      body.data.muscleProvenance?.muscleMassUnit ?? null,
+      body.data.muscleProvenance?.acquisitionProtocol ?? null,
     ).run();
     return context.json({
       requestId: providerRequestId,
@@ -77,6 +85,12 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
         deviceId: row.device_id,
         measuredAt: row.measured_at,
         qualityPassed: Number(row.quality_passed) === 1,
+        muscleDefinition: row.muscle_definition ?? 'UNKNOWN',
+        definitionRef: row.muscle_definition_ref ?? '',
+        muscleMeasurementMethod: row.muscle_measurement_method ?? 'UNKNOWN',
+        methodEvidenceRef: row.muscle_method_evidence_ref ?? '',
+        muscleMassUnit: row.muscle_mass_unit ?? 'kg',
+        acquisitionProtocol: row.acquisition_protocol ?? 'UNKNOWN',
         values: bodyValues(row),
       })),
       selectedMeasurementIds: selected.map((row) => String(row.id)),

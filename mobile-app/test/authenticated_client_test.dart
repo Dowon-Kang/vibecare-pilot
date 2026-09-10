@@ -79,6 +79,8 @@ void main() {
                 'mode': change == 'real' ? 'real' : 'mock',
                 'result': {
                   'realDeviceSendAllowed': false,
+                  'physicalExecution': 'PROHIBITED',
+                  'simulationEligibility': 'ELIGIBLE',
                   'algorithmVersion': change == 'version'
                       ? 'pilot-0.5.0'
                       : algorithmVersion,
@@ -140,6 +142,8 @@ void main() {
             .toIso8601String(),
         'result': {
           'realDeviceSendAllowed': false,
+          'physicalExecution': 'PROHIBITED',
+          'simulationEligibility': 'ELIGIBLE',
           'algorithmVersion': algorithmVersion,
           'recommendation': {
             'durationSec': result.recommendation!.durationSec,

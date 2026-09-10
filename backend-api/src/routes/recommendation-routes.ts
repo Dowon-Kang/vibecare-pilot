@@ -110,8 +110,8 @@ export function registerRecommendationRoutes(app: VibeCareApp): void {
     await context.env.DB.batch([
       context.env.DB.prepare(
         `INSERT INTO measurement_sets
-          (id, participant_id, device_id, measurement_ids_json, average_json, algorithm_version)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+          (id, participant_id, device_id, measurement_ids_json, average_json, algorithm_version, muscle_mass_basis)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       ).bind(
         measurementSetId,
         participantId,
@@ -119,6 +119,7 @@ export function registerRecommendationRoutes(app: VibeCareApp): void {
         JSON.stringify(parsed.data.measurementIds),
         JSON.stringify(result.average),
         result.algorithmVersion,
+        parsed.data.muscleMassBasis,
       ),
       context.env.DB.prepare(
         `INSERT INTO recommendations
@@ -133,7 +134,8 @@ export function registerRecommendationRoutes(app: VibeCareApp): void {
         JSON.stringify(result),
       ),
     ]);
-    if (result.status !== 'READY') {
+    if (result.status !== 'READY' || result.simulationEligibility !== 'ELIGIBLE' ||
+      result.dataDecision !== 'ACCEPTED' || result.physicalExecution !== 'PROHIBITED') {
       return context.json({ authorized: false, recommendationId, result }, 409);
     }
     const mode = context.env.DEVICE_MODE ??

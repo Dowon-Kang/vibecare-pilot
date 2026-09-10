@@ -3,13 +3,14 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibecare_pilot/models/models.dart';
 import 'package:vibecare_pilot/algorithm/vibration_algorithm.dart';
+import 'package:vibecare_pilot/services/fitrus_repository.dart';
 
 void main() {
   final measurements = <BiaMeasurement>[
-    _m('M1', 42, 17.7, 18.8, 7.9, 18.1),
-    _m('M2', 42.2, 17.8, 18.7, 7.9, 18),
-    _m('M3', 41.9, 17.7, 19.1, 8, 18.2),
-    _m('M4', 42.1, 17.8, 18.9, 8, 18.1),
+    _m('M1', 42, 18.67, 18.8, 7.9, 18.1),
+    _m('M2', 42.2, 18.76, 18.7, 7.9, 18),
+    _m('M3', 41.9, 18.62, 19.1, 8, 18.2),
+    _m('M4', 42.1, 18.71, 18.9, 8, 18.1),
   ];
 
   test('4회 평균으로 여성 전신 골격근지수와 프로토콜을 계산한다', () {
@@ -18,19 +19,21 @@ void main() {
         id: 'USER-001',
         age: 72,
         sex: ParticipantSex.female,
-        heightCm: 154,
+        heightCm: 150,
       ),
       measurements: measurements,
       safety: const SafetyCheck.confirmedClear(),
     );
     expect(result.average?.weightKg, 42.05);
     expect(result.average?.bodyFatPct, 18.88);
-    expect(result.muscleAssessment?.totalSmmi, 7.63);
+    expect(result.muscleAssessment?.totalSmmi, 8.04);
     expect(result.muscleAssessment?.level, MuscleLevel.reference);
     expect(result.recommendation?.frequencyHz, 20);
     expect(result.recommendation?.durationSec, 300);
     expect(result.recommendation?.intensityPct, 50);
-    expect(result.status, RecommendationStatus.review);
+    expect(result.status, RecommendationStatus.ready);
+    expect(result.executionStatus, 'SIMULATION_READY');
+    expect(result.physicalExecution, 'PROHIBITED');
   });
 
   test('같은 골격근량도 남성 전신 골격근지수 기준에서는 낮은 등급이다', () {
@@ -39,7 +42,7 @@ void main() {
         id: 'USER-001',
         age: 72,
         sex: ParticipantSex.male,
-        heightCm: 154,
+        heightCm: 150,
       ),
       measurements: measurements,
       safety: const SafetyCheck.confirmedClear(),
@@ -50,24 +53,22 @@ void main() {
     expect(result.recommendation?.intensityPct, 30);
   });
 
-  test('같은 필드를 ASM으로 해석하면 별도 추천을 계산한다', () {
+  test('SMM 필드를 ASM으로 임의 해석하면 추천을 차단한다', () {
     final result = calculateRecommendation(
       profile: const ParticipantProfile(
         id: 'USER-001',
         age: 72,
         sex: ParticipantSex.female,
-        heightCm: 154,
+        heightCm: 150,
       ),
       measurements: measurements,
       safety: const SafetyCheck.confirmedClear(),
       muscleMassBasis: MuscleMassBasis.asm,
     );
-    expect(result.muscleAssessment?.basis, MuscleMassBasis.asm);
-    expect(result.muscleAssessment?.indexName, 'ASMI');
-    expect(result.muscleAssessment?.level, MuscleLevel.medium);
-    expect(result.recommendation?.frequencyHz, 16);
-    expect(result.recommendation?.durationSec, 240);
-    expect(result.recommendation?.intensityPct, 40);
+    expect(result.status, RecommendationStatus.review);
+    expect(result.muscleAssessment, isNull);
+    expect(result.recommendation, isNull);
+    expect(result.warnings.join(), contains('MUSCLE_BASIS_MISMATCH'));
   });
 
   test('어지럼은 추천과 실행을 차단한다', () {
@@ -122,19 +123,32 @@ void main() {
     final f =
         jsonDecode(
               File(
-                '../shared-contracts/fixtures/pilot-0.6.0.json',
+                '../shared-contracts/fixtures/pilot-0.7.0.json',
               ).readAsStringSync(),
             )
             as Map<String, dynamic>;
     final rows = (f['measurements'] as List).map((m) {
-      final v = m['values'];
-      return _m(
-        m['id'],
-        (v['weightKg'] as num).toDouble(),
-        (v['bmi'] as num).toDouble(),
-        (v['bodyFatPct'] as num).toDouble(),
-        (v['fatMassKg'] as num).toDouble(),
-        (v['skeletalMuscleMassKg'] as num).toDouble(),
+      return BiaMeasurement(
+        id: m['id'],
+        participantId: m['participantId'],
+        deviceId: m['deviceId'],
+        measuredAt: DateTime.parse(m['measuredAt']),
+        qualityPassed: m['qualityPassed'],
+        muscleDefinition: MuscleMassBasis.values.byName(
+          (m['muscleDefinition'] as String).toLowerCase(),
+        ),
+        muscleMeasurementMethod: m['muscleMeasurementMethod'],
+        methodEvidenceRef: m['methodEvidenceRef'],
+        muscleMassUnit: m['muscleMassUnit'],
+        definitionRef: m['definitionRef'],
+        acquisitionProtocolRef: m['acquisitionProtocol'],
+        values: BiaValues(
+          weightKg: (m['weightKg'] as num).toDouble(),
+          bmi: (m['bmi'] as num).toDouble(),
+          bodyFatPct: (m['bodyFatPct'] as num).toDouble(),
+          fatMassKg: (m['fatMassKg'] as num).toDouble(),
+          skeletalMuscleMassKg: (m['skeletalMuscleMassKg'] as num).toDouble(),
+        ),
       );
     }).toList();
     final p = f['profile'];
@@ -147,13 +161,70 @@ void main() {
       ),
       measurements: rows,
       safety: const SafetyCheck.confirmedClear(),
+      muscleMassBasis: MuscleMassBasis.smm,
+      ruleSet: BackendFitrusRepository.parseAlgorithmRuleSet(
+        f['ruleSet'] as Map<String, dynamic>,
+      ),
+      evaluatedAt: DateTime.parse(f['evaluatedAt']),
     );
+    expect(result.recommendation?.intensityPct, f['expected']['intensityPct']);
+    expect(result.recommendation?.durationSec, f['expected']['durationSec']);
+    expect(result.recommendation?.frequencyHz, f['expected']['frequencyHz']);
+    expect(result.recommendation?.purpose, f['expected']['candidatePurpose']);
+    expect(result.recommendation?.evidence, f['expected']['candidateEvidence']);
+    expect(result.muscleAssessment?.meanSkeletalMuscleMassKg, 18.1);
     expect(
-      result.recommendation?.intensityPct,
-      f['expected']['femaleIntensityPct'],
+      result.muscleAssessment?.sdKg,
+      closeTo(f['expected']['sampleSdKg'], 1e-9),
     );
-    expect(result.average?.bmi, f['expected']['averageBmi']);
-    expect(result.status, RecommendationStatus.review);
+    expect(result.status, RecommendationStatus.ready);
+    expect(result.executionStatus, f['expected']['executionStatus']);
+    expect(result.physicalExecution, f['expected']['physicalExecution']);
+    final assessment = result.muscleAssessment!;
+    final average = result.average!;
+    final recommendation = result.recommendation!;
+    final normalized = <String, dynamic>{
+      'status': result.status.name.toUpperCase(),
+      'executionStatus': result.executionStatus,
+      'dataDecision': result.dataDecision,
+      'simulationEligibility': result.simulationEligibility,
+      'physicalExecution': result.physicalExecution,
+      'realDeviceSendAllowed': result.realDeviceSendAllowed,
+      'reasonCodes': result.reasonCodes,
+      'warnings': result.warnings,
+      'algorithmVersion': result.algorithmVersion,
+      'muscleMassBasis': assessment.basis.name.toUpperCase(),
+      'muscleStatistics': {
+        'count': rows.length,
+        'meanKg': assessment.meanSkeletalMuscleMassKg,
+        'sampleSdKg': assessment.sdKg,
+        'cvPct': assessment.cvPct,
+        'minimumKg': assessment.minimumKg,
+        'maximumKg': assessment.maximumKg,
+        'rangeKg': assessment.maximumKg - assessment.minimumKg,
+      },
+      'average': {
+        'weightKg': average.weightKg,
+        'bmi': average.bmi,
+        'bodyFatPct': average.bodyFatPct,
+        'fatMassKg': average.fatMassKg,
+        'skeletalMuscleMassKg': average.skeletalMuscleMassKg,
+      },
+      'muscleAssessment': {
+        'heightAdjustedIndex': assessment.indexKgM2,
+        'level': assessment.level.name,
+        'unstable': assessment.unstable,
+      },
+      'recommendation': {
+        'durationSec': recommendation.durationSec,
+        'frequencyHz': recommendation.frequencyHz,
+        'intensityPct': recommendation.intensityPct,
+        'evidence': recommendation.evidence,
+        'purpose': recommendation.purpose,
+      },
+      'factors': null,
+    };
+    expect(normalized, f['expectedNormalizedResult']);
   });
 
   test('미응답 안전 확인은 미리보기만 허용한다', () {
@@ -216,6 +287,11 @@ void main() {
         deviceId: 'FITRUS-PLUS-01',
         measuredAt: DateTime.utc(2026, 8, 22, 0, 6),
         qualityPassed: true,
+        muscleDefinition: MuscleMassBasis.smm,
+        muscleMeasurementMethod: 'BIA_TEST',
+        methodEvidenceRef: 'TEST-METHOD-EVIDENCE-V1',
+        definitionRef: 'SMM-TEST-V1',
+        acquisitionProtocolRef: 'TEST-STANDARD-V1',
         values: measurements.first.values,
       ),
     ];
@@ -239,13 +315,19 @@ BiaMeasurement _m(
   double fatMass,
   double muscle, {
   int minute = 0,
+  DateTime? measuredAt,
 }) {
   return BiaMeasurement(
     id: id,
     participantId: 'USER-001',
     deviceId: 'FITRUS-PLUS-01',
-    measuredAt: DateTime.utc(2026, 8, 22, 0, minute),
+    measuredAt: measuredAt ?? DateTime.utc(2026, 9, 1, 0, minute),
     qualityPassed: true,
+    muscleDefinition: MuscleMassBasis.smm,
+    muscleMeasurementMethod: 'BIA_TEST',
+    methodEvidenceRef: 'TEST-METHOD-EVIDENCE-V1',
+    definitionRef: 'SMM-TEST-V1',
+    acquisitionProtocolRef: 'TEST-STANDARD-V1',
     values: BiaValues(
       weightKg: weight,
       bmi: bmi,

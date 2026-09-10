@@ -204,71 +204,89 @@ class BackendFitrusRepository implements FitrusRepository {
           .map(_parseVital)
           .toList(growable: false),
       syncedAt: DateTime.parse(measurementJson['syncedAt'] as String),
-      ruleSet: _parseRuleSet(ruleJson),
+      ruleSet: parseAlgorithmRuleSet(ruleJson),
     );
   }
 
-  static AlgorithmRuleSet _parseRuleSet(Map<String, dynamic> json) {
+  static AlgorithmRuleSet parseAlgorithmRuleSet(Map<String, dynamic> json) {
     final research = json['research'] as Map<String, dynamic>?;
     if (json['version'] != algorithmVersion ||
         research?['mode'] != 'simulation_only' ||
-        research?['measurementDefinition'] != 'unverified' ||
-        research?['protocolEvidence'] != 'PILOT') {
+        research?['protocolEvidence'] != 'HYPOTHESIS_UNVALIDATED' ||
+        research?['physicalExecution'] != 'PROHIBITED') {
       throw const FormatException('지원되지 않거나 불완전한 계산 규칙입니다.');
     }
-    final base = json['base'] as Map<String, dynamic>;
-    final age = json['age'] as Map<String, dynamic>;
-    final sex = json['sex'] as Map<String, dynamic>;
-    final bodyFat = json['bodyFat'] as Map<String, dynamic>;
-    final female = bodyFat['female'] as Map<String, dynamic>;
-    final male = bodyFat['male'] as Map<String, dynamic>;
+    final measurementPolicy = json['measurementPolicy'] as Map<String, dynamic>;
     final output = json['output'] as Map<String, dynamic>;
-    final muscle = json['muscle'] as Map<String, dynamic>?;
-    final muscleFemale = muscle?['female'] as Map<String, dynamic>?;
-    final muscleMale = muscle?['male'] as Map<String, dynamic>?;
-    final protocols = muscle?['protocols'] as Map<String, dynamic>?;
+    final muscle = json['muscle'] as Map<String, dynamic>;
+    final definitions = muscle['definitions'] as Map<String, dynamic>;
+    final asm = definitions['ASM'] as Map<String, dynamic>;
+    final smm = definitions['SMM'] as Map<String, dynamic>;
+    final protocols = muscle['simulatorCandidates'] as Map<String, dynamic>;
+    MuscleThresholds thresholds(Map<String, dynamic> definition, String sex) {
+      final value = definition[sex] as Map<String, dynamic>;
+      return MuscleThresholds(
+        lowMaximum: (value['lowMaximum'] as num).toDouble(),
+        mediumMaximum: (value['mediumMaximum'] as num).toDouble(),
+      );
+    }
+
+    List<MuscleMethodEvidence> methods(Map<String, dynamic> definition) =>
+        ((definition['applicableMethods'] as List?) ?? const [])
+            .cast<Map<String, dynamic>>()
+            .map(
+              (value) => MuscleMethodEvidence(
+                method: value['method'] as String,
+                methodEvidenceRef: value['methodEvidenceRef'] as String,
+                definitionRef: value['definitionRef'] as String,
+              ),
+            )
+            .toList(growable: false);
+
     ProtocolPreset protocol(String key) {
-      final value = protocols?[key] as Map<String, dynamic>?;
-      if (value == null) throw const FormatException('근육량 프로토콜이 누락됐습니다.');
+      final value = protocols[key] as Map<String, dynamic>?;
+      if (value == null) {
+        throw const FormatException('근육량 프로토콜이 누락됐습니다.');
+      }
       return ProtocolPreset(
         durationSec: value['durationSec'] as int,
         frequencyHz: value['frequencyHz'] as int,
         intensityPct: (value['intensityPct'] as num).toDouble(),
+        evidence: value['evidence'] as String,
       );
     }
 
     return AlgorithmRuleSet(
       version: json['version'] as String,
       enabled: json['enabled'] as bool,
-      durationSec: base['durationSec'] as int,
-      frequencyHz: base['frequencyHz'] as int,
-      baseIntensityPct: (base['intensityPct'] as num).toDouble(),
-      ageThreshold: age['threshold'] as int,
-      ageFactor: (age['factor'] as num).toDouble(),
-      femaleFactor: (sex['femaleFactor'] as num).toDouble(),
-      maleFactor: (sex['maleFactor'] as num).toDouble(),
-      femaleBodyFat: BodyFatRange(
-        (female['minimum'] as num).toDouble(),
-        (female['maximum'] as num).toDouble(),
-      ),
-      maleBodyFat: BodyFatRange(
-        (male['minimum'] as num).toDouble(),
-        (male['maximum'] as num).toDouble(),
-      ),
-      outsideBodyFatFactor: (bodyFat['outsideRangeFactor'] as num).toDouble(),
+      durationSec: 300,
+      frequencyHz: 20,
+      baseIntensityPct: 50,
+      ageThreshold: 70,
+      ageFactor: 1,
+      femaleFactor: 1,
+      maleFactor: 1,
+      femaleBodyFat: const BodyFatRange(20, 35),
+      maleBodyFat: const BodyFatRange(10, 28),
+      outsideBodyFatFactor: 1,
       minimumPct: (output['minimumPct'] as num).toDouble(),
       maximumPct: (output['maximumPct'] as num).toDouble(),
-      femaleMuscleThresholds: MuscleThresholds(
-        lowMaximum: (muscleFemale!['lowMaximum'] as num).toDouble(),
-        mediumMaximum: (muscleFemale['mediumMaximum'] as num).toDouble(),
-      ),
-      maleMuscleThresholds: MuscleThresholds(
-        lowMaximum: (muscleMale!['lowMaximum'] as num).toDouble(),
-        mediumMaximum: (muscleMale['mediumMaximum'] as num).toDouble(),
-      ),
+      femaleMuscleThresholds: thresholds(smm, 'female'),
+      maleMuscleThresholds: thresholds(smm, 'male'),
+      asmFemaleMuscleThresholds: thresholds(asm, 'female'),
+      asmMaleMuscleThresholds: thresholds(asm, 'male'),
       lowMuscleProtocol: protocol('low'),
       mediumMuscleProtocol: protocol('medium'),
       referenceMuscleProtocol: protocol('reference'),
+      maximumAgeDays: measurementPolicy['maximumAgeDays'] as int,
+      maximumFutureSkewMinutes:
+          measurementPolicy['maximumFutureSkewMinutes'] as int,
+      policyBasis: measurementPolicy['policyBasis'] as String,
+      physicalExecution: research!['physicalExecution'] as String,
+      asmClassificationEvidence: asm['classificationEvidence'] as String,
+      smmClassificationEvidence: smm['classificationEvidence'] as String,
+      asmApplicableMethods: methods(asm),
+      smmApplicableMethods: methods(smm),
     );
   }
 
@@ -282,6 +300,16 @@ class BackendFitrusRepository implements FitrusRepository {
       deviceId: json['deviceId'] as String,
       measuredAt: DateTime.parse(json['measuredAt'] as String),
       qualityPassed: json['qualityPassed'] as bool,
+      muscleDefinition: MuscleMassBasis.values.byName(
+        (json['muscleDefinition'] as String).toLowerCase(),
+      ),
+      muscleMeasurementMethod:
+          json['muscleMeasurementMethod'] as String? ?? 'UNKNOWN',
+      methodEvidenceRef: json['methodEvidenceRef'] as String? ?? '',
+      muscleMassUnit: json['muscleMassUnit'] as String? ?? 'kg',
+      definitionRef: json['definitionRef'] as String? ?? '',
+      acquisitionProtocolRef:
+          json['acquisitionProtocol'] as String? ?? 'UNKNOWN',
       values: BiaValues(
         weightKg: number('weightKg'),
         bmi: number('bmi'),
@@ -334,6 +362,12 @@ BiaMeasurement _body(
   deviceId: deviceId,
   measuredAt: measuredAt,
   qualityPassed: true,
+  muscleDefinition: MuscleMassBasis.smm,
+  muscleMeasurementMethod: 'BIA_SAMPLE',
+  methodEvidenceRef: 'SYNTHETIC-METHOD-EVIDENCE-V1',
+  muscleMassUnit: 'kg',
+  definitionRef: 'SYNTHETIC-SMM-DEMO-V1',
+  acquisitionProtocolRef: 'SYNTHETIC-STANDARD-V1',
   values: BiaValues(
     weightKg: weight,
     bmi: bmi,

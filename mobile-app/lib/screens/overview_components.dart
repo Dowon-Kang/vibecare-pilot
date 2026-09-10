@@ -21,6 +21,11 @@ class _MuscleBasisSelector extends StatelessWidget {
       required AlgorithmResult? result,
     }) {
       final selected = state.muscleMassBasis == basis;
+      final definitions = state.snapshot?.selectedMeasurements
+          .map((item) => item.muscleDefinition)
+          .toSet();
+      final confirmed =
+          definitions?.length == 1 && definitions!.single == basis;
       return Expanded(
         child: Semantics(
           selected: selected,
@@ -28,7 +33,7 @@ class _MuscleBasisSelector extends StatelessWidget {
           label: '$title, ${output(result)}',
           child: InkWell(
             key: ValueKey('muscle-basis-${basis.name}'),
-            onTap: state.isBusy || state.isRunning
+            onTap: state.isBusy || state.isRunning || !confirmed
                 ? null
                 : () => onChanged(basis),
             borderRadius: BorderRadius.circular(12),
@@ -104,20 +109,20 @@ class _MuscleBasisSelector extends StatelessWidget {
           children: [
             option(
               basis: MuscleMassBasis.asm,
-              title: '사지 ASM 가정',
+              title: '사지 ASM',
               result: state.asmResult,
             ),
             const SizedBox(width: 8),
             option(
               basis: MuscleMassBasis.smm,
-              title: '전신 SMM 가정',
+              title: '전신 SMM',
               result: state.smmResult,
             ),
           ],
         ),
         const SizedBox(height: 3),
         Text(
-          '계산 기준 선택 · FITRUS 골격근량 정의는 미확정',
+          '공급사가 확인한 측정 정의만 사용 · 다른 해석으로 실행 불가',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12),

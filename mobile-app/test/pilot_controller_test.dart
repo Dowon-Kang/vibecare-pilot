@@ -180,6 +180,11 @@ class _SnapshotRepository implements FitrusRepository {
           deviceId: deviceId,
           measuredAt: DateTime.utc(2026, 9, 1, 12, index),
           qualityPassed: true,
+          muscleDefinition: MuscleMassBasis.smm,
+          muscleMeasurementMethod: 'BIA_TEST',
+          methodEvidenceRef: 'TEST-METHOD-EVIDENCE-V1',
+          definitionRef: 'SMM-TEST-V1',
+          acquisitionProtocolRef: 'TEST-STANDARD-V1',
           values: const BiaValues(
             weightKg: 60,
             bmi: 26.6666666667,

@@ -7,7 +7,9 @@ enum MuscleLevel { low, medium, reference }
 /// How the vendor's ambiguous `skeletalMuscleMassKg` field is interpreted.
 ///
 /// This is a research assumption until FITRUS confirms the field definition.
-enum MuscleMassBasis { asm, smm }
+/// Meaning of the provider's muscle-mass value.
+/// UNKNOWN is deliberately not a selectable calculation basis.
+enum MuscleMassBasis { unknown, asm, smm }
 
 enum VitalKind { bloodPressure, heartRate, stress, stressV2, bodyTemperature }
 
@@ -26,15 +28,28 @@ class MuscleThresholds {
   final double mediumMaximum;
 }
 
+class MuscleMethodEvidence {
+  const MuscleMethodEvidence({
+    required this.method,
+    required this.methodEvidenceRef,
+    required this.definitionRef,
+  });
+  final String method;
+  final String methodEvidenceRef;
+  final String definitionRef;
+}
+
 class ProtocolPreset {
   const ProtocolPreset({
     required this.durationSec,
     required this.frequencyHz,
     required this.intensityPct,
+    this.evidence = 'HYPOTHESIS_UNVALIDATED',
   });
   final int durationSec;
   final int frequencyHz;
   final double intensityPct;
+  final String evidence;
 }
 
 class AlgorithmRuleSet {
@@ -55,9 +70,41 @@ class AlgorithmRuleSet {
     required this.maximumPct,
     required this.femaleMuscleThresholds,
     required this.maleMuscleThresholds,
+    this.asmFemaleMuscleThresholds = const MuscleThresholds(
+      lowMaximum: 5.7,
+      mediumMaximum: 5.700001,
+    ),
+    this.asmMaleMuscleThresholds = const MuscleThresholds(
+      lowMaximum: 7.0,
+      mediumMaximum: 7.000001,
+    ),
     required this.lowMuscleProtocol,
     required this.mediumMuscleProtocol,
     required this.referenceMuscleProtocol,
+    this.maximumAgeDays = 30,
+    this.maximumFutureSkewMinutes = 5,
+    this.policyBasis = 'ENGINEERING_POLICY',
+    this.physicalExecution = 'PROHIBITED',
+    this.asmClassificationEvidence = 'HYPOTHESIS_UNVALIDATED',
+    this.smmClassificationEvidence = 'INDIRECT',
+    this.asmApplicableMethods = const [],
+    this.smmApplicableMethods = const [
+      MuscleMethodEvidence(
+        method: 'BIA_SAMPLE',
+        methodEvidenceRef: 'SYNTHETIC-METHOD-EVIDENCE-V1',
+        definitionRef: 'SYNTHETIC-SMM-DEMO-V1',
+      ),
+      MuscleMethodEvidence(
+        method: 'BIA_TEST',
+        methodEvidenceRef: 'TEST-METHOD-EVIDENCE-V1',
+        definitionRef: 'SMM-TEST-V1',
+      ),
+      MuscleMethodEvidence(
+        method: 'BIA',
+        methodEvidenceRef: 'TEST-METHOD-EVIDENCE-V1',
+        definitionRef: 'TEST-SMM-DEFINITION-V1',
+      ),
+    ],
   });
 
   final String version;
@@ -76,9 +123,19 @@ class AlgorithmRuleSet {
   final double maximumPct;
   final MuscleThresholds femaleMuscleThresholds;
   final MuscleThresholds maleMuscleThresholds;
+  final MuscleThresholds asmFemaleMuscleThresholds;
+  final MuscleThresholds asmMaleMuscleThresholds;
   final ProtocolPreset lowMuscleProtocol;
   final ProtocolPreset mediumMuscleProtocol;
   final ProtocolPreset referenceMuscleProtocol;
+  final int maximumAgeDays;
+  final int maximumFutureSkewMinutes;
+  final String policyBasis;
+  final String physicalExecution;
+  final String asmClassificationEvidence;
+  final String smmClassificationEvidence;
+  final List<MuscleMethodEvidence> asmApplicableMethods;
+  final List<MuscleMethodEvidence> smmApplicableMethods;
 }
 
 class ParticipantProfile {
@@ -171,6 +228,12 @@ class BiaMeasurement {
     required this.measuredAt,
     required this.qualityPassed,
     required this.values,
+    this.muscleDefinition = MuscleMassBasis.unknown,
+    this.muscleMeasurementMethod = 'UNKNOWN',
+    this.methodEvidenceRef = '',
+    this.muscleMassUnit = 'kg',
+    this.definitionRef = '',
+    this.acquisitionProtocolRef = 'UNKNOWN',
   });
 
   final String id;
@@ -179,6 +242,12 @@ class BiaMeasurement {
   final DateTime measuredAt;
   final bool qualityPassed;
   final BiaValues values;
+  final MuscleMassBasis muscleDefinition;
+  final String muscleMeasurementMethod;
+  final String methodEvidenceRef;
+  final String muscleMassUnit;
+  final String definitionRef;
+  final String acquisitionProtocolRef;
 }
 
 class VitalMeasurement {

@@ -5,10 +5,11 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "authorizationId", "participantId", "deviceId", "durationSec", "frequencyHz",
+    "executionMode", "authorizationId", "participantId", "deviceId", "durationSec", "frequencyHz",
     "intensityPct", "algorithmVersion", "issuedAt", "expiresAt", "idempotencyKey"
   ],
   "properties": {
+    "executionMode": { "const": "SIMULATOR_ONLY" },
     "authorizationId": { "type": "string", "minLength": 1 },
     "participantId": { "type": "string", "minLength": 1 },
     "deviceId": { "type": "string", "minLength": 1 },

@@ -48,13 +48,13 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('ASM과 SMM 해석 결과를 보고 선택하면 추천이 바뀐다', (tester) async {
+  testWidgets('확인된 SMM 값을 ASM으로 임의 재해석할 수 없다', (tester) async {
     _size(tester, const Size(390, 844));
     await _login(tester);
     expect(find.text('50%'), findsOneWidget);
     await _tap(tester, 'muscle-basis-asm');
-    expect(find.text('40%'), findsWidgets);
-    expect(find.textContaining('ASMI'), findsWidgets);
+    expect(find.text('40%'), findsNothing);
+    expect(find.textContaining('ASM'), findsWidgets);
     await _tap(tester, 'muscle-basis-smm');
     expect(find.text('50%'), findsOneWidget);
     expect(find.textContaining('SMMI'), findsWidgets);
@@ -139,7 +139,7 @@ void main() {
     await _login(tester);
     await _tap(tester, 'command-details-button');
     expect(find.text('계산 근거'), findsWidgets);
-    expect(find.textContaining('기본 50%'), findsWidgets);
+    expect(find.textContaining('연구 분류 →'), findsWidgets);
     await tester.scrollUntilVisible(
       find.text('장치 전송 정보'),
       150,
