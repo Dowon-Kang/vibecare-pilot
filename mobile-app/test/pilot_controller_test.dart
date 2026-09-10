@@ -95,6 +95,27 @@ void main() {
     expect(adjustment.intensityCap, isNull);
     expect(adjustment.requiresReview, isFalse);
   });
+
+  test('백그라운드 전환은 미사용 허가를 폐기하고 연결을 해제한다', () async {
+    final gateway = _FakeDeviceGateway();
+    final container = _container(gateway: gateway);
+    addTearDown(container.dispose);
+    final controller = container.read(pilotControllerProvider.notifier);
+
+    await controller.login('USER-001', '123456');
+    controller.updateSafety(pain: false, dizziness: false, hold: false);
+    await controller.sendToDevice();
+    expect(
+      container.read(pilotControllerProvider).pendingAuthorization,
+      isNotNull,
+    );
+
+    await controller.onAppBackgrounded();
+    final state = container.read(pilotControllerProvider);
+    expect(state.pendingAuthorization, isNull);
+    expect(state.deviceState, DeviceConnectionState.disconnected);
+    expect(gateway.disconnectReason, 'app_backgrounded');
+  });
 }
 
 ProviderContainer _container({
@@ -182,6 +203,7 @@ class _FakeDeviceGateway implements DeviceGateway {
   final _states = StreamController<DeviceConnectionState>.broadcast();
   DeviceCommand? _command;
   String? stopReason;
+  String? disconnectReason;
 
   @override
   Stream<DeviceConnectionState> get statusStream => _states.stream;
@@ -230,6 +252,12 @@ class _FakeDeviceGateway implements DeviceGateway {
   Future<void> stop(String sessionId, String reason) async {
     stopReason = reason;
     _states.add(DeviceConnectionState.completed);
+  }
+
+  @override
+  Future<void> disconnect(String reason) async {
+    disconnectReason = reason;
+    _states.add(DeviceConnectionState.disconnected);
   }
 
   @override

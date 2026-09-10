@@ -1,9 +1,11 @@
 # Supply real secrets through AWS Secrets Manager or SSM, never Git.
-APP_ENV=production
+ENVIRONMENT=production
+APP_VERSION=replace-with-release-id
 PORT=8080
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/vibecare
 FITRUS_API_BASE_URL=https://api.thefitrus.com/fitrus-ml/measure
 FITRUS_API_KEY=replace-through-aws-secret
 AUTH_TOKEN_SECRET=replace-with-at-least-32-random-characters
+ALLOWED_ORIGINS=https://replace-with-approved-browser-origin.example
 DEVICE_MODE=mock
 REAL_DEVICE_ENABLED=false

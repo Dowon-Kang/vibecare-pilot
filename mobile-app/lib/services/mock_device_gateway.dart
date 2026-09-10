@@ -2,9 +2,24 @@ import 'dart:async';
 
 import '../models/models.dart';
 import 'device_gateway.dart';
+import 'device_state_machine.dart';
 
 class MockDeviceGateway implements DeviceGateway {
+  MockDeviceGateway({
+    this.connectDelay = const Duration(milliseconds: 250),
+    this.ackDelay = const Duration(milliseconds: 200),
+    this.stopDelay = const Duration(milliseconds: 100),
+    this.ackTimeout = const Duration(seconds: 5),
+    this.stopTimeout = const Duration(seconds: 5),
+  });
+
+  final Duration connectDelay;
+  final Duration ackDelay;
+  final Duration stopDelay;
+  final Duration ackTimeout;
+  final Duration stopTimeout;
   final _states = StreamController<DeviceConnectionState>.broadcast();
+  final _machine = DeviceStateMachine();
   String? _deviceId;
   String? _activeSessionId;
   bool _disposed = false;
@@ -15,6 +30,7 @@ class MockDeviceGateway implements DeviceGateway {
   Stream<DeviceConnectionState> get statusStream => _states.stream;
 
   void _emit(DeviceConnectionState state) {
+    _machine.transition(state);
     if (!_disposed) _states.add(state);
   }
 
@@ -24,7 +40,7 @@ class MockDeviceGateway implements DeviceGateway {
       throw StateError('이미 실행 중인 세션이 있습니다.');
     }
     _emit(DeviceConnectionState.connecting);
-    await Future<void>.delayed(const Duration(milliseconds: 250));
+    await Future<void>.delayed(connectDelay);
     _deviceId = deviceId;
     _emit(DeviceConnectionState.ready);
   }
@@ -83,30 +99,58 @@ class MockDeviceGateway implements DeviceGateway {
     _emit(DeviceConnectionState.starting);
     _starting = true;
     _usedAuthorizations.add(authorization.command.authorizationId);
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    final id = 'MOCK-${DateTime.now().millisecondsSinceEpoch}';
-    _activeSessionId = id;
-    _starting = false;
-    _emit(DeviceConnectionState.running);
-    return DeviceSession(
-      id: id,
-      startedAt: DateTime.now(),
-      command: authorization.command,
-    );
+    try {
+      await Future<void>.delayed(ackDelay).timeout(ackTimeout);
+      final id = 'MOCK-${DateTime.now().millisecondsSinceEpoch}';
+      _activeSessionId = id;
+      _starting = false;
+      _emit(DeviceConnectionState.running);
+      return DeviceSession(
+        id: id,
+        startedAt: DateTime.now(),
+        command: authorization.command,
+      );
+    } on TimeoutException {
+      _starting = false;
+      _emit(DeviceConnectionState.error);
+      throw StateError('시뮬레이터 ACK 제한 시간을 초과했습니다.');
+    }
   }
 
   @override
   Future<void> stop(String sessionId, String reason) async {
-    if (_activeSessionId != sessionId) return;
+    if (_activeSessionId != sessionId) {
+      throw StateError('중지할 활성 세션을 찾을 수 없습니다.');
+    }
     _emit(DeviceConnectionState.stopping);
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    _activeSessionId = null;
-    _emit(DeviceConnectionState.completed);
-    _emit(DeviceConnectionState.ready);
+    try {
+      await Future<void>.delayed(stopDelay).timeout(stopTimeout);
+      _activeSessionId = null;
+      _emit(DeviceConnectionState.completed);
+      _emit(DeviceConnectionState.ready);
+    } on TimeoutException {
+      _emit(DeviceConnectionState.error);
+      throw StateError('시뮬레이터 중지 확인 제한 시간을 초과했습니다.');
+    }
+  }
+
+  @override
+  Future<void> disconnect(String reason) async {
+    if (_activeSessionId != null || _starting) {
+      throw StateError('실행 중에는 중지 확인 없이 연결을 해제할 수 없습니다.');
+    }
+    _deviceId = null;
+    _emit(DeviceConnectionState.disconnected);
   }
 
   @override
   Future<void> dispose() async {
+    if (!_disposed && _activeSessionId == null && !_starting) {
+      _deviceId = null;
+      if (_machine.state != DeviceConnectionState.disconnected) {
+        _emit(DeviceConnectionState.disconnected);
+      }
+    }
     _disposed = true;
     await _states.close();
   }

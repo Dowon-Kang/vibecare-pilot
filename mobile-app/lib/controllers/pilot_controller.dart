@@ -393,11 +393,25 @@ class PilotController extends Notifier<PilotState> {
       return;
     }
     if (state.pendingAuthorization != null) {
+      try {
+        await ref.read(deviceGatewayProvider).disconnect('app_backgrounded');
+      } catch (_) {
+        // No session is active here. Local state still fails closed below.
+      }
       state = state.copyWith(
         pendingAuthorization: null,
         deviceState: DeviceConnectionState.disconnected,
         error: '앱이 백그라운드로 이동해 전송한 설정을 취소했습니다.',
       );
+      return;
+    }
+    if (state.deviceState != DeviceConnectionState.disconnected) {
+      try {
+        await ref.read(deviceGatewayProvider).disconnect('app_backgrounded');
+      } catch (_) {
+        // Connection cleanup is best effort when no command is authorized.
+      }
+      state = state.copyWith(deviceState: DeviceConnectionState.disconnected);
     }
   }
 

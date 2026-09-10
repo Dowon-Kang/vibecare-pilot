@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../models/models.dart';
 import 'device_gateway.dart';
+import 'device_state_machine.dart';
 
 /// Uses the VibeCare backend API safety boundary.
 ///
@@ -11,17 +12,26 @@ import 'device_gateway.dart';
 /// recalculates the recommendation, issues a one-time authorization and then
 /// starts either its configured device adapter or the server-side simulator.
 class BackendDeviceGateway implements DeviceGateway {
-  BackendDeviceGateway(this._dio);
+  BackendDeviceGateway(
+    this._dio, {
+    this.ackTimeout = const Duration(seconds: 10),
+    this.stopTimeout = const Duration(seconds: 10),
+  });
 
   final Dio _dio;
+  final Duration ackTimeout;
+  final Duration stopTimeout;
   final _states = StreamController<DeviceConnectionState>.broadcast();
+  final _machine = DeviceStateMachine();
   String? _deviceId;
+  String? _activeSessionId;
   bool _disposed = false;
 
   @override
   Stream<DeviceConnectionState> get statusStream => _states.stream;
 
   void _emit(DeviceConnectionState value) {
+    _machine.transition(value);
     if (!_disposed) _states.add(value);
   }
 
@@ -29,7 +39,10 @@ class BackendDeviceGateway implements DeviceGateway {
   Future<void> connect(String deviceId) async {
     _emit(DeviceConnectionState.connecting);
     try {
-      await _dio.get<Map<String, dynamic>>('/health');
+      final response = await _dio.get<Map<String, dynamic>>('/ready');
+      if (response.data?['ready'] != true) {
+        throw StateError('서버가 실행 준비 상태가 아닙니다.');
+      }
       _deviceId = deviceId;
       _emit(DeviceConnectionState.ready);
     } catch (_) {
@@ -111,24 +124,32 @@ class BackendDeviceGateway implements DeviceGateway {
 
   @override
   Future<DeviceSession> start(DeviceAuthorization authorization) async {
+    if (_deviceId == null || authorization.command.deviceId != _deviceId) {
+      throw StateError('실행 허가와 현재 연결 대상이 다릅니다.');
+    }
     _emit(DeviceConnectionState.starting);
     try {
       final command = authorization.command;
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/v1/device-sessions',
-        data: {
-          'authorizationId': command.authorizationId,
-          'deviceId': command.deviceId,
-        },
-        options: Options(headers: {'Idempotency-Key': command.idempotencyKey}),
-      );
+      final response = await _dio
+          .post<Map<String, dynamic>>(
+            '/v1/device-sessions',
+            data: {
+              'authorizationId': command.authorizationId,
+              'deviceId': command.deviceId,
+            },
+            options: Options(
+              headers: {'Idempotency-Key': command.idempotencyKey},
+            ),
+          )
+          .timeout(ackTimeout);
       final json = response.data ?? const <String, dynamic>{};
       if (json['status'] != 'RUNNING' || json['mode'] != 'mock') {
         throw StateError('기기 ACK를 확인하지 못했습니다.');
       }
       _emit(DeviceConnectionState.running);
+      _activeSessionId = json['sessionId'] as String;
       return DeviceSession(
-        id: json['sessionId'] as String,
+        id: _activeSessionId!,
         startedAt: DateTime.now(),
         command: command,
       );
@@ -140,15 +161,21 @@ class BackendDeviceGateway implements DeviceGateway {
 
   @override
   Future<void> stop(String sessionId, String reason) async {
+    if (_activeSessionId != sessionId) {
+      throw StateError('중지할 활성 세션을 찾을 수 없습니다.');
+    }
     _emit(DeviceConnectionState.stopping);
     try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/v1/device-sessions/$sessionId/stop',
-        data: {'reason': reason},
-      );
+      final response = await _dio
+          .post<Map<String, dynamic>>(
+            '/v1/device-sessions/$sessionId/stop',
+            data: {'reason': reason},
+          )
+          .timeout(stopTimeout);
       if (!['STOPPED', 'COMPLETED'].contains(response.data?['status'])) {
         throw StateError('중지 완료 응답을 확인하지 못했습니다. 다시 요청해 주세요.');
       }
+      _activeSessionId = null;
       _emit(DeviceConnectionState.completed);
       _emit(DeviceConnectionState.ready);
     } catch (_) {
@@ -158,7 +185,22 @@ class BackendDeviceGateway implements DeviceGateway {
   }
 
   @override
+  Future<void> disconnect(String reason) async {
+    if (_activeSessionId != null) {
+      throw StateError('실행 중에는 중지 확인 없이 연결을 해제할 수 없습니다.');
+    }
+    _deviceId = null;
+    _emit(DeviceConnectionState.disconnected);
+  }
+
+  @override
   Future<void> dispose() async {
+    if (!_disposed && _activeSessionId == null) {
+      _deviceId = null;
+      if (_machine.state != DeviceConnectionState.disconnected) {
+        _emit(DeviceConnectionState.disconnected);
+      }
+    }
     _disposed = true;
     await _states.close();
   }

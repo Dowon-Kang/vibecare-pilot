@@ -81,5 +81,6 @@ abstract interface class DeviceGateway {
   });
   Future<DeviceSession> start(DeviceAuthorization authorization);
   Future<void> stop(String sessionId, String reason);
+  Future<void> disconnect(String reason);
   Future<void> dispose();
 }

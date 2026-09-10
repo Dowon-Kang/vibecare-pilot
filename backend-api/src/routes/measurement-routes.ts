@@ -3,6 +3,7 @@ import { accessParticipantId, jsonBody } from '../http';
 import { bodyValues, latestValidSql } from '../measurement-store';
 import { fitrusKindSchema, fitrusProxySchema } from '../request-schemas';
 import type { VibeCareApp } from '../app-context';
+import { requestId } from '../runtime';
 
 export function registerMeasurementRoutes(app: VibeCareApp): void {
   app.post('/v1/fitrus/measurements/:kind', async (context) => {
@@ -15,11 +16,13 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
       return context.json({ error: 'FITRUS_NOT_CONFIGURED' }, 503);
     }
 
-    const requestId = crypto.randomUUID();
+    const providerRequestId = `${requestId(context)}:${crypto.randomUUID()}`;
     const response = await new FitrusClient(
       context.env.FITRUS_API_KEY,
       context.env.FITRUS_API_BASE_URL,
-    ).measure(kind.data as FitrusMeasurementKind, body.data.payload, { requestId });
+    ).measure(kind.data as FitrusMeasurementKind, body.data.payload, {
+      requestId: providerRequestId,
+    });
     const rawId = crypto.randomUUID();
     await context.env.DB.prepare(
       `INSERT INTO fitrus_raw_measurements
@@ -30,12 +33,12 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
       participantId,
       kind.data,
       body.data.deviceId,
-      requestId,
+      providerRequestId,
       JSON.stringify(response),
       body.data.measuredAt ?? new Date().toISOString(),
     ).run();
     return context.json({
-      requestId,
+      requestId: providerRequestId,
       rawMeasurementId: rawId,
       normalized: false,
       providerResponse: response,

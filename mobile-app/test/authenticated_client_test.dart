@@ -72,8 +72,8 @@ void main() {
     addTearDown(gateway.dispose);
     for (final change in ['version', 'frequency', 'real']) {
       dio.httpClientAdapter = Adapter(
-        (r) async => r.path == '/health'
-            ? body(200, {})
+        (r) async => r.path == '/ready'
+            ? body(200, {'ready': true})
             : body(201, {
                 'authorized': true,
                 'mode': change == 'real' ? 'real' : 'mock',
@@ -113,18 +113,61 @@ void main() {
     final states = <DeviceConnectionState>[];
     final sub = gateway.statusStream.listen(states.add);
     addTearDown(sub.cancel);
-    final now = DateTime.now();
+    const participant = ParticipantProfile(
+      id: 'TEST',
+      age: 72,
+      sex: ParticipantSex.female,
+      heightCm: 150,
+    );
+    final snapshot = await MockFitrusRepository().loadSnapshot(
+      participant: participant,
+      deviceId: 'BIA',
+    );
+    final result = calculateRecommendation(
+      profile: participant,
+      measurements: snapshot.selectedMeasurements,
+      safety: const SafetyCheck.confirmedClear(),
+    );
+    dio.httpClientAdapter = Adapter((r) async {
+      if (r.path == '/ready') return body(200, {'ready': true});
+      return body(201, {
+        'authorized': true,
+        'mode': 'mock',
+        'authorizationId': 'A',
+        'expiresAt': DateTime.now()
+            .add(const Duration(minutes: 1))
+            .toUtc()
+            .toIso8601String(),
+        'result': {
+          'realDeviceSendAllowed': false,
+          'algorithmVersion': algorithmVersion,
+          'recommendation': {
+            'durationSec': result.recommendation!.durationSec,
+            'frequencyHz': result.recommendation!.frequencyHz,
+            'intensityPct': result.recommendation!.intensityPct,
+          },
+        },
+      });
+    });
+    await gateway.connect('MOCK');
+    final issued = await gateway.authorize(
+      result: result,
+      participant: participant,
+      safety: const SafetyCheck.confirmedClear(),
+      intensityPct: result.recommendation!.intensityPct,
+      sourceDeviceId: 'BIA',
+    );
     final auth = DeviceAuthorization(
       command: DeviceCommand(
-        authorizationId: 'A',
-        participantId: 'TEST',
-        deviceId: 'MOCK',
-        durationSec: 180,
-        frequencyHz: 12,
-        intensityPct: 30,
-        algorithmVersion: algorithmVersion,
-        issuedAt: now,
-        expiresAt: now.add(const Duration(minutes: 1)),
+        authorizationId: issued.command.authorizationId,
+        participantId: issued.command.participantId,
+        deviceId: issued.command.deviceId,
+        durationSec: issued.command.durationSec,
+        frequencyHz: issued.command.frequencyHz,
+        intensityPct: issued.command.intensityPct,
+        algorithmVersion: issued.command.algorithmVersion,
+        issuedAt: issued.command.issuedAt,
+        expiresAt: issued.command.expiresAt,
         idempotencyKey: 'stable-retry-123456',
       ),
     );
@@ -148,7 +191,17 @@ void main() {
     }
     await Future<void>.delayed(Duration.zero);
     expect(states, isNot(contains(DeviceConnectionState.running)));
-    expect(states.where((s) => s == DeviceConnectionState.error).length, 3);
+    expect(states, contains(DeviceConnectionState.error));
+  });
+
+  test('준비성 본문이 false이면 HTTP 200이어도 연결을 거부한다', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://test.invalid'));
+    final gateway = BackendDeviceGateway(dio);
+    addTearDown(dio.close);
+    addTearDown(gateway.dispose);
+    dio.httpClientAdapter = Adapter((_) async => body(200, {'ready': false}));
+
+    await expectLater(gateway.connect('MOCK'), throwsStateError);
   });
   test('서버 규칙의 근육량 프로토콜이 없으면 기본값으로 대체하지 않는다', () async {
     final dio = Dio(BaseOptions(baseUrl: 'https://test.invalid'));

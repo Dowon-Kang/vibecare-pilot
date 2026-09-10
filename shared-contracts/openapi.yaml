@@ -13,7 +13,14 @@ paths:
     get:
       security: []
       responses:
-        '200': { description: Service health }
+        '200': { description: Process liveness; does not assert dependency readiness }
+  /ready:
+    get:
+      security: []
+      description: Deployment readiness. Returns 503 when configuration or the database is unavailable.
+      responses:
+        '200': { description: Runtime configuration and database checks passed }
+        '503': { description: One or more readiness checks failed }
   /v1/auth/pin:
     post:
       security: []

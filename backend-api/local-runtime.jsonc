@@ -5,6 +5,8 @@
   "compatibility_date": "2026-09-03",
   "vars": {
     "ENVIRONMENT": "development",
+    "APP_VERSION": "local",
+    "ALLOWED_ORIGINS": "http://localhost:3000",
     "DEVICE_MODE": "mock",
     "REAL_DEVICE_ENABLED": "false",
     "FITRUS_API_BASE_URL": "https://api.thefitrus.com/fitrus-ml/measure"

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecare.local/contracts/device-event.schema.json",
+  "title": "Device Session Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "sessionId", "eventType", "occurredAt", "source", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "minLength": 1 },
+    "sessionId": { "type": "string", "minLength": 1 },
+    "eventType": {
+      "type": "string",
+      "enum": ["ACK", "RUNNING", "STOPPING", "COMPLETED", "ERROR", "DISCONNECTED"]
+    },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "source": { "type": "string", "enum": ["simulator", "device-adapter"] },
+    "payload": { "type": "object" }
+  }
+}
