@@ -10,7 +10,7 @@
 - [x] 실제 환경값 제외: `.env*`, `.dev.vars`, `*.local.txt`, 로컬 상태·빌드 산출물 ignore
 - [x] 패키지 버전 잠금: 백엔드 `package-lock.json`, Flutter `pubspec.lock`
 - [x] AWS 인계 범위와 미구현 항목 분리
-- [~] `pilot-0.7.0` 로컬 품질 게이트 통과, 최신 원격 `quality-gates`는 push 후 확인
+- [x] `pilot-0.7.0` 구현 커밋 `2d15e9f`의 원격 `quality-gates` 통과: [run 34459978932](https://github.com/Dowon-Kang/vibecare-pilot/actions/runs/34459978932)
 - [ ] branch protection에서 `quality-gates` 필수화
 
 ## B. 현재 정량 검증
@@ -21,7 +21,7 @@
 | Flutter 전체 테스트 | 38/38 통과 | 실패 0 |
 | 백엔드 TypeScript | 통과 | 오류 0 |
 | Flutter format/analyze | 통과 | 오류 0 |
-| Flutter debug APK | 최신 main GitHub Actions에서 확인 | 빌드 실패 0 |
+| Flutter debug APK | GitHub Actions 빌드 통과 | 빌드 실패 0 |
 | API 계약 | OpenAPI·핵심 JSON Schema 유지 | 참조 오류 0 |
 
 수치는 실행한 자동 검사 기준이며 임상 안전성 수치가 아니다.

@@ -27,4 +27,4 @@
 
 Mock 환경에서 `로그인 → 4건 검증·통계 → 확인된 ASM/SMM 층화 → 안전 문진 → 시뮬레이터 전송 → 시작 → 중지 → 피드백` 흐름과 오류·중복 방지 테스트가 통과하면 시연 버전 완료로 본다. 실제 API와 하드웨어는 각각의 공식 계약과 교정 검증 후 별도 완료 판정을 한다.
 
-`pilot-0.7.0` 로컬 검증에서 백엔드 typecheck와 Vitest 43/43, Flutter format·analyze와 전체 테스트 38/38이 통과했다. debug APK는 로컬에서 반복 생성하지 않고 최신 main의 GitHub Actions 결과로 확인한다. 이 결과는 임상 효과나 실장비 안전을 의미하지 않는다.
+`pilot-0.7.0` 구현 커밋 `2d15e9f`의 [GitHub Actions run 34459978932](https://github.com/Dowon-Kang/vibecare-pilot/actions/runs/34459978932)에서 백엔드 typecheck와 Vitest 43/43, Flutter format·analyze·전체 테스트 38/38과 debug APK 빌드가 통과했다. APK는 사용자 PC에서 반복 생성하지 않고 CI에서 검증했다. 이 결과는 임상 효과나 실장비 안전을 의미하지 않는다.
