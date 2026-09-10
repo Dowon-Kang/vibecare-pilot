@@ -119,11 +119,13 @@ void main() {
   });
 
   test('공유 fixture JSON으로 웹과 서버와 같은 결과를 확인한다', () {
-    final f = jsonDecode(
-      File(
-        '../shared-contracts/fixtures/pilot-0.6.0.json',
-      ).readAsStringSync(),
-    ) as Map<String, dynamic>;
+    final f =
+        jsonDecode(
+              File(
+                '../shared-contracts/fixtures/pilot-0.6.0.json',
+              ).readAsStringSync(),
+            )
+            as Map<String, dynamic>;
     final rows = (f['measurements'] as List).map((m) {
       final v = m['values'];
       return _m(

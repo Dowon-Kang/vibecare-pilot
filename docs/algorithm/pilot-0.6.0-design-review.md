@@ -8,17 +8,17 @@
 
 ## 2. 저장소 증거 심사
 
-아래 표는 **변경 전 v0.5 감사 결과**다. 현재 수정·검증 결과는 [v0.6 검증 기록](../evidence/pilot-0.6.0-validation.md)에서 구분한다.
+아래 표는 v0.5 감사에서 발견한 문제와 현재 `pilot-0.6.0`의 대응 상태를 함께 기록한다. 현재 자동 검증은 저장소의 공유 fixture와 앱·백엔드 테스트를 기준으로 판단한다.
 
 | 주장 | 상태 | 증거 파일/함수 | 한계 |
 |---|---|---|---|
 | 4건 골격근량·키·성별이 기본 조건을 결정 | CONFIRMED | backend-api/src/algorithm.ts calculateRecommendation; mobile-app/lib/algorithm/vibration_algorithm.dart | 임상 검증 없음 |
 | 최신 동일인·동일기기 선택 | CONFIRMED | backend-api/src/index.ts latestValidSql; Dart selectLatestValidMeasurements | 당시 시간 정렬·중복·숫자 검증만; 측정환경 기록 없음 |
 | FITRUS 실측 입력이 앱까지 연결됨 | UNKNOWN | backend-api/src/fitrus-client.ts; index.ts normalized:false | 공급사 성공 응답 정규화 미구현; Mock와 구분 |
-| 3개 구현이 모든 입력에서 일치 | 반증 CONFIRMED | 웹/서버는 SMMI 2자리 반올림 후 분류, Dart는 분류 후 반올림 | 기존 fixture는 경계 결함을 발견하지 못함 |
-| 증상·BMI 게이트 | CONFIRMED | 세 calculate 함수 | BMI 18.5는 WBV 안전 임계값으로 검증되지 않음 |
-| 실제 출력 어댑터 있음 | 반증 CONFIRMED | index.ts device-sessions mode 검사; MockDeviceGateway | 서버는 real mode 501; 승인 endpoint는 그 전에 허가를 발급했던 불일치 |
-| 서버 규칙이 없으면 Dart가 실패함 | 반증 CONFIRMED | fitrus_repository.dart parseRuleSet | muscle 누락 시 로컬 기본값을 섞는 fallback 발견 |
+| 서버와 Dart가 모든 입력에서 일치 | PARTIAL | 공통 JSON fixture를 양쪽 테스트에서 사용 | 대표값과 경계값은 검사하지만 전체 응답 직렬화 동등성은 미검증 |
+| 증상·BMI 게이트 | CONFIRMED | 서버와 Dart의 `calculateRecommendation` | BMI 18.5는 WBV 안전 임계값으로 검증되지 않음 |
+| 실제 출력 어댑터 있음 | NOT IMPLEMENTED | `index.ts` mode 검사; `MockDeviceGateway`; `BackendDeviceGateway` | 서버 real mode는 허가 발급 전에 거부하며 두 Gateway 모두 물리 장치와 통신하지 않음 |
+| 서버 규칙이 없으면 Dart가 실패함 | CONFIRMED | `fitrus_repository.dart`의 `parseRuleSet` | 계약 누락을 로컬 기본값으로 보완하지 않음 |
 | 피드백이 세 변수에 독립 반영됨 | PARTIAL/CONFIRMED | `backend-api/src/feedback.ts`; `mobile-app/lib/models/models.dart` | 저장은 세 항목, 감산은 RPE만 사용; 시간/주파수 평가는 자동 조정 근거 아님 |
 
 입력: profile(id, sex, age, heightCm), 정확히 4개 측정(id, participantId, deviceId, time, quality, kg/%, BMI), 증상 3문항, 버전 규칙. 출력: 평균, 연구 등급, 미리보기 T/f/I, 계산 상태, 실행 상태, 이유 코드, 버전. 원시 측정→파생 평균→미리보기→서버 허가→Mock 세션 경계가 있다.
@@ -111,13 +111,13 @@ I_next=min(I_muscle,I_previous, floor(0.9 I_used)) if RPE≥7 OR intensity=stron
 
 입력 범위의 기술적 계약: 나이 정수18–100세(60세 미만 연구 검토), 키100–250cm, 필수 체성분 유한 양수, 체지방률≤100%, 지방량·골격근량≤체중. 체중/키와 BMI 차이>0.6, 지방량/체중과 체지방률 차이>1%p는 검토. 이 허용오차는 기존 공학적 일관성 검사이며 FITRUS 오차를 입증한 한계값이 아니다. 서버 규칙 내 강도는 현재20–70%, 실제 시연 추천은30/40/50%; 수동 조절은 해당 추천 이하만 허용한다. 선택 체성분의 값 하나라도 없으면 해당 항목 평균은 null. 결측·비유한 필수값은 추천 없음.
 
-호환성: `totalSmmi`와 `AGE_70_PILOT` 같은 기존 코드 필드명은 직렬화/UI 호환을 위해 남겼지만, 화면의 뜻은 미확인 추정지수와 비활성 계수1이다. 레거시 `.txt`는 소스 감사용 스냅샷이며 독립 실행 패키지 보존을 의미하지 않는다.
+호환성: `totalSmmi`와 `AGE_70_PILOT` 같은 기존 코드 필드명은 직렬화/UI 호환을 위해 남겼지만, 화면의 뜻은 미확인 추정지수와 비활성 계수1이다.
 
 1. v0.5 소스/fixture 보존, v0.6 규칙·계약·순수 함수 작성.
-2. 원시 평균 기준 분류와 SD/CV/범위·불안정 게이트를 웹·서버·Dart에 연결.
+2. 원시 평균 기준 분류와 SD/CV/범위·불안정 게이트를 서버와 Dart에 연결.
 3. Mock 가능 상태와 실제 실행 상태·reasonCodes 분리, 실모드 허가 차단, 규칙 fallback 제거.
 4. 교정표 순수 검증기와 피드백 기록·멱등·보류 정책 적용.
-5. 공유 경계 fixture와 안전/오류/위젯/HTTP 테스트, 타입·웹 빌드·APK 검증.
+5. 공유 경계 fixture와 안전/오류/위젯/HTTP 테스트, 타입 검사와 APK 검증.
 6. plan/checklist/검증 증거 갱신. 운영 DB migration·배포·실제 API/장치 호출은 수행하지 않음.
 
 장치 형태는 사용자 확인으로 **발판에 서는 전신진동 장치**로 확정했다. 국소진동 연구의 수치를 직접 옮기지 않는다. 수직형/교대형, 파형, 자세 및 무릎 각도, 부하 조건은 아직 미확인이다.

@@ -2,6 +2,8 @@
 
 확인일: 2026-09-07
 
+> 이 문서는 당시 로컬 PC에서 얻은 이력 증거다. 현재 커밋의 지속적인 품질 판정은 GitHub Actions의 analyze, test, debug APK build 결과를 우선한다. APK/AAB 파일과 호스트별 SDK 경로는 저장소 계약이 아니다.
+
 | 항목 | 결과 | 증거 |
 |---|---|---|
 | Flutter | 3.47.2 stable | `E:\flutter-sdk` |

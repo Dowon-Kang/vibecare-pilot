@@ -1,169 +1,27 @@
-import '../services/feedback_repository.dart';
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/models.dart';
 import '../algorithm/vibration_algorithm.dart';
-import '../services/auth_repository.dart';
-import '../services/authenticated_client.dart';
+import '../app/app_environment.dart';
+import '../app/providers.dart';
+import '../models/models.dart';
 import '../services/device_gateway.dart';
-import '../services/fitrus_repository.dart';
-import '../services/mock_device_gateway.dart';
-import '../services/backend_device_gateway.dart';
+import 'pilot_state.dart';
 
-const apiBaseUrl = String.fromEnvironment('VIBECARE_API_BASE_URL');
-
-final sessionStoreProvider = Provider<SessionStore>(
-  (ref) =>
-      apiBaseUrl.isEmpty ? MemorySessionStore() : const SecureSessionStore(),
-);
-final dioProvider = Provider<Dio>((ref) {
-  final dio = createAuthenticatedClient(
-    apiBaseUrl,
-    ref.read(sessionStoreProvider),
-  );
-  ref.onDispose(() => dio.close());
-  return dio;
-});
-final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => apiBaseUrl.isEmpty
-      ? MockAuthRepository()
-      : BackendAuthRepository(ref.read(dioProvider)),
-);
-final fitrusRepositoryProvider = Provider<FitrusRepository>(
-  (ref) => apiBaseUrl.isEmpty
-      ? MockFitrusRepository()
-      : BackendFitrusRepository(ref.read(dioProvider)),
-);
-final deviceGatewayProvider = Provider<DeviceGateway>((ref) {
-  final gateway = apiBaseUrl.isEmpty
-      ? MockDeviceGateway()
-      : BackendDeviceGateway(ref.read(dioProvider));
-  ref.onDispose(gateway.dispose);
-  return gateway;
-});
-
-final feedbackRepositoryProvider = Provider<FeedbackRepository>(
-  (ref) =>
-      FeedbackRepository(apiBaseUrl.isEmpty ? null : ref.read(dioProvider)),
-);
+export '../app/app_environment.dart';
+export '../app/providers.dart';
+export 'pilot_state.dart';
 
 final pilotControllerProvider = NotifierProvider<PilotController, PilotState>(
   PilotController.new,
 );
 
-const _unset = Object();
-
-class PilotState {
-  const PilotState({
-    this.feedbackSession,
-    this.feedbackAdjustment = const FeedbackAdjustment(),
-    this.profile,
-    this.snapshot,
-    this.safety = const SafetyCheck(),
-    this.result,
-    this.asmResult,
-    this.smmResult,
-    this.muscleMassBasis = MuscleMassBasis.smm,
-    this.selectedIntensityPct,
-    this.isIntensityManual = false,
-    this.pendingAuthorization,
-    this.deviceState = DeviceConnectionState.disconnected,
-    this.session,
-    this.remainingSec = 0,
-    this.isBusy = false,
-    this.error,
-  });
-
-  final DeviceSession? feedbackSession;
-  final FeedbackAdjustment feedbackAdjustment;
-  final ParticipantProfile? profile;
-  final MeasurementSnapshot? snapshot;
-  final SafetyCheck safety;
-  final AlgorithmResult? result;
-  final AlgorithmResult? asmResult;
-  final AlgorithmResult? smmResult;
-  final MuscleMassBasis muscleMassBasis;
-  final int? selectedIntensityPct;
-  final bool isIntensityManual;
-  final DeviceAuthorization? pendingAuthorization;
-  final DeviceConnectionState deviceState;
-  final DeviceSession? session;
-  final int remainingSec;
-  final bool isBusy;
-  final String? error;
-
-  bool get isLoggedIn => profile != null;
-  bool get isRunning =>
-      session != null || deviceState == DeviceConnectionState.running;
-  bool get isTransmitted => pendingAuthorization != null && session == null;
-  int? get automaticIntensityPct => result?.recommendation?.intensityPct;
-
-  PilotState copyWith({
-    Object? feedbackSession = _unset,
-    FeedbackAdjustment? feedbackAdjustment,
-    Object? profile = _unset,
-    Object? snapshot = _unset,
-    SafetyCheck? safety,
-    Object? result = _unset,
-    Object? asmResult = _unset,
-    Object? smmResult = _unset,
-    MuscleMassBasis? muscleMassBasis,
-    Object? selectedIntensityPct = _unset,
-    bool? isIntensityManual,
-    Object? pendingAuthorization = _unset,
-    DeviceConnectionState? deviceState,
-    Object? session = _unset,
-    int? remainingSec,
-    bool? isBusy,
-    Object? error = _unset,
-  }) =>
-      PilotState(
-        feedbackSession: identical(feedbackSession, _unset)
-            ? this.feedbackSession
-            : feedbackSession as DeviceSession?,
-        feedbackAdjustment: feedbackAdjustment ?? this.feedbackAdjustment,
-        profile: identical(profile, _unset)
-            ? this.profile
-            : profile as ParticipantProfile?,
-        snapshot: identical(snapshot, _unset)
-            ? this.snapshot
-            : snapshot as MeasurementSnapshot?,
-        safety: safety ?? this.safety,
-        result: identical(result, _unset)
-            ? this.result
-            : result as AlgorithmResult?,
-        asmResult: identical(asmResult, _unset)
-            ? this.asmResult
-            : asmResult as AlgorithmResult?,
-        smmResult: identical(smmResult, _unset)
-            ? this.smmResult
-            : smmResult as AlgorithmResult?,
-        muscleMassBasis: muscleMassBasis ?? this.muscleMassBasis,
-        selectedIntensityPct: identical(selectedIntensityPct, _unset)
-            ? this.selectedIntensityPct
-            : selectedIntensityPct as int?,
-        isIntensityManual: isIntensityManual ?? this.isIntensityManual,
-        pendingAuthorization: identical(pendingAuthorization, _unset)
-            ? this.pendingAuthorization
-            : pendingAuthorization as DeviceAuthorization?,
-        deviceState: deviceState ?? this.deviceState,
-        session: identical(session, _unset)
-            ? this.session
-            : session as DeviceSession?,
-        remainingSec: remainingSec ?? this.remainingSec,
-        isBusy: isBusy ?? this.isBusy,
-        error: identical(error, _unset) ? this.error : error as String?,
-      );
-}
-
 class PilotController extends Notifier<PilotState> {
   StreamSubscription<DeviceConnectionState>? _deviceSubscription;
   Timer? _countdown;
-  static const sourceDeviceId = 'FITRUS-PLUS-01';
-  static const targetDeviceId = 'VIBECARE-SIM-01';
+  AppEnvironment get _environment => ref.read(appEnvironmentProvider);
 
   ({AlgorithmResult asm, AlgorithmResult smm}) _calculateBoth({
     required ParticipantProfile profile,
@@ -172,15 +30,15 @@ class PilotController extends Notifier<PilotState> {
     required FeedbackAdjustment adjustment,
   }) {
     AlgorithmResult calculate(MuscleMassBasis basis) => adjustment.apply(
-          calculateRecommendation(
-            profile: profile,
-            measurements: snapshot.selectedMeasurements,
-            safety: safety,
-            muscleMassBasis: basis,
-            ruleSet: snapshot.ruleSet,
-          ),
-          snapshot.ruleSet.minimumPct,
-        );
+      calculateRecommendation(
+        profile: profile,
+        measurements: snapshot.selectedMeasurements,
+        safety: safety,
+        muscleMassBasis: basis,
+        ruleSet: snapshot.ruleSet,
+      ),
+      snapshot.ruleSet.minimumPct,
+    );
     return (
       asm: calculate(MuscleMassBasis.asm),
       smm: calculate(MuscleMassBasis.smm),
@@ -190,8 +48,37 @@ class PilotController extends Notifier<PilotState> {
   AlgorithmResult _selectedResult(
     ({AlgorithmResult asm, AlgorithmResult smm}) results,
     MuscleMassBasis basis,
-  ) =>
-      basis == MuscleMassBasis.asm ? results.asm : results.smm;
+  ) => basis == MuscleMassBasis.asm ? results.asm : results.smm;
+
+  PilotState _recalculated(
+    PilotState current, {
+    required ParticipantProfile profile,
+    required MeasurementSnapshot snapshot,
+    required SafetyCheck safety,
+    required FeedbackAdjustment adjustment,
+    bool disconnectDevice = true,
+  }) {
+    final results = _calculateBoth(
+      profile: profile,
+      snapshot: snapshot,
+      safety: safety,
+      adjustment: adjustment,
+    );
+    final selected = _selectedResult(results, current.muscleMassBasis);
+    return current.copyWith(
+      profile: profile,
+      snapshot: snapshot,
+      safety: safety,
+      feedbackAdjustment: adjustment,
+      result: selected,
+      asmResult: results.asm,
+      smmResult: results.smm,
+      selectedIntensityPct: selected.recommendation?.intensityPct,
+      isIntensityManual: false,
+      pendingAuthorization: null,
+      deviceState: disconnectDevice ? DeviceConnectionState.disconnected : null,
+    );
+  }
 
   @override
   PilotState build() {
@@ -214,34 +101,22 @@ class PilotController extends Notifier<PilotState> {
           .read(authRepositoryProvider)
           .login(participantCode: participantCode, pin: pin);
       await ref.read(sessionStoreProvider).save(session);
-      final snapshot = await ref.read(fitrusRepositoryProvider).loadSnapshot(
+      final snapshot = await ref
+          .read(fitrusRepositoryProvider)
+          .loadSnapshot(
             participant: session.participant,
-            deviceId: sourceDeviceId,
+            deviceId: _environment.sourceDeviceId,
           );
       final adjustment = await ref
           .read(feedbackRepositoryProvider)
           .load(session.participant.id);
-      final results = _calculateBoth(
+      state = _recalculated(
+        state,
         profile: session.participant,
         snapshot: snapshot,
         safety: const SafetyCheck(),
         adjustment: adjustment,
-      );
-      final selectedResult = _selectedResult(results, state.muscleMassBasis);
-      state = state.copyWith(
-        feedbackAdjustment: adjustment,
-        profile: session.participant,
-        snapshot: snapshot,
-        result: selectedResult,
-        asmResult: results.asm,
-        smmResult: results.smm,
-        selectedIntensityPct: selectedResult.recommendation?.intensityPct,
-        isIntensityManual: false,
-        pendingAuthorization: null,
-        safety: const SafetyCheck(),
-        isBusy: false,
-        error: null,
-      );
+      ).copyWith(isBusy: false, error: null);
     } catch (error) {
       state = state.copyWith(isBusy: false, error: _message(error));
     }
@@ -259,28 +134,20 @@ class PilotController extends Notifier<PilotState> {
     try {
       final snapshot = await ref
           .read(fitrusRepositoryProvider)
-          .loadSnapshot(participant: profile, deviceId: sourceDeviceId);
-      final adjustment =
-          await ref.read(feedbackRepositoryProvider).load(profile.id);
-      final results = _calculateBoth(
+          .loadSnapshot(
+            participant: profile,
+            deviceId: _environment.sourceDeviceId,
+          );
+      final adjustment = await ref
+          .read(feedbackRepositoryProvider)
+          .load(profile.id);
+      state = _recalculated(
+        state,
         profile: profile,
         snapshot: snapshot,
         safety: state.safety,
         adjustment: adjustment,
-      );
-      final selectedResult = _selectedResult(results, state.muscleMassBasis);
-      state = state.copyWith(
-        feedbackAdjustment: adjustment,
-        snapshot: snapshot,
-        result: selectedResult,
-        asmResult: results.asm,
-        smmResult: results.smm,
-        selectedIntensityPct: selectedResult.recommendation?.intensityPct,
-        isIntensityManual: false,
-        pendingAuthorization: null,
-        deviceState: DeviceConnectionState.disconnected,
-        isBusy: false,
-      );
+      ).copyWith(isBusy: false);
     } catch (error) {
       state = state.copyWith(isBusy: false, error: _message(error));
     }
@@ -300,27 +167,17 @@ class PilotController extends Notifier<PilotState> {
       dizziness: dizziness ?? state.safety.dizziness,
       clinicianHold: hold ?? state.safety.clinicianHold,
     );
-    final results = _calculateBoth(
+    state = _recalculated(
+      state,
       profile: profile,
       snapshot: snapshot,
       safety: next,
       adjustment: state.feedbackAdjustment,
     );
-    final selectedResult = _selectedResult(results, state.muscleMassBasis);
-    state = state.copyWith(
-      safety: next,
-      result: selectedResult,
-      asmResult: results.asm,
-      smmResult: results.smm,
-      selectedIntensityPct: selectedResult.recommendation?.intensityPct,
-      isIntensityManual: false,
-      pendingAuthorization: null,
-      deviceState: DeviceConnectionState.disconnected,
-    );
   }
 
   void updateProfile({int? age, ParticipantSex? sex}) {
-    if (apiBaseUrl.isNotEmpty) return;
+    if (!ref.read(appEnvironmentProvider).usesSampleData) return;
     final profile = state.profile;
     final snapshot = state.snapshot;
     if (profile == null ||
@@ -330,22 +187,12 @@ class PilotController extends Notifier<PilotState> {
       return;
     }
     final next = profile.copyWith(age: age?.clamp(18, 100), sex: sex);
-    final results = _calculateBoth(
+    state = _recalculated(
+      state,
       profile: next,
       snapshot: snapshot,
       safety: state.safety,
       adjustment: state.feedbackAdjustment,
-    );
-    final selectedResult = _selectedResult(results, state.muscleMassBasis);
-    state = state.copyWith(
-      profile: next,
-      result: selectedResult,
-      asmResult: results.asm,
-      smmResult: results.smm,
-      selectedIntensityPct: selectedResult.recommendation?.intensityPct,
-      isIntensityManual: false,
-      pendingAuthorization: null,
-      deviceState: DeviceConnectionState.disconnected,
     );
   }
 
@@ -353,8 +200,9 @@ class PilotController extends Notifier<PilotState> {
     if (state.isRunning || state.isBusy || state.feedbackSession != null) {
       return;
     }
-    final selected =
-        basis == MuscleMassBasis.asm ? state.asmResult : state.smmResult;
+    final selected = basis == MuscleMassBasis.asm
+        ? state.asmResult
+        : state.smmResult;
     if (selected == null) return;
     state = state.copyWith(
       muscleMassBasis: basis,
@@ -416,13 +264,13 @@ class PilotController extends Notifier<PilotState> {
     state = state.copyWith(isBusy: true, error: null);
     try {
       final gateway = ref.read(deviceGatewayProvider);
-      await gateway.connect(targetDeviceId);
+      await gateway.connect(_environment.targetDeviceId);
       final authorization = await gateway.authorize(
         result: result,
         participant: profile,
         safety: state.safety,
         intensityPct: intensity,
-        sourceDeviceId: sourceDeviceId,
+        sourceDeviceId: _environment.sourceDeviceId,
       );
       state = state.copyWith(
         pendingAuthorization: authorization,
@@ -450,8 +298,9 @@ class PilotController extends Notifier<PilotState> {
     }
     state = state.copyWith(isBusy: true, error: null);
     try {
-      final session =
-          await ref.read(deviceGatewayProvider).start(authorization);
+      final session = await ref
+          .read(deviceGatewayProvider)
+          .start(authorization);
       state = state.copyWith(
         session: session,
         pendingAuthorization: null,
@@ -515,7 +364,9 @@ class PilotController extends Notifier<PilotState> {
     }
     state = state.copyWith(isBusy: true, error: null);
     try {
-      final adjustment = await ref.read(feedbackRepositoryProvider).save(
+      final adjustment = await ref
+          .read(feedbackRepositoryProvider)
+          .save(
             profile.id,
             finished.id,
             finished.command.intensityPct,
@@ -523,25 +374,14 @@ class PilotController extends Notifier<PilotState> {
               earlyStopped: _earlyStops[finished.id] ?? true,
             ),
           );
-      final results = _calculateBoth(
+      state = _recalculated(
+        state,
         profile: profile,
         snapshot: snapshot,
         safety: const SafetyCheck(),
         adjustment: adjustment,
-      );
-      final result = _selectedResult(results, state.muscleMassBasis);
-      state = state.copyWith(
-        feedbackSession: null,
-        feedbackAdjustment: adjustment,
-        result: result,
-        asmResult: results.asm,
-        smmResult: results.smm,
-        selectedIntensityPct: result.recommendation?.intensityPct,
-        isIntensityManual: false,
-        safety: const SafetyCheck(),
-        isBusy: false,
-        error: null,
-      );
+        disconnectDevice: false,
+      ).copyWith(feedbackSession: null, isBusy: false, error: null);
     } catch (error) {
       state = state.copyWith(isBusy: false, error: _message(error));
     }

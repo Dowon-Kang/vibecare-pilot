@@ -17,13 +17,15 @@ flowchart TD
     I -- 예 --> K[추천과 PILOT 보정 사유 표시]
     K --> L{상태가 READY?}
     L -- 아니오 --> F
-    L -- 예 --> M[서버 실행 허가 요청]
-    M --> N[기기 연결과 실행]
-    N --> O[남은 시간·연결·즉시중지]
+    L -- 예 --> M[Mock 실행 허가 요청]
+    M --> N[로컬 또는 서버 시뮬레이션 시작]
+    N --> O[남은 시간·시뮬레이션 상태·중지]
     O --> P[RPE·통증·어지럼 피드백]
 ```
 
-## 앱·백엔드·기기 흐름
+## 현재 구현된 앱·백엔드 Mock 흐름
+
+`VIBECARE_API_BASE_URL`이 없으면 앱 내부 Mock 저장소와 `MockDeviceGateway`를 사용한다. URL이 있으면 백엔드에 저장된 표준 측정값을 읽고 `BackendDeviceGateway`가 서버 시뮬레이터를 호출한다. 두 경로 모두 실제 진동 장치에는 연결되지 않는다.
 
 ```mermaid
 sequenceDiagram
@@ -31,14 +33,6 @@ sequenceDiagram
     participant App as Flutter 앱
     participant API as 백엔드 API
     participant DB as 데이터 저장소
-    participant BIA as BIA 공급 API
-    participant Dev as REST/BLE 기기
-
-    App->>API: 측정 종류와 공급사 입력 전달
-    API->>BIA: 서버 전용 API 키로 POST
-    BIA-->>API: 공급사 원본 응답
-    API->>API: 계약 확보 후 DTO 정규화·중복검사
-    API->>DB: 원본과 표준값 저장
     User->>App: 코드+PIN 로그인
     App->>API: 최신 측정세트 요청
     API->>DB: 동일 참여자 최신 유효 4건 조회
@@ -48,16 +42,18 @@ sequenceDiagram
     App->>API: 측정 ID 4개+문진+기기 ID
     API->>DB: 원본 재조회
     API->>API: authoritative 재계산
-    alt READY와 교정된 기기
-        API->>DB: 1회성 허가 저장
-        API-->>App: 만료시각이 있는 실행 허가
-        App->>Dev: 허가 결합 명령
-        Dev-->>App: ACK와 상태
-        App->>API: 세션 이벤트 기록
+    alt READY와 DEVICE_MODE=mock
+        API->>DB: 1회성 Mock 허가 저장
+        API-->>App: mode=mock과 만료시각 반환
+        App->>API: Mock 세션 시작 요청
+        API->>DB: 시뮬레이션 세션과 합성 ACK 기록
+        API-->>App: mode=mock, RUNNING
     else REVIEW/BLOCKED/불일치
         API-->>App: 실행 거부와 사유
     end
 ```
+
+FITRUS 프록시의 URL·인증 경계는 준비되어 있지만 공급사 성공 응답 계약과 정규화가 미완료다. 실제 REST/BLE 기기 어댑터도 없다. 두 외부 연동은 현재 흐름이 아니라 후속 작업이다.
 
 ## 백엔드 경계
 
@@ -71,9 +67,9 @@ flowchart LR
     subgraph Backend[백엔드 API]
         AUTH[PIN 인증·잠금]
         ADAPTER[BIA 정규화 어댑터]
-        ENGINE[pilot-0.3.0 안전 엔진]
-        AUTHORIZE[1회성 실행 허가]
-        SESSION[세션·ACK·피드백 API]
+        ENGINE[pilot-0.6.0 연구용 계산 엔진]
+        AUTHORIZE[1회성 Mock 허가]
+        SESSION[시뮬레이션 세션·합성 ACK·피드백 API]
     end
 
     subgraph Storage[데이터 저장소: 현재 D1, AWS 전환 예정]
@@ -83,13 +79,13 @@ flowchart LR
     end
 
     APP[Flutter 참여자 앱] --> AUTH
-    BIA --> ADAPTER --> RAW
+    BIA -. 계약 확보 후 .-> ADAPTER --> RAW
     APP --> ENGINE
     ENGINE --> RAW
     ENGINE --> RULES
     ENGINE --> AUTHORIZE --> AUDIT
-    AUTHORIZE --> APP --> DEVICE
-    DEVICE --> SESSION --> AUDIT
+    AUTHORIZE --> APP --> SESSION --> AUDIT
+    APP -. 실장비 어댑터 미구현 .-> DEVICE
 ```
 
 ## 안전 상태 머신
@@ -97,9 +93,9 @@ flowchart LR
 ```mermaid
 stateDiagram-v2
     [*] --> REVIEW: 측정세트 미확정
-    REVIEW --> READY: 4건·문진·교정 검증
-    READY --> AUTHORIZED: 서버 1회성 허가
-    AUTHORIZED --> RUNNING: 기기 ACK
+    REVIEW --> READY: 4건·문진·연구 규칙 검증
+    READY --> AUTHORIZED: 1회성 Mock 허가
+    AUTHORIZED --> RUNNING: 로컬/서버 시뮬레이션 ACK
     AUTHORIZED --> REVIEW: 허가 만료/불일치
     RUNNING --> STOPPING: 종료·사용자 중지·오류
     STOPPING --> COMPLETED: 중지 ACK
@@ -110,4 +106,4 @@ stateDiagram-v2
     BLOCKED --> REVIEW: 다음 세션 재평가
 ```
 
-실제 장비 명세 전에는 `MockDeviceGateway`만 선택된다. REST/BLE 구현은 공통 `DeviceGateway` 경계 뒤에 두므로 화면과 알고리즘을 다시 만들지 않고 공급사 어댑터만 교체할 수 있다.
+현재 `DeviceGateway` 구현은 앱 내부 `MockDeviceGateway`와 서버 시뮬레이터를 호출하는 `BackendDeviceGateway`다. 어느 쪽도 물리 장치와 통신하지 않는다. REST/BLE 실장비 구현은 장치 명세·교정표·안전 승인을 확보한 뒤 같은 인터페이스 뒤에 별도 어댑터로 추가한다.

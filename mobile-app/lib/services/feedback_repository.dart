@@ -32,9 +32,9 @@ class FeedbackRepository {
       if (!_saved.containsKey(key)) {
         _mock[participantId] =
             (_mock[participantId] ?? const FeedbackAdjustment()).next(
-          feedback,
-          used,
-        );
+              feedback,
+              used,
+            );
         _saved[key] = serialized;
       }
       return _mock[participantId]!;

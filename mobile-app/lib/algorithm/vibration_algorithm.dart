@@ -259,8 +259,9 @@ AlgorithmResult calculateRecommendation({
       profile.heightCm.isFinite &&
       profile.heightCm > 0) {
     final heightM = profile.heightCm / 100;
-    final muscles =
-        measurements.map((m) => m.values.skeletalMuscleMassKg).toList();
+    final muscles = measurements
+        .map((m) => m.values.skeletalMuscleMassKg)
+        .toList();
     final sum = muscles.reduce((a, b) => a + b);
     final mean = sum / 4;
     final muscleIndex = mean / math.pow(heightM, 2);
@@ -272,8 +273,8 @@ AlgorithmResult calculateRecommendation({
     final asmCutoff = profile.sex == ParticipantSex.female
         ? 5.7
         : profile.age >= 65
-            ? 7.0
-            : 7.6;
+        ? 7.0
+        : 7.6;
     final heightSquared = heightM * heightM;
     MuscleLevel classify(double total, int count) {
       if (muscleMassBasis == MuscleMassBasis.asm) {
@@ -284,8 +285,8 @@ AlgorithmResult calculateRecommendation({
       return total <= thresholds.lowMaximum * heightSquared * count
           ? MuscleLevel.low
           : total <= thresholds.mediumMaximum * heightSquared * count
-              ? MuscleLevel.medium
-              : MuscleLevel.reference;
+          ? MuscleLevel.medium
+          : MuscleLevel.reference;
     }
 
     final level = classify(sum, 4);
@@ -334,9 +335,10 @@ AlgorithmResult calculateRecommendation({
   final selectedProtocol = muscleProtocol!;
   final levelLabel = switch (muscleAssessment!.level) {
     MuscleLevel.low => '낮은 근육량 등급',
-    MuscleLevel.medium => muscleAssessment.basis == MuscleMassBasis.asm
-        ? '낮지 않은 사지근육량 등급'
-        : '중간 근육량 등급',
+    MuscleLevel.medium =>
+      muscleAssessment.basis == MuscleMassBasis.asm
+          ? '낮지 않은 사지근육량 등급'
+          : '중간 근육량 등급',
     MuscleLevel.reference => '참조 이상 근육량 등급',
   };
   final indexName = muscleAssessment.indexName;
@@ -364,8 +366,9 @@ AlgorithmResult calculateRecommendation({
     ),
   ];
 
-  final ageFactor =
-      profile.age >= ruleSet.ageThreshold ? ruleSet.ageFactor : 1.0;
+  final ageFactor = profile.age >= ruleSet.ageThreshold
+      ? ruleSet.ageFactor
+      : 1.0;
   final intensity = (selectedProtocol.intensityPct * ageFactor)
       .clamp(ruleSet.minimumPct, ruleSet.maximumPct)
       .round();

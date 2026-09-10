@@ -64,6 +64,8 @@ paths:
                 payload: { type: object, additionalProperties: true }
       responses:
         '201': { description: Raw provider response retained; normalization status returned }
+        '502': { description: FITRUS rejected the request or could not be reached }
+        '504': { description: FITRUS did not respond before the server timeout }
   /v1/participants/me/measurement-set/current:
     get:
       description: Returns the latest 20 history records plus any older records in the selected four (at most 24). Selection uses the requested source device, measuredAt descending, then ID descending.
@@ -148,6 +150,31 @@ paths:
           schema: { type: string }
       responses:
         '200': { description: STOPPED or COMPLETED confirmed; terminal calls are idempotent }
+  /v1/feedback-adjustment:
+    get:
+      description: Returns the participant's current conservative feedback adjustment, or null when no completed-session feedback exists.
+      responses:
+        '200':
+          description: Current feedback adjustment
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [adjustment]
+                properties:
+                  adjustment:
+                    oneOf:
+                      - type: 'null'
+                      - type: object
+                        required: [intensityCap, requiresReview, reason, reasonCode, policyVersion, sourceSessionId]
+                        properties:
+                          intensityCap: { type: number, minimum: 0, maximum: 100 }
+                          requiresReview: { type: boolean }
+                          reason: { type: string }
+                          reasonCode: { type: string }
+                          policyVersion: { type: string }
+                          sourceSessionId: { type: string }
+        '401': { description: Missing or invalid access token }
   /v1/session-feedback:
     post:
       description: Idempotent by participant and session; conflicting retries rejected. policyVersion feedback-0.2.0 and reasonCode accompany the adjustment. Physical telemetry is nullable and participant-reported, not device-attested.

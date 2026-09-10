@@ -106,19 +106,19 @@ void main() {
 }
 
 List<BiaMeasurement> rows(List<double> masses, double bmi) => [
-      for (var i = 0; i < masses.length; i++)
-        BiaMeasurement(
-          id: 'M$i',
-          participantId: 'TEST',
-          deviceId: 'BIA',
-          measuredAt: DateTime.utc(2026, 9, 1),
-          qualityPassed: true,
-          values: BiaValues(
-            weightKg: bmi * 4,
-            bmi: bmi,
-            bodyFatPct: 25,
-            fatMassKg: bmi,
-            skeletalMuscleMassKg: masses[i],
-          ),
-        ),
-    ];
+  for (var i = 0; i < masses.length; i++)
+    BiaMeasurement(
+      id: 'M$i',
+      participantId: 'TEST',
+      deviceId: 'BIA',
+      measuredAt: DateTime.utc(2026, 9, 1),
+      qualityPassed: true,
+      values: BiaValues(
+        weightKg: bmi * 4,
+        bmi: bmi,
+        bodyFatPct: 25,
+        fatMassKg: bmi,
+        skeletalMuscleMassKg: masses[i],
+      ),
+    ),
+];

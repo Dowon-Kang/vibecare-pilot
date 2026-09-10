@@ -6,11 +6,11 @@
 ## A. 저장소 품질 게이트
 
 - [x] 공개 문서 진입점: `docs/README.md`
-- [x] GitHub Actions: 백엔드 typecheck/test, Flutter analyze/test
+- [x] GitHub Actions 구성: 백엔드 typecheck/test, Flutter format/analyze/test/debug APK build
 - [x] 실제 환경값 제외: `.env*`, `.dev.vars`, `*.local.txt`, 로컬 상태·빌드 산출물 ignore
 - [x] 패키지 버전 잠금: 백엔드 `package-lock.json`, Flutter `pubspec.lock`
 - [x] AWS 인계 범위와 미구현 항목 분리
-- [ ] 원격 GitHub Actions 최초 실행 결과 확인
+- [ ] 변경된 format/debug APK 게이트의 원격 GitHub Actions 결과 확인
 - [ ] branch protection에서 `quality-gates` 필수화
 
 ## B. 현재 정량 검증

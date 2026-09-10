@@ -38,17 +38,17 @@ class DeviceCommand {
   final String idempotencyKey;
 
   Map<String, Object> toJson() => {
-        'authorizationId': authorizationId,
-        'participantId': participantId,
-        'deviceId': deviceId,
-        'durationSec': durationSec,
-        'frequencyHz': frequencyHz,
-        'intensityPct': intensityPct,
-        'algorithmVersion': algorithmVersion,
-        'issuedAt': issuedAt.toUtc().toIso8601String(),
-        'expiresAt': expiresAt.toUtc().toIso8601String(),
-        'idempotencyKey': idempotencyKey,
-      };
+    'authorizationId': authorizationId,
+    'participantId': participantId,
+    'deviceId': deviceId,
+    'durationSec': durationSec,
+    'frequencyHz': frequencyHz,
+    'intensityPct': intensityPct,
+    'algorithmVersion': algorithmVersion,
+    'issuedAt': issuedAt.toUtc().toIso8601String(),
+    'expiresAt': expiresAt.toUtc().toIso8601String(),
+    'idempotencyKey': idempotencyKey,
+  };
 }
 
 class DeviceAuthorization {

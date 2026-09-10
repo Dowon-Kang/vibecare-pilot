@@ -35,6 +35,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('50%'), findsOneWidget);
+    expect(find.text('확인 필요'), findsOneWidget);
+    expect(find.text('설정 계산됨'), findsNothing);
+    expect(find.text('로컬 시연 설정 보내기'), findsOneWidget);
+    expect(find.textContaining('서버 시연'), findsNothing);
     expect(
       tester
           .widget<FilledButton>(find.byKey(const ValueKey('send-button')))
@@ -80,6 +84,7 @@ void main() {
     expect(find.text('강도는 어땠나요?'), findsOneWidget);
     expect(find.text('시간은 어땠나요?'), findsOneWidget);
     expect(find.text('주파수 느낌은 어땠나요?'), findsOneWidget);
+    await _tap(tester, 'feedback-rpe-slider');
     await _tap(tester, 'feedback-intensity-FeedbackRating.weak');
     await _tap(tester, 'feedback-duration-FeedbackRating.weak');
     await _tap(tester, 'feedback-frequency-FeedbackRating.weak');

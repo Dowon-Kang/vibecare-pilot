@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { FitrusApiError, FitrusClient } from '../src/fitrus-client';
+import {
+  FitrusApiError,
+  FitrusClient,
+  FitrusNetworkError,
+  FitrusTimeoutError,
+} from '../src/fitrus-client';
 
 describe('FitrusClient', () => {
   it('keeps the API key server-side and calls the bodyfat POST endpoint', async () => {
@@ -36,5 +41,29 @@ describe('FitrusClient', () => {
       status: 403,
     } satisfies Partial<FitrusApiError>);
     await expect(client.measure('heartRate', {})).rejects.not.toThrow('do-not-log-this');
+  });
+
+  it('stops a provider request after the configured timeout', async () => {
+    const fetcher: typeof fetch = async (_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => {
+        reject(new DOMException('aborted', 'AbortError'));
+      });
+    });
+    const client = new FitrusClient('server-secret', undefined, fetcher);
+
+    await expect(client.measure('stress', {}, { timeoutMs: 5 })).rejects.toBeInstanceOf(
+      FitrusTimeoutError,
+    );
+  });
+
+  it('distinguishes a network failure from an HTTP rejection', async () => {
+    const fetcher: typeof fetch = async () => {
+      throw new TypeError('connection refused');
+    };
+    const client = new FitrusClient('server-secret', undefined, fetcher);
+
+    await expect(client.measure('bodyTemperature', {})).rejects.toBeInstanceOf(
+      FitrusNetworkError,
+    );
   });
 });
