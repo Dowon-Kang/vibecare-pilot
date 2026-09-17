@@ -9,6 +9,36 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /v1/research/smm-frequency-preview:
+    post:
+      summary: SMM frequency research comparison, never an execution authorization
+      description: Uses the signed-in participant's latest four valid stored records from the selected source device. Existing provenance, safety, feedback and tier-instability gates remain active. No FITRUS call, database write or device command. The mobile pilot algorithm is unchanged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [sourceDeviceId, safety]
+              properties:
+                sourceDeviceId: { type: string, minLength: 1, maxLength: 200 }
+                safety: { $ref: '#/components/schemas/SafetyCheck' }
+      responses:
+        '200':
+          description: Unvalidated numerical preview only
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SmmFrequencyPreview' }
+        '400': { description: Invalid request or client-submitted profile/muscle overrides }
+        '401': { description: Authentication required }
+        '404': { description: Participant not found }
+        '409':
+          description: Data review or current/persisted safety hold; preview is null
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SmmFrequencyPreview' }
+        '503': { description: No enabled valid source rule set }
   /health:
     get:
       security: []
@@ -70,7 +100,7 @@ paths:
         '503': { description: No enabled valid rule set; execution is disabled }
   /v1/fitrus/measurements/{kind}:
     post:
-      description: Server-only FITRUS proxy. Provider payload remains opaque until the vendor contract is supplied.
+      description: Server-only FITRUS proxy. The payload must match the selected provider endpoint contract. Valid body-composition and vital responses are inserted into history; unsupported or model-error responses remain raw only.
       parameters:
         - in: path
           name: kind
@@ -98,9 +128,19 @@ paths:
                     methodEvidenceRef: { type: string, minLength: 1 }
                     muscleMassUnit: { const: kg }
                     acquisitionProtocol: { type: string, minLength: 1 }
-                payload: { type: object, additionalProperties: true }
+                payload:
+                  description: Must match the schema for kind. PPG list length/range remains device-spec dependent.
+                  oneOf:
+                    - { $ref: '#/components/schemas/FitrusBloodPressureRequest' }
+                    - { $ref: '#/components/schemas/FitrusHeartRateRequest' }
+                    - { $ref: '#/components/schemas/FitrusStressRequest' }
+                    - { $ref: '#/components/schemas/FitrusStressV2Request' }
+                    - { $ref: '#/components/schemas/FitrusBodyTemperatureRequest' }
+                    - { $ref: '#/components/schemas/FitrusBodyFatRequest' }
       responses:
-        '201': { description: Raw provider response retained; normalization status returned }
+        '201': { description: Raw response retained. normalized indicates whether a validated history record was also inserted. }
+        '400': { description: Invalid wrapper or endpoint-specific FITRUS payload }
+        '409': { description: Body-fat demographics do not match the authenticated participant profile }
         '502': { description: FITRUS rejected the request or could not be reached }
         '504': { description: FITRUS did not respond before the server timeout }
   /v1/participants/me/measurement-set/current:
@@ -118,14 +158,14 @@ paths:
         '200': { description: Display-only vital history }
   /v1/recommendations/authorize:
     post:
-      description: pilot-0.7.0 accepts only four provenance-matched ASM or SMM measurements. It may issue a mock simulator authorization; physicalExecution is always PROHIBITED.
+      description: pilot-0.8.0 accepts four provenance-matched SMM measurements and a body part. It applies configurable prototype gender, age, and body-fat coefficients to the selected part baseline. Physical execution is always PROHIBITED.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [measurementIds, safety, deviceId, algorithmVersion, muscleMassBasis]
+              required: [measurementIds, safety, deviceId, algorithmVersion, bodyPart]
               properties:
                 measurementIds:
                   type: array
@@ -140,15 +180,15 @@ paths:
                   minLength: 1
                   description: BIA measurement source device. Legacy callers may omit it to use deviceId. deviceId identifies the target simulator.
                 algorithmVersion: { type: string }
-                muscleMassBasis:
+                bodyPart:
                   type: string
-                  enum: [ASM, SMM]
-                  description: Must exactly match the confirmed muscleDefinition stored on all four measurements. UNKNOWN and mismatches fail closed.
+                  enum: [wholeBody, shoulder, arm, abdomen, thigh, calf]
+                  description: Selects the configured time, frequency, and baseline device-output setting. All four measurements must have confirmed SMM provenance.
                 requestedIntensityPct:
                   type: integer
                   minimum: 1
                   maximum: 100
-                  description: Optional manual intensity. The server accepts only values between its configured minimum and calculated recommendation.
+                  description: Optional device output setting in percent of the device's own output scale. The server accepts only values between its configured minimum and calculated recommendation. This is not a measured physical output.
       responses:
         '201':
           description: One-time 60-second mock authorization.
@@ -164,7 +204,7 @@ paths:
                   recommendationId: { type: string }
                   expiresAt: { type: string, format: date-time }
                   result: { $ref: '#/components/schemas/AlgorithmResult' }
-        '409': { description: 'UNKNOWN/mixed/mismatched muscle definition, mixed method/unit/acquisition protocol, stale/future data under the labelled engineering policy, tier instability, safety block, physical mode, intensity range, or algorithm version mismatch.' }
+        '409': { description: 'Non-SMM or mixed provenance, stale/future data under the labelled engineering policy, safety block, physical mode, intensity range, or algorithm version mismatch.' }
         '400': { description: Invalid input or missing explicit safety answers }
         '503': { description: Algorithm unavailable }
   /v1/device-sessions:
@@ -305,9 +345,108 @@ components:
       type: http
       scheme: bearer
   schemas:
+    SmmFrequencyPreview:
+      type: object
+      additionalProperties: false
+      required: [modelVersion, sourceRuleVersion, evidence, status, authorized, physicalExecution, realDeviceSendAllowed, reasonCodes, preview]
+      properties:
+        modelVersion: { const: smm-frequency-research-0.1.0 }
+        sourceRuleVersion: { type: string }
+        evidence: { const: HYPOTHESIS_UNVALIDATED }
+        status: { enum: [PREVIEW_ONLY, REVIEW, BLOCKED] }
+        authorized: { const: false }
+        physicalExecution: { const: PROHIBITED }
+        realDeviceSendAllowed: { const: false }
+        reasonCodes: { type: array, items: { type: string } }
+        preview:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [basis, selectedModel, selectionBasis, meanSmmKg, indexKgM2, bodyFatPct, bmi, lowerIndex, upperIndex, candidatesHz, frequencyHz, observedRangeHz, maximumSlopeHzPerKg, measurements]
+              properties:
+                basis: { const: SMM }
+                selectedModel: { const: linear }
+                selectionBasis: { const: NUMERICAL_SENSITIVITY_NOT_CLINICAL_EFFECT }
+                meanSmmKg: { type: number }
+                indexKgM2: { type: number }
+                bodyFatPct: { type: number }
+                bmi: { type: number }
+                lowerIndex: { type: number }
+                upperIndex: { type: number }
+                candidatesHz:
+                  type: object
+                  additionalProperties: false
+                  required: [fixed, step, linear, smoothstep]
+                  properties:
+                    fixed: { type: number, minimum: 12, maximum: 20 }
+                    step: { type: number, minimum: 12, maximum: 20 }
+                    linear: { type: number, minimum: 12, maximum: 20 }
+                    smoothstep: { type: number, minimum: 12, maximum: 20 }
+                frequencyHz: { type: number, minimum: 12, maximum: 20 }
+                observedRangeHz:
+                  type: object
+                  additionalProperties: false
+                  required: [minimum, maximum, meaning]
+                  properties:
+                    minimum: { type: number }
+                    maximum: { type: number }
+                    meaning: { const: OBSERVED_SPREAD_NOT_CONFIDENCE_INTERVAL }
+                maximumSlopeHzPerKg: { type: number }
+                measurements:
+                  type: array
+                  minItems: 4
+                  maxItems: 4
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [id, measuredAt]
+                    properties:
+                      id: { type: string }
+                      measuredAt: { type: string, format: date-time }
+    FitrusPpgList:
+      type: array
+      minItems: 1
+      items: { type: integer }
+      description: Interleaved red/green/IR integers. The provider has not supplied a valid sample count or item range.
+    FitrusBloodPressureRequest:
+      type: object
+      required: [list, baseSystolic, baseDiastolic]
+      properties:
+        list: { $ref: '#/components/schemas/FitrusPpgList' }
+        baseSystolic: { type: number, exclusiveMinimum: 0 }
+        baseDiastolic: { type: number, exclusiveMinimum: 0 }
+    FitrusHeartRateRequest:
+      type: object
+      required: [list]
+      properties:
+        list: { $ref: '#/components/schemas/FitrusPpgList' }
+    FitrusStressRequest:
+      type: object
+      required: [list, age]
+      properties:
+        list: { $ref: '#/components/schemas/FitrusPpgList' }
+        age: { type: integer, minimum: 1 }
+    FitrusStressV2Request:
+      $ref: '#/components/schemas/FitrusHeartRateRequest'
+    FitrusBodyTemperatureRequest:
+      type: object
+      required: [temp]
+      properties:
+        temp: { type: number }
+    FitrusBodyFatRequest:
+      type: object
+      required: [age, height, weight, gender, voltage]
+      properties:
+        age: { type: integer, minimum: 1 }
+        height: { type: number, exclusiveMinimum: 0 }
+        weight: { type: number, exclusiveMinimum: 0 }
+        gender: { type: string, enum: [male, female], description: Case-insensitive on input }
+        voltage: { type: number }
+        correct: { type: [number, 'null'], default: 0 }
     AlgorithmResult:
       type: object
-      required: [status, executionStatus, dataDecision, simulationEligibility, physicalExecution, realDeviceSendAllowed, reasonCodes, warnings, algorithmVersion, muscleMassBasis, muscleStatistics, average, muscleAssessment, recommendation, factors]
+      required: [status, executionStatus, dataDecision, simulationEligibility, physicalExecution, realDeviceSendAllowed, reasonCodes, warnings, algorithmVersion, bodyPart, muscleMassBasis, average, recommendation, factors]
       properties:
         status: { type: string, enum: [READY, REVIEW, BLOCKED] }
         executionStatus: { type: string, enum: [SIMULATION_READY, REVIEW, BLOCKED] }
@@ -315,23 +454,11 @@ components:
         simulationEligibility: { type: string, enum: [ELIGIBLE, INELIGIBLE] }
         physicalExecution: { const: PROHIBITED }
         realDeviceSendAllowed: { const: false }
-        algorithmVersion: { const: pilot-0.7.0 }
-        muscleMassBasis: { type: string, enum: [ASM, SMM] }
+        algorithmVersion: { const: pilot-0.8.0 }
+        bodyPart: { type: string, enum: [wholeBody, shoulder, arm, abdomen, thigh, calf] }
+        muscleMassBasis: { const: SMM }
         reasonCodes: { type: array, items: { type: string } }
         warnings: { type: array, items: { type: string } }
-        muscleStatistics:
-          oneOf:
-            - type: 'null'
-            - type: object
-              required: [count, meanKg, sampleSdKg, cvPct, minimumKg, maximumKg, rangeKg]
-              properties:
-                count: { const: 4 }
-                meanKg: { type: number }
-                sampleSdKg: { type: number, minimum: 0 }
-                cvPct: { type: number, minimum: 0 }
-                minimumKg: { type: number }
-                maximumKg: { type: number }
-                rangeKg: { type: number, minimum: 0 }
         average:
           oneOf:
             - type: 'null'
@@ -343,27 +470,31 @@ components:
                 bodyFatPct: { type: number }
                 fatMassKg: { type: number }
                 skeletalMuscleMassKg: { type: number }
-        muscleAssessment:
-          oneOf:
-            - type: 'null'
-            - type: object
-              required: [heightAdjustedIndex, level, unstable]
-              properties:
-                heightAdjustedIndex: { type: number }
-                level: { type: string, enum: [low, medium, reference] }
-                unstable: { type: boolean }
         recommendation:
           oneOf:
             - type: 'null'
             - type: object
-              required: [purpose, evidence, durationSec, frequencyHz, intensityPct]
+              required: [purpose, evidence, durationSec, frequencyHz, intensityPct, baseIntensityPct]
               properties:
                 purpose: { const: SIMULATION_CANDIDATE }
                 evidence: { const: HYPOTHESIS_UNVALIDATED }
                 durationSec: { type: integer, minimum: 1 }
                 frequencyHz: { type: integer, minimum: 1 }
                 intensityPct: { type: number, minimum: 0, maximum: 100 }
-        factors: { type: 'null' }
+                baseIntensityPct: { type: number, minimum: 0, maximum: 100 }
+        factors:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [genderCoefficient, ageCoefficient, bodyFatCoefficient, muscleMassCoefficient, totalCoefficient, calculatedIntensityPct, bodyFatBand]
+              properties:
+                genderCoefficient: { type: number, exclusiveMinimum: 0, maximum: 1 }
+                ageCoefficient: { type: number, exclusiveMinimum: 0, maximum: 1 }
+                bodyFatCoefficient: { type: number, exclusiveMinimum: 0, maximum: 1 }
+                muscleMassCoefficient: { const: 1 }
+                totalCoefficient: { type: number, exclusiveMinimum: 0, maximum: 1 }
+                calculatedIntensityPct: { type: number, minimum: 0, maximum: 100 }
+                bodyFatBand: { type: string, enum: [low, normal, high] }
     SafetyCheck:
       description: All three answers must be explicitly provided; null or omitted is not false. Any true answer blocks execution.
       type: object

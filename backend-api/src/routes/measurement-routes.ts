@@ -1,4 +1,6 @@
 import { FitrusClient, type FitrusMeasurementKind } from '../fitrus-client';
+import { parseFitrusRequest, type FitrusBodyFatRequest } from '../fitrus-contract';
+import { normalizeFitrusBodyComposition, normalizeFitrusVital } from '../fitrus-normalizer';
 import { accessParticipantId, jsonBody } from '../http';
 import { bodyValues, latestValidSql } from '../measurement-store';
 import { fitrusKindSchema, fitrusProxySchema } from '../request-schemas';
@@ -12,6 +14,26 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
     const kind = fitrusKindSchema.safeParse(context.req.param('kind'));
     const body = fitrusProxySchema.safeParse(await jsonBody(context));
     if (!kind.success || !body.success || (kind.success && kind.data === 'bodyFat' && !body.data.muscleProvenance)) return context.json({ error: 'INVALID_REQUEST' }, 400);
+    const providerPayload = parseFitrusRequest(kind.data, body.data.payload);
+    if (!providerPayload.success) {
+      return context.json({
+        error: 'INVALID_FITRUS_PAYLOAD',
+        fields: providerPayload.error.issues.map((issue) => issue.path.join('.')),
+      }, 400);
+    }
+    if (kind.data === 'bodyFat') {
+      const profile = await context.env.DB.prepare(
+        'SELECT age, sex, height_cm FROM participants WHERE id = ?',
+      ).bind(participantId).first<Record<string, unknown>>();
+      const payload = providerPayload.data as FitrusBodyFatRequest;
+      if (
+        !profile || Number(profile.age) !== payload.age ||
+        String(profile.sex).toLowerCase() !== payload.gender ||
+        Math.abs(Number(profile.height_cm) - payload.height) > 0.01
+      ) {
+        return context.json({ error: 'FITRUS_PROFILE_MISMATCH' }, 409);
+      }
+    }
     if (!context.env.FITRUS_API_KEY) {
       return context.json({ error: 'FITRUS_NOT_CONFIGURED' }, 503);
     }
@@ -20,10 +42,11 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
     const response = await new FitrusClient(
       context.env.FITRUS_API_KEY,
       context.env.FITRUS_API_BASE_URL,
-    ).measure(kind.data as FitrusMeasurementKind, body.data.payload, {
+    ).measure(kind.data as FitrusMeasurementKind, providerPayload.data, {
       requestId: providerRequestId,
     });
     const rawId = crypto.randomUUID();
+    const measuredAt = body.data.measuredAt ?? new Date().toISOString();
     await context.env.DB.prepare(
       `INSERT INTO fitrus_raw_measurements
         (id, participant_id, kind, source_device_id, request_id, response_json, measured_at,
@@ -37,7 +60,7 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
       body.data.deviceId,
       providerRequestId,
       JSON.stringify(response),
-      body.data.measuredAt ?? new Date().toISOString(),
+      measuredAt,
       body.data.muscleProvenance?.muscleDefinition ?? null,
       body.data.muscleProvenance?.definitionRef ?? null,
       body.data.muscleProvenance?.muscleMeasurementMethod ?? null,
@@ -45,6 +68,100 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
       body.data.muscleProvenance?.muscleMassUnit ?? null,
       body.data.muscleProvenance?.acquisitionProtocol ?? null,
     ).run();
+
+    if (kind.data === 'bodyFat' && body.data.muscleProvenance) {
+      const normalized = normalizeFitrusBodyComposition(
+        providerPayload.data as FitrusBodyFatRequest,
+        response,
+      );
+      if (!normalized.success) {
+        return context.json({
+          requestId: providerRequestId,
+          rawMeasurementId: rawId,
+          normalized: false,
+          normalizationError: normalized.reason,
+          providerResponse: response,
+        }, 201);
+      }
+
+      const value = normalized.value;
+      const provenance = body.data.muscleProvenance;
+      await context.env.DB.prepare(
+        `INSERT INTO bia_measurements
+          (id, participant_id, device_id, measured_at, quality_passed, weight_kg, bmi,
+           body_fat_pct, fat_mass_kg, skeletal_muscle_mass_kg, raw_json,
+           basal_metabolic_rate_kcal, body_water_pct, protein_kg, mineral_kg, ecw_ratio,
+           waist_cm, visceral_fat_level, muscle_definition, muscle_definition_ref,
+           muscle_measurement_method, muscle_method_evidence_ref, muscle_mass_unit,
+           acquisition_protocol)
+         VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
+        rawId,
+        participantId,
+        body.data.deviceId,
+        measuredAt,
+        value.weightKg,
+        value.bmi,
+        value.bodyFatPct,
+        value.fatMassKg,
+        value.skeletalMuscleMassKg,
+        JSON.stringify(response),
+        value.basalMetabolicRateKcal,
+        value.bodyWaterPct,
+        value.proteinKg,
+        value.mineralKg,
+        value.ecwRatio,
+        value.waistCm,
+        value.visceralFatLevel,
+        provenance.muscleDefinition,
+        provenance.definitionRef,
+        provenance.muscleMeasurementMethod,
+        provenance.methodEvidenceRef,
+        provenance.muscleMassUnit,
+        provenance.acquisitionProtocol,
+      ).run();
+      return context.json({
+        requestId: providerRequestId,
+        rawMeasurementId: rawId,
+        measurementId: rawId,
+        normalized: true,
+        providerResponse: response,
+      }, 201);
+    }
+
+    if (kind.data !== 'bodyFat') {
+      const normalized = normalizeFitrusVital(kind.data, response);
+      if (!normalized.success) {
+        return context.json({
+          requestId: providerRequestId,
+          rawMeasurementId: rawId,
+          normalized: false,
+          normalizationError: normalized.reason,
+          providerResponse: response,
+        }, 201);
+      }
+      await context.env.DB.prepare(
+        `INSERT INTO vital_measurements
+          (id, participant_id, kind, measured_at, values_json, units_json, source_raw_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
+        rawId,
+        participantId,
+        kind.data,
+        measuredAt,
+        JSON.stringify(normalized.value),
+        JSON.stringify({}),
+        rawId,
+      ).run();
+      return context.json({
+        requestId: providerRequestId,
+        rawMeasurementId: rawId,
+        measurementId: rawId,
+        normalized: true,
+        providerResponse: response,
+      }, 201);
+    }
+
     return context.json({
       requestId: providerRequestId,
       rawMeasurementId: rawId,

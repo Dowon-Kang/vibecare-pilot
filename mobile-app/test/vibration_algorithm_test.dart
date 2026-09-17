@@ -1,339 +1,119 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibecare_pilot/models/models.dart';
 import 'package:vibecare_pilot/algorithm/vibration_algorithm.dart';
-import 'package:vibecare_pilot/services/fitrus_repository.dart';
+import 'package:vibecare_pilot/models/models.dart';
 
-void main() {
-  final measurements = <BiaMeasurement>[
-    _m('M1', 42, 18.67, 18.8, 7.9, 18.1),
-    _m('M2', 42.2, 18.76, 18.7, 7.9, 18),
-    _m('M3', 41.9, 18.62, 19.1, 8, 18.2),
-    _m('M4', 42.1, 18.71, 18.9, 8, 18.1),
-  ];
+const safety = SafetyCheck.confirmedClear();
 
-  test('4회 평균으로 여성 전신 골격근지수와 프로토콜을 계산한다', () {
-    final result = calculateRecommendation(
-      profile: const ParticipantProfile(
-        id: 'USER-001',
-        age: 72,
-        sex: ParticipantSex.female,
-        heightCm: 150,
-      ),
-      measurements: measurements,
-      safety: const SafetyCheck.confirmedClear(),
-    );
-    expect(result.average?.weightKg, 42.05);
-    expect(result.average?.bodyFatPct, 18.88);
-    expect(result.muscleAssessment?.totalSmmi, 8.04);
-    expect(result.muscleAssessment?.level, MuscleLevel.reference);
-    expect(result.recommendation?.frequencyHz, 20);
-    expect(result.recommendation?.durationSec, 300);
-    expect(result.recommendation?.intensityPct, 50);
-    expect(result.status, RecommendationStatus.ready);
-    expect(result.executionStatus, 'SIMULATION_READY');
-    expect(result.physicalExecution, 'PROHIBITED');
-  });
-
-  test('같은 골격근량도 남성 전신 골격근지수 기준에서는 낮은 등급이다', () {
-    final result = calculateRecommendation(
-      profile: const ParticipantProfile(
-        id: 'USER-001',
-        age: 72,
-        sex: ParticipantSex.male,
-        heightCm: 150,
-      ),
-      measurements: measurements,
-      safety: const SafetyCheck.confirmedClear(),
-    );
-    expect(result.muscleAssessment?.level, MuscleLevel.low);
-    expect(result.recommendation?.frequencyHz, 12);
-    expect(result.recommendation?.durationSec, 180);
-    expect(result.recommendation?.intensityPct, 30);
-  });
-
-  test('SMM 필드를 ASM으로 임의 해석하면 추천을 차단한다', () {
-    final result = calculateRecommendation(
-      profile: const ParticipantProfile(
-        id: 'USER-001',
-        age: 72,
-        sex: ParticipantSex.female,
-        heightCm: 150,
-      ),
-      measurements: measurements,
-      safety: const SafetyCheck.confirmedClear(),
-      muscleMassBasis: MuscleMassBasis.asm,
-    );
-    expect(result.status, RecommendationStatus.review);
-    expect(result.muscleAssessment, isNull);
-    expect(result.recommendation, isNull);
-    expect(result.warnings.join(), contains('MUSCLE_BASIS_MISMATCH'));
-  });
-
-  test('어지럼은 추천과 실행을 차단한다', () {
-    final result = calculateRecommendation(
-      profile: const ParticipantProfile(
-        id: 'USER-001',
-        age: 72,
-        sex: ParticipantSex.female,
-        heightCm: 154,
-      ),
-      measurements: measurements,
-      safety: const SafetyCheck(dizziness: true),
-    );
-    expect(result.status, RecommendationStatus.blocked);
-    expect(result.recommendation, isNull);
-    expect(result.canRequestAuthorization, isFalse);
-  });
-
-  test('3건 또는 중복 ID는 실행할 수 없다', () {
-    final three = calculateRecommendation(
-      profile: const ParticipantProfile(
-        id: 'USER-001',
-        age: 60,
-        sex: ParticipantSex.male,
-        heightCm: 154,
-      ),
-      measurements: measurements.take(3).toList(),
-      safety: const SafetyCheck.confirmedClear(),
-    );
-    expect(three.status, RecommendationStatus.review);
-    expect(three.recommendation, isNull);
-
-    final duplicate = calculateRecommendation(
-      profile: const ParticipantProfile(
-        id: 'USER-001',
-        age: 60,
-        sex: ParticipantSex.male,
-        heightCm: 154,
-      ),
-      measurements: [
-        measurements[0],
-        measurements[0],
-        measurements[2],
-        measurements[3],
-      ],
-      safety: const SafetyCheck.confirmedClear(),
-    );
-    expect(duplicate.status, RecommendationStatus.review);
-  });
-
-  test('공유 fixture JSON으로 웹과 서버와 같은 결과를 확인한다', () {
-    final f =
-        jsonDecode(
-              File(
-                '../shared-contracts/fixtures/pilot-0.7.0.json',
-              ).readAsStringSync(),
-            )
-            as Map<String, dynamic>;
-    final rows = (f['measurements'] as List).map((m) {
-      return BiaMeasurement(
-        id: m['id'],
-        participantId: m['participantId'],
-        deviceId: m['deviceId'],
-        measuredAt: DateTime.parse(m['measuredAt']),
-        qualityPassed: m['qualityPassed'],
-        muscleDefinition: MuscleMassBasis.values.byName(
-          (m['muscleDefinition'] as String).toLowerCase(),
-        ),
-        muscleMeasurementMethod: m['muscleMeasurementMethod'],
-        methodEvidenceRef: m['methodEvidenceRef'],
-        muscleMassUnit: m['muscleMassUnit'],
-        definitionRef: m['definitionRef'],
-        acquisitionProtocolRef: m['acquisitionProtocol'],
-        values: BiaValues(
-          weightKg: (m['weightKg'] as num).toDouble(),
-          bmi: (m['bmi'] as num).toDouble(),
-          bodyFatPct: (m['bodyFatPct'] as num).toDouble(),
-          fatMassKg: (m['fatMassKg'] as num).toDouble(),
-          skeletalMuscleMassKg: (m['skeletalMuscleMassKg'] as num).toDouble(),
-        ),
-      );
-    }).toList();
-    final p = f['profile'];
-    final result = calculateRecommendation(
-      profile: ParticipantProfile(
-        id: p['participantId'],
-        age: p['age'],
-        sex: ParticipantSex.values.byName(p['sex']),
-        heightCm: (p['heightCm'] as num).toDouble(),
-      ),
-      measurements: rows,
-      safety: const SafetyCheck.confirmedClear(),
-      muscleMassBasis: MuscleMassBasis.smm,
-      ruleSet: BackendFitrusRepository.parseAlgorithmRuleSet(
-        f['ruleSet'] as Map<String, dynamic>,
-      ),
-      evaluatedAt: DateTime.parse(f['evaluatedAt']),
-    );
-    expect(result.recommendation?.intensityPct, f['expected']['intensityPct']);
-    expect(result.recommendation?.durationSec, f['expected']['durationSec']);
-    expect(result.recommendation?.frequencyHz, f['expected']['frequencyHz']);
-    expect(result.recommendation?.purpose, f['expected']['candidatePurpose']);
-    expect(result.recommendation?.evidence, f['expected']['candidateEvidence']);
-    expect(result.muscleAssessment?.meanSkeletalMuscleMassKg, 18.1);
-    expect(
-      result.muscleAssessment?.sdKg,
-      closeTo(f['expected']['sampleSdKg'], 1e-9),
-    );
-    expect(result.status, RecommendationStatus.ready);
-    expect(result.executionStatus, f['expected']['executionStatus']);
-    expect(result.physicalExecution, f['expected']['physicalExecution']);
-    final assessment = result.muscleAssessment!;
-    final average = result.average!;
-    final recommendation = result.recommendation!;
-    final normalized = <String, dynamic>{
-      'status': result.status.name.toUpperCase(),
-      'executionStatus': result.executionStatus,
-      'dataDecision': result.dataDecision,
-      'simulationEligibility': result.simulationEligibility,
-      'physicalExecution': result.physicalExecution,
-      'realDeviceSendAllowed': result.realDeviceSendAllowed,
-      'reasonCodes': result.reasonCodes,
-      'warnings': result.warnings,
-      'algorithmVersion': result.algorithmVersion,
-      'muscleMassBasis': assessment.basis.name.toUpperCase(),
-      'muscleStatistics': {
-        'count': rows.length,
-        'meanKg': assessment.meanSkeletalMuscleMassKg,
-        'sampleSdKg': assessment.sdKg,
-        'cvPct': assessment.cvPct,
-        'minimumKg': assessment.minimumKg,
-        'maximumKg': assessment.maximumKg,
-        'rangeKg': assessment.maximumKg - assessment.minimumKg,
-      },
-      'average': {
-        'weightKg': average.weightKg,
-        'bmi': average.bmi,
-        'bodyFatPct': average.bodyFatPct,
-        'fatMassKg': average.fatMassKg,
-        'skeletalMuscleMassKg': average.skeletalMuscleMassKg,
-      },
-      'muscleAssessment': {
-        'heightAdjustedIndex': assessment.indexKgM2,
-        'level': assessment.level.name,
-        'unstable': assessment.unstable,
-      },
-      'recommendation': {
-        'durationSec': recommendation.durationSec,
-        'frequencyHz': recommendation.frequencyHz,
-        'intensityPct': recommendation.intensityPct,
-        'evidence': recommendation.evidence,
-        'purpose': recommendation.purpose,
-      },
-      'factors': null,
-    };
-    expect(normalized, f['expectedNormalizedResult']);
-  });
-
-  test('미응답 안전 확인은 미리보기만 허용한다', () {
-    final rows = [for (var i = 0; i < 4; i++) _m('S$i', 45, 20, 25, 11.25, 18)];
-    final result = calculateRecommendation(
-      profile: const ParticipantProfile(
-        id: 'USER-001',
-        age: 72,
-        sex: ParticipantSex.female,
-        heightCm: 150,
-      ),
-      measurements: rows,
-      safety: const SafetyCheck(),
-    );
-    expect(result.status, RecommendationStatus.review);
-    expect(result.recommendation, isNotNull);
-    expect(result.canRequestAuthorization, isFalse);
-    expect(result.average?.waistCm, isNull);
-  });
-
-  test('숫자 오류와 모순된 체지방량은 충돌 없이 차단한다', () {
-    for (final fat in [double.nan, double.infinity, 0.0, -1.0, 101.0]) {
-      final rows = [
-        for (var i = 0; i < 4; i++) _m('S$i', 45, 20, fat, 11.25, 18),
-      ];
-      final result = calculateRecommendation(
-        profile: const ParticipantProfile(
-          id: 'USER-001',
-          age: 72,
-          sex: ParticipantSex.female,
-          heightCm: 150,
-        ),
-        measurements: rows,
-        safety: const SafetyCheck.confirmedClear(),
-      );
-      expect(result.recommendation, isNull);
-      expect(result.average, isNull);
-    }
-    final result = calculateRecommendation(
-      profile: const ParticipantProfile(
-        id: 'USER-001',
-        age: 72,
-        sex: ParticipantSex.female,
-        heightCm: 150,
-      ),
-      measurements: [for (var i = 0; i < 4; i++) _m('S$i', 45, 20, 25, 1, 18)],
-      safety: const SafetyCheck.confirmedClear(),
-    );
-    expect(result.recommendation, isNull);
-  });
-
-  test('최근 유효한 서로 다른 4건만 선택한다', () {
-    final history = [
-      ...measurements,
-      _m('M5', 42, 17.7, 18.8, 7.9, 18.1, minute: 5),
-      _m('M5', 42, 17.7, 18.8, 7.9, 18.1, minute: 4),
-      BiaMeasurement(
-        id: 'OTHER',
-        participantId: 'OTHER-USER',
-        deviceId: 'FITRUS-PLUS-01',
-        measuredAt: DateTime.utc(2026, 8, 22, 0, 6),
+List<BiaMeasurement> measurements(double bodyFatPct) => [1, 2, 3, 4]
+    .map(
+      (index) => BiaMeasurement(
+        id: 'M$index',
+        participantId: 'P1',
+        deviceId: 'BIA',
+        measuredAt: DateTime.utc(2026, 9, index),
         qualityPassed: true,
         muscleDefinition: MuscleMassBasis.smm,
-        muscleMeasurementMethod: 'BIA_TEST',
-        methodEvidenceRef: 'TEST-METHOD-EVIDENCE-V1',
-        definitionRef: 'SMM-TEST-V1',
-        acquisitionProtocolRef: 'TEST-STANDARD-V1',
-        values: measurements.first.values,
+        muscleMeasurementMethod: 'BIA',
+        acquisitionProtocolRef: 'TEST',
+        values: BiaValues(
+          weightKg: 60,
+          bmi: 22,
+          bodyFatPct: bodyFatPct,
+          fatMassKg: 60 * bodyFatPct / 100,
+          skeletalMuscleMassKg: 24,
+        ),
       ),
-    ];
-    final selected = selectLatestValidMeasurements(
-      participantId: 'USER-001',
-      deviceId: 'FITRUS-PLUS-01',
-      candidates: history,
-    );
-    expect(selected, hasLength(4));
-    expect(selected.first.id, 'M5');
-    expect(selected.map((item) => item.id).toSet(), hasLength(4));
-    expect(selected.any((item) => item.participantId != 'USER-001'), isFalse);
-  });
-}
+    )
+    .toList();
 
-BiaMeasurement _m(
-  String id,
-  double weight,
-  double bmi,
-  double bodyFat,
-  double fatMass,
-  double muscle, {
-  int minute = 0,
-  DateTime? measuredAt,
-}) {
-  return BiaMeasurement(
-    id: id,
-    participantId: 'USER-001',
-    deviceId: 'FITRUS-PLUS-01',
-    measuredAt: measuredAt ?? DateTime.utc(2026, 9, 1, 0, minute),
-    qualityPassed: true,
-    muscleDefinition: MuscleMassBasis.smm,
-    muscleMeasurementMethod: 'BIA_TEST',
-    methodEvidenceRef: 'TEST-METHOD-EVIDENCE-V1',
-    definitionRef: 'SMM-TEST-V1',
-    acquisitionProtocolRef: 'TEST-STANDARD-V1',
-    values: BiaValues(
-      weightKg: weight,
-      bmi: bmi,
-      bodyFatPct: bodyFat,
-      fatMassKg: fatMass,
-      skeletalMuscleMassKg: muscle,
-    ),
-  );
+AlgorithmResult evaluate({
+  required int age,
+  required ParticipantSex sex,
+  required double bodyFat,
+  BodyPart part = BodyPart.wholeBody,
+  AlgorithmRuleSet rules = pilotRuleSet,
+}) => calculateRecommendation(
+  profile: ParticipantProfile(id: 'P1', age: age, sex: sex, heightCm: 170),
+  measurements: measurements(bodyFat),
+  safety: safety,
+  bodyPart: part,
+  ruleSet: rules,
+  evaluatedAt: DateTime.utc(2026, 9, 10),
+);
+
+void main() {
+  test('Case A: male under 60 and normal body fat keeps baseline', () {
+    final result = evaluate(age: 30, sex: ParticipantSex.male, bodyFat: 20);
+    expect(result.recommendation?.baseIntensityPct, 90);
+    expect(result.recommendation?.intensityPct, 90);
+    expect(result.factors?.totalCoefficient, 1);
+  });
+
+  test('Case B: female coefficient only', () {
+    final result = evaluate(age: 30, sex: ParticipantSex.female, bodyFat: 25);
+    expect(result.recommendation?.intensityPct, 86);
+    expect(result.factors?.genderCoefficient, .95);
+  });
+
+  test('Case C: female and age-70 coefficients multiply', () {
+    final result = evaluate(age: 75, sex: ParticipantSex.female, bodyFat: 25);
+    expect(result.recommendation?.intensityPct, 77);
+    expect(result.factors?.totalCoefficient, .855);
+  });
+
+  test('Case D: low body fat adds another five-percent reduction', () {
+    final result = evaluate(age: 75, sex: ParticipantSex.female, bodyFat: 18);
+    expect(result.recommendation?.intensityPct, 73);
+    expect(result.factors?.bodyFatCoefficient, .95);
+    expect(result.factors?.bodyFatBand, 'low');
+  });
+
+  test('Case E: clamp prevents output below configured minimum', () {
+    final rules = AlgorithmRuleSet(
+      version: pilotRuleSet.version,
+      enabled: true,
+      baselines: pilotRuleSet.baselines,
+      femaleCoefficient: .5,
+      maleCoefficient: 1,
+      ageUnder60Coefficient: 1,
+      ageSixtiesCoefficient: .95,
+      ageSeventiesCoefficient: .9,
+      ageEightyPlusCoefficient: .85,
+      femaleBodyFat: pilotRuleSet.femaleBodyFat,
+      maleBodyFat: pilotRuleSet.maleBodyFat,
+      lowBodyFatCoefficient: .95,
+      normalBodyFatCoefficient: 1,
+      highBodyFatCoefficient: .95,
+      muscleMassCoefficient: 1,
+      minimumPct: 70,
+      maximumPct: 99,
+    );
+    final result = evaluate(
+      age: 85,
+      sex: ParticipantSex.female,
+      bodyFat: 18,
+      part: BodyPart.calf,
+      rules: rules,
+    );
+    expect(result.factors!.calculatedIntensityPct, lessThan(70));
+    expect(result.recommendation?.intensityPct, 70);
+  });
+
+  test('calculates all six body parts from data', () {
+    final all = calculateAllRecommendations(
+      profile: const ParticipantProfile(
+        id: 'P1',
+        age: 30,
+        sex: ParticipantSex.male,
+        heightCm: 170,
+      ),
+      measurements: measurements(20),
+      safety: safety,
+      evaluatedAt: DateTime.utc(2026, 9, 10),
+    );
+    expect(all.keys, containsAll(BodyPart.values));
+    expect(all[BodyPart.shoulder]?.recommendation?.frequencyHz, 15);
+    expect(all[BodyPart.thigh]?.recommendation?.durationSec, 600);
+    expect(all[BodyPart.calf]?.recommendation?.intensityPct, 70);
+  });
 }

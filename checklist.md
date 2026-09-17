@@ -17,28 +17,55 @@
 
 | 검사 | 마지막 결과 | 합격 기준 |
 |---|---:|---:|
-| 백엔드 전체 Vitest | 43/43 통과 | 실패 0 |
-| Flutter 전체 테스트 | 38/38 통과 | 실패 0 |
+| 백엔드 전체 Vitest | 141/141 통과 (2026-09-15, 역학 연구 시험 포함) | 실패 0 |
+| Flutter 전체 테스트 | 45/45 통과 (2026-09-15 쉬운 설명 포함) | 실패 0 |
 | 백엔드 TypeScript | 통과 | 오류 0 |
-| Flutter format/analyze | 통과 | 오류 0 |
+| Flutter format/analyze | 변경 4파일 format 통과 / analyze 재검증 도구 오류로 미완료 | 오류 0 |
 | Flutter debug APK | GitHub Actions 빌드 통과 | 빌드 실패 0 |
 | API 계약 | OpenAPI·핵심 JSON Schema 유지 | 참조 오류 0 |
 
 수치는 실행한 자동 검사 기준이며 임상 안전성 수치가 아니다.
+2026-09-15에는 백엔드·OpenAPI 파싱/참조를 재검증했다. Flutter 및 APK 행은 과거 결과이며 이번에 재실행하지 않았다.
 
 ## C. 데이터와 FITRUS
 
 - [x] FITRUS API 키는 백엔드 환경변수만 사용
 - [x] 공급 API 종류: bodyfat, bp, hr, stress, stress2, bodytemp
 - [x] 공급 원본과 앱 표준 DTO의 책임 분리
-- [~] FITRUS 서버 전용 client와 오류 전달
-- [ ] 공식 요청 형식·인증 헤더·성공/오류 응답 fixture
+- [x] FITRUS 서버 전용 client와 HTTP 상태 기반 오류 전달
+- [x] 공식 요청 형식·인증 헤더·성공 응답 fixture 및 비정형 오류 본문 처리
 - [ ] bodyfat 근육 필드가 ASM인지 SMM인지, 산출법·단위·방법 근거 확인 후 `applicableMethods` 등록
-- [ ] 실제 응답의 표준 DTO 변환과 `normalized:true`
+- [x] 명세상 체성분·활력 응답 검증, 표준 이력 저장과 `normalized:true`
+- [ ] 공급사 실장치 응답 fixture로 계약 테스트 재확인
 - [ ] 호출 제한·타임아웃·개발/운영 endpoint 확인
 - [ ] 개인정보 보존기간·삭제·접근 감사 정책
 
 ## D. 측정과 알고리즘
+
+- [x] REQ-SIMPLE-01: 계산 근거 4단계 설명·연구 상세 접기, 새 단위6/위젯1 및 전체45/45 통과
+- [ ] REQ-SIMPLE-01 정적 분석 재확인: LSP 초기 메시지 오류/직접 분석 무응답, 통과로 판정하지 않음
+
+근거·역학 확장:
+
+- [x] REQ-MECH-01~03 멀티에이전트 근거/반례 설계: `docs/algorithm/exa-results/muscle-wbv-causal-design-2026-09-15.md`
+- [x] `vibration-mechanics.ts` 순수 계산, 새28시험 및 전체141/141, typecheck 통과
+- [x] 독립 검토 수치 오류2건 수정·회귀/재검토, 반응모델과 정책 평가 분리
+- [ ] 실제 장치 교정·반응 데이터·사람 단위 외부검증 및 정책 효과 검증
+
+DSPy 후속:
+
+- [x] REQ-DSPY-01~03 근거·평가·누출 방지 설계: `docs/algorithm/exa-results/dspy-smm-2026-09-15.md`
+- [ ] 사람 이중 검토 골드셋, 고정 evaluator, DSPy/GEPA 실제 실행 및 잠금 평가
+- [ ] 실측 반응 모델 검증 (DSPy 문헌 해석 점수와 별개)
+
+2026-09-15 SMM 주파수 연구 묶음 (기존 앱과 분리):
+
+- [x] REQ-SMM-01~04 수식·근거·가설·입력 계약: `docs/algorithm/smm-frequency-design.md`
+- [x] 고정/계단/선형/smoothstep 순수 함수: `backend-api/src/smm-frequency.ts`
+- [x] 읽기 전용 인증 API와 실행 허가 금지: `backend-api/src/routes/research-routes.ts`
+- [x] 수치 격자·경계·정규화·소유권·보류: 전체 113/113, 새 단위 29·라우트 12; 위 설계 문서에 명령·수치 기록
+- [ ] Flutter 새 연구 모델 연결 및 소수 Hz 표시/계약 검증
+- [ ] 실측 반응 자료 기반 효과 비교 (소프트웨어 시험으로 대체 불가)
 
 - [x] 동일 참여자·동일 장치·정확히 네 건 검사
 - [x] 중복·결측·비유한수·단위/정의 혼합·BMI/체지방 모순 차단
@@ -47,13 +74,14 @@
 - [x] 현재/과거 통증·어지럼·사용보류 실패 폐쇄
 - [x] `UNKNOWN`·ASM/SMM 기준 불일치·방법/단위/프로토콜 혼합 시 층화·인가 차단
 - [x] 공급사가 확인한 ASM/SMM 정의만 앱에서 활성화하고 임의 재해석 차단
-- [x] 연령·성별·체지방 진동량 곱셈 미사용(`pilot-0.7.0`)
-- [~] 앱·백엔드·공유 fixture의 핵심 결과 parity; 공개 계약 전체 자동 parity는 미완료
+- [x] 성별·연령·체지방 연구용 계수와 6개 부위 기준값 구현(`pilot-0.8.0`)
+- [x] Flutter·백엔드 Case A~E와 6개 부위 계산 검증
+- [~] 앱·백엔드 핵심 결과 parity; 공개 계약 전체 자동 parity는 미완료
 - [x] 모든 결과 `physicalExecution=PROHIBITED`, 모든 Mock 명령 `SIMULATOR_ONLY`
 - [ ] FITRUS 정의 동등성 검증
 - [ ] 신뢰된 정책·이력 Repository와 안전보류 해제 감사
 - [ ] 근육량→특정 시간·Hz·물리량의 전향 검증
-- [ ] 나이·성별·체지방 개인화 계수의 추정·외부 검증
+- [ ] 나이·성별·체지방 계수의 임상 추정·외부 검증(현재 값은 프로젝트 가설)
 
 ## E. Flutter 사용자 흐름
 

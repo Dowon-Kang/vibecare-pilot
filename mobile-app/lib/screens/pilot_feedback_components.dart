@@ -46,13 +46,13 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
             ),
             const SizedBox(height: 4),
             const Text(
-              '다음 강도를 안전하게 계산하도록 지금 상태를 알려주세요.',
+              '다음 기기 출력을 조절하도록 지금 상태를 알려주세요.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             _FeedbackChoice<FeedbackRating>(
               id: 'intensity',
-              title: '강도는 어땠나요?',
+              title: '기기 출력을 얼마나 강하게 느꼈나요?',
               values: const {
                 FeedbackRating.weak: '약했어요',
                 FeedbackRating.suitable: '적당해요',
@@ -71,6 +71,27 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                         ? '운동자각도(RPE) 0∼10·선택해 주세요'
                         : '운동자각도(RPE) $_rpe/10',
                     style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Wrap(
+                    spacing: 16,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        _rpe == null ? '미선택' : '$_rpe / 10',
+                        key: const ValueKey('feedback-rpe-value'),
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      OutlinedButton(
+                        key: const ValueKey('feedback-rpe-zero'),
+                        onPressed: state.isBusy
+                            ? null
+                            : () => setState(() => _rpe = 0),
+                        child: const Text('0점 · 힘들지 않음'),
+                      ),
+                    ],
                   ),
                   Slider(
                     key: const ValueKey('feedback-rpe-slider'),

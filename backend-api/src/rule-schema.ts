@@ -1,20 +1,27 @@
 import { z } from 'zod';
-const thresholds = z.object({ lowMaximum: z.number().positive(), mediumMaximum: z.number().positive() }).refine((value) => value.lowMaximum < value.mediumMaximum);
-const candidate = z.object({ durationSec: z.number().int().positive(), frequencyHz: z.number().int().positive(), intensityPct: z.number().min(0).max(100), evidence: z.literal('HYPOTHESIS_UNVALIDATED') });
-const method = z.object({ method: z.string().min(1), methodEvidenceRef: z.string().min(1), definitionRef: z.string().min(1) });
-const definition = (evidence: 'HYPOTHESIS_UNVALIDATED' | 'INDIRECT') => z.object({
-  female: thresholds, male: thresholds, classificationEvidence: z.literal(evidence), applicableMethods: z.array(method),
+
+const coefficient = z.number().positive().max(1);
+const baseline = z.object({
+  durationMin: z.number().int().positive(),
+  frequencyHz: z.number().int().positive(),
+  intensityPct: z.number().min(0).max(100),
 });
+const fatRange = z.object({ lowThresholdPct: z.number().min(0).max(100), highThresholdPct: z.number().min(0).max(100) })
+  .refine(value => value.lowThresholdPct < value.highThresholdPct);
+
 export const ruleSchema = z.object({
-  version: z.literal('pilot-0.7.0'), activeFrom: z.iso.datetime(), enabled: z.literal(true),
+  version: z.literal('pilot-0.8.0'), activeFrom: z.iso.datetime(), enabled: z.literal(true),
   research: z.object({ mode: z.literal('simulation_only'), protocolEvidence: z.literal('HYPOTHESIS_UNVALIDATED'), physicalExecution: z.literal('PROHIBITED') }),
   measurementPolicy: z.object({
     maximumAgeDays: z.number().int().positive(), maximumFutureSkewMinutes: z.number().int().nonnegative(), requiredUnit: z.literal('kg'),
     requireSameMethod: z.literal(true), requireSameAcquisitionProtocol: z.literal(true), policyBasis: z.literal('ENGINEERING_POLICY'),
   }),
-  muscle: z.object({
-    definitions: z.object({ ASM: definition('HYPOTHESIS_UNVALIDATED'), SMM: definition('INDIRECT') }),
-    simulatorCandidates: z.object({ low: candidate, medium: candidate, reference: candidate }),
+  baselines: z.object({ wholeBody: baseline, shoulder: baseline, arm: baseline, abdomen: baseline, thigh: baseline, calf: baseline }),
+  correctionPolicy: z.object({
+    gender: z.object({ female: coefficient, male: coefficient }),
+    age: z.object({ under60: coefficient, sixties: coefficient, seventies: coefficient, eightyPlus: coefficient }),
+    bodyFat: z.object({ female: fatRange, male: fatRange, lowCoefficient: coefficient, normalCoefficient: coefficient, highCoefficient: coefficient }),
+    muscleMass: z.object({ neutralCoefficient: z.literal(1) }),
   }),
-  output: z.object({ minimumPct: z.number().min(0).max(100), maximumPct: z.number().min(0).max(100) }).refine((value) => value.minimumPct <= value.maximumPct),
-}).refine((value) => Object.values(value.muscle.simulatorCandidates).every((item) => item.intensityPct >= value.output.minimumPct && item.intensityPct <= value.output.maximumPct));
+  output: z.object({ minimumPct: z.number().min(0).max(100), maximumPct: z.number().min(0).max(100) }).refine(value => value.minimumPct <= value.maximumPct),
+});

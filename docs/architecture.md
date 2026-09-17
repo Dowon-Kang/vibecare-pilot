@@ -61,7 +61,7 @@ sequenceDiagram
 
 FITRUS 프록시의 URL·인증 경계는 준비되어 있지만 공급사 성공 응답 계약과 정규화가 미완료다. 실제 REST/BLE 기기 어댑터도 없다. 두 외부 연동은 현재 흐름이 아니라 후속 작업이다.
 
-`pilot-0.7.0`은 연령·성별·체지방 진동량 곱셈 보정을 사용하지 않는다. 성별은 확인된 ASM/SMM 정의별 연구 경계 선택, 체지방은 일관성 검사와 향후 연구 변수에 사용한다.
+`pilot-0.8.0`은 SMM 4건 평균을 입력 근거로 사용하고, 선택한 6개 부위 기준 출력에 성별·나이·체지방 연구용 계수를 곱한다. 계수는 임상 확정값이 아닌 서버 버전 가설이며, 실제 장치 실행은 금지한다.
 
 ## 백엔드 경계
 
@@ -75,7 +75,7 @@ flowchart LR
     subgraph Backend[백엔드 API]
         AUTH[PIN 인증·잠금]
         ADAPTER[BIA 정규화 어댑터]
-        ENGINE[pilot-0.7.0 연구용 계산 엔진]
+        ENGINE[pilot-0.8.0 연구용 계산 엔진]
         AUTHORIZE[1회성 Mock 허가]
         SESSION[시뮬레이션 세션·합성 ACK·피드백 API]
     end

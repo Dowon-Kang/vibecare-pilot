@@ -15,7 +15,7 @@
     "deviceId": { "type": "string", "minLength": 1 },
     "durationSec": { "type": "integer", "minimum": 1 },
     "frequencyHz": { "type": "integer", "minimum": 1 },
-    "intensityPct": { "type": "integer", "minimum": 1, "maximum": 100 },
+    "intensityPct": { "type": "integer", "minimum": 1, "maximum": 100, "description": "Device's own output setting in percent. This is a device-relative command, not a measured acceleration, displacement, or power value. The physical output mapping requires device calibration." },
     "targetAccelerationG": { "type": ["number", "null"], "exclusiveMinimum": 0 },
     "algorithmVersion": { "type": "string", "minLength": 1 },
     "issuedAt": { "type": "string", "format": "date-time" },

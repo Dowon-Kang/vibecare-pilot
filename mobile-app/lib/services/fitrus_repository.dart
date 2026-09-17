@@ -218,75 +218,52 @@ class BackendFitrusRepository implements FitrusRepository {
     }
     final measurementPolicy = json['measurementPolicy'] as Map<String, dynamic>;
     final output = json['output'] as Map<String, dynamic>;
-    final muscle = json['muscle'] as Map<String, dynamic>;
-    final definitions = muscle['definitions'] as Map<String, dynamic>;
-    final asm = definitions['ASM'] as Map<String, dynamic>;
-    final smm = definitions['SMM'] as Map<String, dynamic>;
-    final protocols = muscle['simulatorCandidates'] as Map<String, dynamic>;
-    MuscleThresholds thresholds(Map<String, dynamic> definition, String sex) {
-      final value = definition[sex] as Map<String, dynamic>;
-      return MuscleThresholds(
-        lowMaximum: (value['lowMaximum'] as num).toDouble(),
-        mediumMaximum: (value['mediumMaximum'] as num).toDouble(),
-      );
-    }
-
-    List<MuscleMethodEvidence> methods(Map<String, dynamic> definition) =>
-        ((definition['applicableMethods'] as List?) ?? const [])
-            .cast<Map<String, dynamic>>()
-            .map(
-              (value) => MuscleMethodEvidence(
-                method: value['method'] as String,
-                methodEvidenceRef: value['methodEvidenceRef'] as String,
-                definitionRef: value['definitionRef'] as String,
-              ),
-            )
-            .toList(growable: false);
-
-    ProtocolPreset protocol(String key) {
-      final value = protocols[key] as Map<String, dynamic>?;
-      if (value == null) {
-        throw const FormatException('근육량 프로토콜이 누락됐습니다.');
-      }
-      return ProtocolPreset(
-        durationSec: value['durationSec'] as int,
-        frequencyHz: value['frequencyHz'] as int,
+    final baselinesJson = json['baselines'] as Map<String, dynamic>;
+    final correction = json['correctionPolicy'] as Map<String, dynamic>;
+    final gender = correction['gender'] as Map<String, dynamic>;
+    final age = correction['age'] as Map<String, dynamic>;
+    final fat = correction['bodyFat'] as Map<String, dynamic>;
+    final femaleFat = fat['female'] as Map<String, dynamic>;
+    final maleFat = fat['male'] as Map<String, dynamic>;
+    final muscle = correction['muscleMass'] as Map<String, dynamic>;
+    VibrationBaseSetting baseline(BodyPart part) {
+      final value = baselinesJson[part.name] as Map<String, dynamic>;
+      return VibrationBaseSetting(
+        durationMin: (value['durationMin'] as num).toDouble(),
+        frequencyHz: (value['frequencyHz'] as num).toInt(),
         intensityPct: (value['intensityPct'] as num).toDouble(),
-        evidence: value['evidence'] as String,
       );
     }
 
     return AlgorithmRuleSet(
       version: json['version'] as String,
       enabled: json['enabled'] as bool,
-      durationSec: 300,
-      frequencyHz: 20,
-      baseIntensityPct: 50,
-      ageThreshold: 70,
-      ageFactor: 1,
-      femaleFactor: 1,
-      maleFactor: 1,
-      femaleBodyFat: const BodyFatRange(20, 35),
-      maleBodyFat: const BodyFatRange(10, 28),
-      outsideBodyFatFactor: 1,
+      baselines: {for (final part in BodyPart.values) part: baseline(part)},
+      femaleCoefficient: (gender['female'] as num).toDouble(),
+      maleCoefficient: (gender['male'] as num).toDouble(),
+      ageUnder60Coefficient: (age['under60'] as num).toDouble(),
+      ageSixtiesCoefficient: (age['sixties'] as num).toDouble(),
+      ageSeventiesCoefficient: (age['seventies'] as num).toDouble(),
+      ageEightyPlusCoefficient: (age['eightyPlus'] as num).toDouble(),
+      femaleBodyFat: BodyFatThresholds(
+        lowPct: (femaleFat['lowThresholdPct'] as num).toDouble(),
+        highPct: (femaleFat['highThresholdPct'] as num).toDouble(),
+      ),
+      maleBodyFat: BodyFatThresholds(
+        lowPct: (maleFat['lowThresholdPct'] as num).toDouble(),
+        highPct: (maleFat['highThresholdPct'] as num).toDouble(),
+      ),
+      lowBodyFatCoefficient: (fat['lowCoefficient'] as num).toDouble(),
+      normalBodyFatCoefficient: (fat['normalCoefficient'] as num).toDouble(),
+      highBodyFatCoefficient: (fat['highCoefficient'] as num).toDouble(),
+      muscleMassCoefficient: (muscle['neutralCoefficient'] as num).toDouble(),
       minimumPct: (output['minimumPct'] as num).toDouble(),
       maximumPct: (output['maximumPct'] as num).toDouble(),
-      femaleMuscleThresholds: thresholds(smm, 'female'),
-      maleMuscleThresholds: thresholds(smm, 'male'),
-      asmFemaleMuscleThresholds: thresholds(asm, 'female'),
-      asmMaleMuscleThresholds: thresholds(asm, 'male'),
-      lowMuscleProtocol: protocol('low'),
-      mediumMuscleProtocol: protocol('medium'),
-      referenceMuscleProtocol: protocol('reference'),
       maximumAgeDays: measurementPolicy['maximumAgeDays'] as int,
       maximumFutureSkewMinutes:
           measurementPolicy['maximumFutureSkewMinutes'] as int,
       policyBasis: measurementPolicy['policyBasis'] as String,
       physicalExecution: research!['physicalExecution'] as String,
-      asmClassificationEvidence: asm['classificationEvidence'] as String,
-      smmClassificationEvidence: smm['classificationEvidence'] as String,
-      asmApplicableMethods: methods(asm),
-      smmApplicableMethods: methods(smm),
     );
   }
 

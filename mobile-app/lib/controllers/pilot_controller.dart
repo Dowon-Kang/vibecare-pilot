@@ -23,32 +23,24 @@ class PilotController extends Notifier<PilotState> {
   Timer? _countdown;
   AppEnvironment get _environment => ref.read(appEnvironmentProvider);
 
-  ({AlgorithmResult asm, AlgorithmResult smm}) _calculateBoth({
+  AlgorithmResult _calculate({
     required ParticipantProfile profile,
     required MeasurementSnapshot snapshot,
     required SafetyCheck safety,
     required FeedbackAdjustment adjustment,
+    required BodyPart bodyPart,
   }) {
-    AlgorithmResult calculate(MuscleMassBasis basis) => adjustment.apply(
+    return adjustment.apply(
       calculateRecommendation(
         profile: profile,
         measurements: snapshot.selectedMeasurements,
         safety: safety,
-        muscleMassBasis: basis,
+        bodyPart: bodyPart,
         ruleSet: snapshot.ruleSet,
       ),
       snapshot.ruleSet.minimumPct,
     );
-    return (
-      asm: calculate(MuscleMassBasis.asm),
-      smm: calculate(MuscleMassBasis.smm),
-    );
   }
-
-  AlgorithmResult _selectedResult(
-    ({AlgorithmResult asm, AlgorithmResult smm}) results,
-    MuscleMassBasis basis,
-  ) => basis == MuscleMassBasis.asm ? results.asm : results.smm;
 
   PilotState _recalculated(
     PilotState current, {
@@ -58,31 +50,24 @@ class PilotController extends Notifier<PilotState> {
     required FeedbackAdjustment adjustment,
     bool disconnectDevice = true,
   }) {
-    final results = _calculateBoth(
-      profile: profile,
-      snapshot: snapshot,
-      safety: safety,
-      adjustment: adjustment,
-    );
-    final definitions = snapshot.selectedMeasurements
-        .map((item) => item.muscleDefinition)
-        .toSet();
-    final confirmedBasis = definitions.length == 1
-        ? definitions.single
-        : MuscleMassBasis.unknown;
-    final selectedBasis = confirmedBasis == MuscleMassBasis.unknown
-        ? current.muscleMassBasis
-        : confirmedBasis;
-    final selected = _selectedResult(results, selectedBasis);
+    final results = {
+      for (final part in BodyPart.values)
+        part: _calculate(
+          profile: profile,
+          snapshot: snapshot,
+          safety: safety,
+          adjustment: adjustment,
+          bodyPart: part,
+        ),
+    };
+    final selected = results[current.bodyPart]!;
     return current.copyWith(
       profile: profile,
       snapshot: snapshot,
       safety: safety,
       feedbackAdjustment: adjustment,
       result: selected,
-      asmResult: results.asm,
-      smmResult: results.smm,
-      muscleMassBasis: selectedBasis,
+      partResults: results,
       selectedIntensityPct: selected.recommendation?.intensityPct,
       isIntensityManual: false,
       pendingAuthorization: null,
@@ -206,26 +191,24 @@ class PilotController extends Notifier<PilotState> {
     );
   }
 
-  void selectMuscleMassBasis(MuscleMassBasis basis) {
+  void selectBodyPart(BodyPart bodyPart) {
     if (state.isRunning || state.isBusy || state.feedbackSession != null) {
       return;
     }
-    final definitions = state.snapshot?.selectedMeasurements
-        .map((item) => item.muscleDefinition)
-        .toSet();
-    final confirmed = definitions?.length == 1 ? definitions!.single : null;
-    if (confirmed == null ||
-        confirmed == MuscleMassBasis.unknown ||
-        basis != confirmed) {
-      state = state.copyWith(error: '공급사가 확인한 근육량 정의와 다른 기준으로 실행할 수 없습니다.');
-      return;
-    }
-    final selected = basis == MuscleMassBasis.asm
-        ? state.asmResult
-        : state.smmResult;
-    if (selected == null) return;
+    final profile = state.profile;
+    final snapshot = state.snapshot;
+    if (profile == null || snapshot == null) return;
+    final selected =
+        state.partResults[bodyPart] ??
+        _calculate(
+          profile: profile,
+          snapshot: snapshot,
+          safety: state.safety,
+          adjustment: state.feedbackAdjustment,
+          bodyPart: bodyPart,
+        );
     state = state.copyWith(
-      muscleMassBasis: basis,
+      bodyPart: bodyPart,
       result: selected,
       selectedIntensityPct: selected.recommendation?.intensityPct,
       isIntensityManual: false,

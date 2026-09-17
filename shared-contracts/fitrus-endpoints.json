@@ -16,6 +16,16 @@
     "bodyFat": "/bodyfat",
     "stressV2": "/stress2"
   },
-  "requestSchemas": "PENDING_VENDOR_SPECIFICATION",
-  "responseSchemas": "PENDING_VENDOR_SPECIFICATION"
+  "requestSchemas": {
+    "status": "CONFIRMED",
+    "source": "../measure-api-guide.md",
+    "implementation": "../backend-api/src/fitrus-contract.ts",
+    "remaining": "PPG sample count and item range are device-spec dependent"
+  },
+  "responseSchemas": {
+    "status": "CONFIRMED",
+    "source": "../measure-api-guide.md",
+    "implementation": "../backend-api/src/fitrus-contract.ts",
+    "remaining": "Numeric units, valid ranges, and body-composition method definitions are not specified"
+  }
 }

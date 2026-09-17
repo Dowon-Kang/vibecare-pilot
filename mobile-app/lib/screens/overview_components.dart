@@ -1,137 +1,5 @@
 part of 'overview_card.dart';
 
-class _MuscleBasisSelector extends StatelessWidget {
-  const _MuscleBasisSelector({required this.state, required this.onChanged});
-
-  final PilotState state;
-  final ValueChanged<MuscleMassBasis> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    String output(AlgorithmResult? result) {
-      final rec = result?.recommendation;
-      return rec == null
-          ? '검토 필요'
-          : '${rec.intensityPct}% · ${rec.frequencyHz}Hz · ${rec.durationSec ~/ 60}분';
-    }
-
-    Widget option({
-      required MuscleMassBasis basis,
-      required String title,
-      required AlgorithmResult? result,
-    }) {
-      final selected = state.muscleMassBasis == basis;
-      final definitions = state.snapshot?.selectedMeasurements
-          .map((item) => item.muscleDefinition)
-          .toSet();
-      final confirmed =
-          definitions?.length == 1 && definitions!.single == basis;
-      return Expanded(
-        child: Semantics(
-          selected: selected,
-          button: true,
-          label: '$title, ${output(result)}',
-          child: InkWell(
-            key: ValueKey('muscle-basis-${basis.name}'),
-            onTap: state.isBusy || state.isRunning || !confirmed
-                ? null
-                : () => onChanged(basis),
-            borderRadius: BorderRadius.circular(12),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              constraints: const BoxConstraints(minHeight: 52),
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected
-                    ? const Color(0xFFE7F2EF)
-                    : const Color(0xFFF5F5F7),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: selected
-                      ? const Color(0xFF087F6B)
-                      : Colors.transparent,
-                  width: 1.5,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            output(result),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: selected
-                                  ? const Color(0xFF087F6B)
-                                  : const Color(0xFF6C6C70),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (selected) ...[
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.check_circle,
-                      size: 18,
-                      color: Color(0xFF087F6B),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            option(
-              basis: MuscleMassBasis.asm,
-              title: '사지 ASM',
-              result: state.asmResult,
-            ),
-            const SizedBox(width: 8),
-            option(
-              basis: MuscleMassBasis.smm,
-              title: '전신 SMM',
-              result: state.smmResult,
-            ),
-          ],
-        ),
-        const SizedBox(height: 3),
-        Text(
-          '공급사가 확인한 측정 정의만 사용 · 다른 해석으로 실행 불가',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12),
-        ),
-      ],
-    );
-  }
-}
-
 class _OverviewActions extends StatelessWidget {
   const _OverviewActions({
     required this.state,
@@ -177,7 +45,7 @@ class _OverviewActions extends StatelessWidget {
       children: [
         action(
           key: const ValueKey('settings-button'),
-          label: largeText ? '강도' : '강도 조절',
+          label: largeText ? '출력' : '출력 조절',
           icon: Icons.tune,
           onPressed: state.isBusy || state.isRunning ? null : onSettings,
         ),
@@ -252,24 +120,37 @@ class _MeasurementSummary extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 1),
-              Row(
-                children: [
-                  for (var index = 0; index < metrics.length; index++) ...[
-                    Expanded(
-                      child: _MeasurementValue(
-                        label: metrics[index].$1,
-                        value: metrics[index].$2,
-                        unit: metrics[index].$3,
-                      ),
-                    ),
-                    if (index != metrics.length - 1)
-                      Container(
-                        width: 1,
-                        height: 38,
-                        color: const Color(0xFFE5E5EA),
-                      ),
-                  ],
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns =
+                      MediaQuery.textScalerOf(context).scale(16) > 22 ? 1 : 2;
+                  final width =
+                      (constraints.maxWidth - 10 * (columns - 1)) / columns;
+                  return Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      for (final metric in metrics)
+                        SizedBox(
+                          width: width,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF4F7F6),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(10),
+                              child: _MeasurementValue(
+                                label: metric.$1,
+                                value: metric.$2,
+                                unit: metric.$3,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -295,28 +176,24 @@ class _MeasurementValue extends StatelessWidget {
     children: [
       Text(label, style: Theme.of(context).textTheme.bodySmall),
       const SizedBox(height: 1),
-      FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text.rich(
-          TextSpan(
-            text: value,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1C1C1E),
-            ),
-            children: [
-              if (unit.isNotEmpty)
-                TextSpan(
-                  text: unit,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF6C6C70),
-                  ),
-                ),
-            ],
+      Text.rich(
+        TextSpan(
+          text: value,
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF17352F),
           ),
+          children: [
+            if (unit.isNotEmpty)
+              TextSpan(
+                text: ' $unit',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+          ],
         ),
       ),
     ],
@@ -339,12 +216,20 @@ class _RecommendationValues extends StatelessWidget {
     final values = [
       _ValueCell(
         key: const ValueKey('output-intensity'),
-        label: '강도',
+        label: '기기 출력',
         value: intensity,
         emphasized: true,
       ),
-      _ValueCell(label: '시간', value: duration),
-      _ValueCell(label: '주파수', value: frequency),
+      _ValueCell(
+        key: const ValueKey('output-duration'),
+        label: '시간',
+        value: duration,
+      ),
+      _ValueCell(
+        key: const ValueKey('output-frequency'),
+        label: '주파수',
+        value: frequency,
+      ),
     ];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -352,24 +237,24 @@ class _RecommendationValues extends StatelessWidget {
         color: const Color(0xFFF0F7F5),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: largeText
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          values[0],
+          const Divider(height: 18, color: Color(0xFFD4E3DF)),
+          if (largeText) ...[
+            values[1],
+            const SizedBox(height: 12),
+            values[2],
+          ] else
+            Row(
               children: [
-                for (var index = 0; index < values.length; index++) ...[
-                  values[index],
-                  if (index != values.length - 1) const SizedBox(height: 8),
-                ],
-              ],
-            )
-          : Row(
-              children: [
-                Expanded(flex: 5, child: values[0]),
-                Container(width: 1, height: 42, color: const Color(0xFFD4E3DF)),
-                Expanded(flex: 4, child: values[1]),
-                Expanded(flex: 4, child: values[2]),
+                Expanded(child: values[1]),
+                Expanded(child: values[2]),
               ],
             ),
+        ],
+      ),
     );
   }
 }
@@ -443,8 +328,9 @@ class _ValueCell extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            fontSize: emphasized ? 32 : 20,
-            fontWeight: FontWeight.w700,
+            fontSize: emphasized ? 64 : 34,
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF17352F),
             height: 1.1,
           ),
         ),

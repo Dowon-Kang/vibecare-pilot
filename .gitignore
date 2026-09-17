@@ -1,5 +1,4 @@
 # dependencies
-/node_modules
 **/node_modules/
 **/build/
 /.pnp
@@ -11,7 +10,7 @@
 !.yarn/versions
 
 # testing
-/coverage
+**/coverage/
 
 # next.js
 /.next/
@@ -20,7 +19,26 @@
 
 # misc
 .DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.log
+hs_err_pid*
+replay_pid*
 *.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+key.properties
+google-services.json
+GoogleService-Info.plist
 
 # debug
 npm-debug.log*
@@ -29,20 +47,29 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local environment
-.env*
-/backend-api/.dev.vars
+.env
+.env.*
+!.env.example
+!.env.*.example
+**/.dev.vars
+!**/.dev.vars.example
 
 # deployment and generated files
 .vercel
 next-env.d.ts
 *.tsbuildinfo
 /dist/
-/.wrangler/
 **/.wrangler/
 /outputs/
 /output/
 /tmp/
 /work/
+**/.gradle/
+**/.kotlin/
+**/local.properties
+*.apk
+*.aab
+*.ipa
 
 # Flutter/Android machine-local runtime state
 /mobile-app/.android/

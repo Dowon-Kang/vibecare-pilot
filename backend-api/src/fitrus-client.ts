@@ -68,6 +68,7 @@ export class FitrusClient {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
+          accept: 'application/json',
           'x-api-key': this.apiKey,
           ...(options.requestId ? { 'x-request-id': options.requestId } : {}),
         },

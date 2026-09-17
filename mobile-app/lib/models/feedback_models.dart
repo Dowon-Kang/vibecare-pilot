@@ -142,9 +142,11 @@ class FeedbackAdjustment {
               durationSec: recommendation.durationSec,
               frequencyHz: recommendation.frequencyHz,
               intensityPct: intensity,
+              baseIntensityPct: recommendation.baseIntensityPct,
             ),
       algorithmVersion: result.algorithmVersion,
-      muscleAssessment: result.muscleAssessment,
+      bodyPart: result.bodyPart,
+      factors: result.factors,
       measurementIds: result.measurementIds,
     );
   }

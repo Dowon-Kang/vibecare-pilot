@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/pilot_controller.dart';
 import '../models/models.dart';
+import '../widgets/human_body_map.dart';
 
 part 'overview_components.dart';
 
@@ -15,12 +16,12 @@ class OverviewCard extends StatelessWidget {
     required this.onDetails,
     required this.onSettings,
     required this.onCommand,
-    required this.onMuscleBasisChanged,
+    required this.onBodyPartChanged,
   });
   final PilotState state;
   final AppEnvironment environment;
   final VoidCallback onDetails, onSettings, onCommand;
-  final ValueChanged<MuscleMassBasis> onMuscleBasisChanged;
+  final ValueChanged<BodyPart> onBodyPartChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -78,8 +79,27 @@ class OverviewCard extends StatelessWidget {
                 duration: rec == null ? '—' : '${rec.durationSec ~/ 60}분',
                 frequency: rec == null ? '—' : '${rec.frequencyHz}Hz',
               ),
+            const SizedBox(height: 6),
+            if (rec != null)
+              Text(
+                state.isIntensityManual
+                    ? '직접 조절 중 · 자동 추천 이하'
+                    : state.feedbackAdjustment.intensityCap == null
+                    ? '측정 기반 자동값'
+                    : '지난 설문을 반영한 자동값',
+                key: const ValueKey('adjustment-mode'),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF087F6B),
+                ),
+              ),
             const SizedBox(height: 10),
-            _MuscleBasisSelector(state: state, onChanged: onMuscleBasisChanged),
+            HumanBodyMap(
+              results: state.partResults,
+              selected: state.bodyPart,
+              onSelected: onBodyPartChanged,
+            ),
             const SizedBox(height: 10),
             if (result.average != null) ...[
               _MeasurementSummary(
@@ -89,12 +109,11 @@ class OverviewCard extends StatelessWidget {
               ),
               const SizedBox(height: 9),
             ],
-            if (rec != null && result.muscleAssessment != null)
+            if (rec != null && result.factors != null)
               Text(
-                '${result.muscleAssessment!.indexName} '
-                '${result.muscleAssessment!.indexKgM2.toStringAsFixed(2)} '
-                '→ ${_muscleLevelLabel(result.muscleAssessment!)} '
-                '→ ${rec.intensityPct}%',
+                '기준 ${rec.baseIntensityPct}% × 총 계수 '
+                '${result.factors!.totalCoefficient.toStringAsFixed(3)} '
+                '= ${result.factors!.calculatedIntensityPct.toStringAsFixed(1)}% → ${rec.intensityPct}%',
                 key: const ValueKey('calculation-inputs'),
                 style: Theme.of(
                   context,
@@ -118,12 +137,4 @@ class OverviewCard extends StatelessWidget {
       ),
     );
   }
-
-  static String _muscleLevelLabel(MuscleAssessment assessment) =>
-      switch (assessment.level) {
-        MuscleLevel.low => '낮은 근육량',
-        MuscleLevel.medium =>
-          assessment.basis == MuscleMassBasis.asm ? '낮지 않은 사지근육량' : '중간 근육량',
-        MuscleLevel.reference => '참조 이상 근육량',
-      };
 }

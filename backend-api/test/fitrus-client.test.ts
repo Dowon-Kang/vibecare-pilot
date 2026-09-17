@@ -28,6 +28,7 @@ describe('FitrusClient', () => {
     expect(requestUrl).toBe('https://api.thefitrus.com/fitrus-ml/measure/bodyfat');
     expect(requestInit?.method).toBe('POST');
     expect(new Headers(requestInit?.headers).get('x-api-key')).toBe('server-secret');
+    expect(new Headers(requestInit?.headers).get('accept')).toBe('application/json');
   });
 
   it('returns a typed error without exposing the API key', async () => {

@@ -11,9 +11,8 @@ class PilotState {
     this.snapshot,
     this.safety = const SafetyCheck(),
     this.result,
-    this.asmResult,
-    this.smmResult,
-    this.muscleMassBasis = MuscleMassBasis.smm,
+    this.partResults = const {},
+    this.bodyPart = BodyPart.wholeBody,
     this.selectedIntensityPct,
     this.isIntensityManual = false,
     this.pendingAuthorization,
@@ -30,9 +29,8 @@ class PilotState {
   final MeasurementSnapshot? snapshot;
   final SafetyCheck safety;
   final AlgorithmResult? result;
-  final AlgorithmResult? asmResult;
-  final AlgorithmResult? smmResult;
-  final MuscleMassBasis muscleMassBasis;
+  final Map<BodyPart, AlgorithmResult> partResults;
+  final BodyPart bodyPart;
   final int? selectedIntensityPct;
   final bool isIntensityManual;
   final DeviceAuthorization? pendingAuthorization;
@@ -55,9 +53,8 @@ class PilotState {
     Object? snapshot = _unset,
     SafetyCheck? safety,
     Object? result = _unset,
-    Object? asmResult = _unset,
-    Object? smmResult = _unset,
-    MuscleMassBasis? muscleMassBasis,
+    Map<BodyPart, AlgorithmResult>? partResults,
+    BodyPart? bodyPart,
     Object? selectedIntensityPct = _unset,
     bool? isIntensityManual,
     Object? pendingAuthorization = _unset,
@@ -81,13 +78,8 @@ class PilotState {
     result: identical(result, _unset)
         ? this.result
         : result as AlgorithmResult?,
-    asmResult: identical(asmResult, _unset)
-        ? this.asmResult
-        : asmResult as AlgorithmResult?,
-    smmResult: identical(smmResult, _unset)
-        ? this.smmResult
-        : smmResult as AlgorithmResult?,
-    muscleMassBasis: muscleMassBasis ?? this.muscleMassBasis,
+    partResults: partResults ?? this.partResults,
+    bodyPart: bodyPart ?? this.bodyPart,
     selectedIntensityPct: identical(selectedIntensityPct, _unset)
         ? this.selectedIntensityPct
         : selectedIntensityPct as int?,

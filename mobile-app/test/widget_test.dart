@@ -15,6 +15,15 @@ class FailFirstStop extends MockDeviceGateway {
 }
 
 void main() {
+  testWidgets('계산 근거에서 쉬운 순서와 접힌 연구 정보를 보여준다', (tester) async {
+    _size(tester, const Size(390, 844));
+    await _login(tester);
+    await _tap(tester, 'command-details-button');
+    expect(find.text('1. 부위별 기준값'), findsOneWidget);
+    expect(find.text('2. 독립 보정계수'), findsOneWidget);
+    expect(find.textContaining('검토 코드:'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('390 화면에서 입력, 추천, 안전 질문, CTA를 모두 구성한다', (tester) async {
     _size(tester, const Size(390, 844));
     await _login(tester);
@@ -34,9 +43,19 @@ void main() {
       find.byKey(const ValueKey('send-button')).hitTestable(),
       findsOneWidget,
     );
-    expect(find.text('50%'), findsOneWidget);
-    expect(find.text('확인 필요'), findsOneWidget);
-    expect(find.text('설정 계산됨'), findsNothing);
+    expect(find.text('73%'), findsWidgets);
+    for (final part in [
+      'wholeBody',
+      'shoulder',
+      'arm',
+      'abdomen',
+      'thigh',
+      'calf',
+    ]) {
+      expect(find.byKey(ValueKey('body-map-$part')), findsOneWidget);
+    }
+    expect(find.textContaining('기준 90%'), findsOneWidget);
+    expect(find.text('설정 계산됨'), findsOneWidget);
     expect(find.text('로컬 시연 설정 보내기'), findsOneWidget);
     expect(find.textContaining('서버 시연'), findsNothing);
     expect(
@@ -48,16 +67,13 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('확인된 SMM 값을 ASM으로 임의 재해석할 수 없다', (tester) async {
+  testWidgets('인체 지도에서 부위를 선택하면 해당 기준과 보정 출력으로 바뀐다', (tester) async {
     _size(tester, const Size(390, 844));
     await _login(tester);
-    expect(find.text('50%'), findsOneWidget);
-    await _tap(tester, 'muscle-basis-asm');
-    expect(find.text('40%'), findsNothing);
-    expect(find.textContaining('ASM'), findsWidgets);
-    await _tap(tester, 'muscle-basis-smm');
-    expect(find.text('50%'), findsOneWidget);
-    expect(find.textContaining('SMMI'), findsWidgets);
+    expect(find.text('73%'), findsWidgets);
+    await _tap(tester, 'body-map-shoulder');
+    expect(find.text('69%'), findsWidgets);
+    expect(find.textContaining('기준 85%'), findsOneWidget);
   });
 
   testWidgets('세 질문에 직접 답한 후 명령 준비, 시작, 중지가 가능하다', (tester) async {
@@ -81,10 +97,12 @@ void main() {
     await _tap(tester, 'start-button');
     await _tap(tester, 'stop-button');
 
-    expect(find.text('강도는 어땠나요?'), findsOneWidget);
+    expect(find.text('기기 출력을 얼마나 강하게 느꼈나요?'), findsOneWidget);
     expect(find.text('시간은 어땠나요?'), findsOneWidget);
     expect(find.text('주파수 느낌은 어땠나요?'), findsOneWidget);
-    await _tap(tester, 'feedback-rpe-slider');
+    expect(find.text('미선택'), findsOneWidget);
+    await _tap(tester, 'feedback-rpe-zero');
+    expect(find.text('0 / 10'), findsOneWidget);
     await _tap(tester, 'feedback-intensity-FeedbackRating.weak');
     await _tap(tester, 'feedback-duration-FeedbackRating.weak');
     await _tap(tester, 'feedback-frequency-FeedbackRating.weak');
@@ -139,7 +157,16 @@ void main() {
     await _login(tester);
     await _tap(tester, 'command-details-button');
     expect(find.text('계산 근거'), findsWidgets);
-    expect(find.textContaining('연구 분류 →'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('자세한 연구·검토 정보'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.ensureVisible(find.text('자세한 연구·검토 정보'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('자세한 연구·검토 정보'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('기준 출력'), findsWidgets);
     await tester.scrollUntilVisible(
       find.text('장치 전송 정보'),
       150,

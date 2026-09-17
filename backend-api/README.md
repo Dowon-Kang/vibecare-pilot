@@ -47,4 +47,8 @@ npm run typecheck
 
 `DEVICE_MODE=mock`에서는 D1에 Mock 세션과 ACK를 남기지만 실제 장비로 전송하지 않는다. `real` 모드는 공급사 프로토콜이 구현되지 않았으므로 의도적으로 `501 DEVICE_PROTOCOL_NOT_CONFIGURED`를 반환한다.
 
-FITRUS 응답 정규화는 공급사 성공 응답과 단위 계약이 확보될 때까지 `normalized: false`로 남는다. 원본 응답을 임의로 해석하지 않는다.
+FITRUS 요청은 `measure-api-guide.md`의 엔드포인트별 필드를 서버에서 검증한 뒤 전달한다.
+`bodyFat` 응답은 상호 일관성 검사까지 통과하면 raw 원본과 `bia_measurements`에 함께 저장되고,
+혈압·심박·스트레스·체온은 응답 계약을 통과하면 `vital_measurements`에 저장된다. 지원하지 않는
+응답 구조와 `stress2.errorcode != 0`은 raw로만 남는다. 명세에 없는 단위와 근육량의 ASM/SMM
+측정 근거는 서버가 추정하지 않는다.

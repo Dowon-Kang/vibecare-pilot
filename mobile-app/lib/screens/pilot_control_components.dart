@@ -20,7 +20,7 @@ class _IntensityControlCard extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '진동 강도 조절',
+                    '기기 출력 조절',
                     style: Theme.of(
                       context,
                     ).textTheme.titleMedium?.copyWith(fontSize: 18),
@@ -41,7 +41,7 @@ class _IntensityControlCard extends ConsumerWidget {
               style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
             ),
             Text(
-              '안전을 위해 자동 계산값 $automatic%보다 높일 수 없습니다.',
+              '기기 자체의 출력 설정값입니다. 자동 계산값 $automatic%보다 높일 수 없습니다.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
@@ -49,7 +49,7 @@ class _IntensityControlCard extends ConsumerWidget {
               children: [
                 IconButton.filledTonal(
                   key: const ValueKey('intensity-minus'),
-                  tooltip: '강도 1% 낮추기',
+                  tooltip: '기기 출력 1%p 낮추기',
                   onPressed: disabled || selected <= minimum
                       ? null
                       : () => controller.updateIntensity(selected - 1),
@@ -78,7 +78,7 @@ class _IntensityControlCard extends ConsumerWidget {
                 ),
                 IconButton.filledTonal(
                   key: const ValueKey('intensity-plus'),
-                  tooltip: '강도 1% 높이기',
+                  tooltip: '기기 출력 1%p 높이기',
                   onPressed: disabled || selected >= automatic
                       ? null
                       : () => controller.updateIntensity(selected + 1),
@@ -104,6 +104,7 @@ class _PrimaryActionBar extends ConsumerWidget {
     final simulationLabel = environment.usesBackendApi ? '서버 시연' : '로컬 시연';
     final canSend =
         state.result?.canRequestAuthorization == true &&
+        state.safety.isComplete &&
         state.selectedIntensityPct != null &&
         !state.isBusy;
     final VoidCallback? action;
@@ -146,8 +147,8 @@ class _PrimaryActionBar extends ConsumerWidget {
           ? '오늘 상태 3문항에 모두 답해 주세요.'
           : state.result?.status == RecommendationStatus.ready
           ? environment.usesDeviceSimulator
-                ? '선택 강도 ${state.selectedIntensityPct ?? 0}% · 시뮬레이터 전용, 실제 출력 없음'
-                : '선택 강도 ${state.selectedIntensityPct ?? 0}%를 장치로 보냅니다.'
+                ? '기기 출력 설정 ${state.selectedIntensityPct ?? 0}% · 시뮬레이터 전용, 실제 출력 없음'
+                : '기기 출력 설정 ${state.selectedIntensityPct ?? 0}%를 장치로 보냅니다.'
           : '안전 검토가 끝나야 장치로 보낼 수 있습니다.';
     }
 

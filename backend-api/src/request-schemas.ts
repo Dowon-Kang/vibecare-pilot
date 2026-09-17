@@ -20,7 +20,7 @@ export const authorizeSchema = z.object({
   deviceId: z.string().min(1),
   sourceDeviceId: z.string().min(1).optional(),
   algorithmVersion: z.string().min(1),
-  muscleMassBasis: z.enum(['ASM', 'SMM']),
+  bodyPart: z.enum(['wholeBody', 'shoulder', 'arm', 'abdomen', 'thigh', 'calf']),
   requestedIntensityPct: z.number().int().min(1).max(100).optional(),
 });
 

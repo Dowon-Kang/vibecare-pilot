@@ -66,7 +66,7 @@ export function registerRecommendationRoutes(app: VibeCareApp): void {
       },
       measurements: rows.results.map(canonicalMeasurement),
       safety: parsed.data.safety,
-      muscleMassBasis: parsed.data.muscleMassBasis,
+      bodyPart: parsed.data.bodyPart,
       ruleSet,
     });
     const adjustment = await readFeedbackAdjustment(context, participantId);
@@ -119,7 +119,7 @@ export function registerRecommendationRoutes(app: VibeCareApp): void {
         JSON.stringify(parsed.data.measurementIds),
         JSON.stringify(result.average),
         result.algorithmVersion,
-        parsed.data.muscleMassBasis,
+        'SMM',
       ),
       context.env.DB.prepare(
         `INSERT INTO recommendations

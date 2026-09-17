@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/pilot_controller.dart';
+import '../algorithm/calculation_summary.dart';
 import '../models/models.dart';
 import '../services/device_gateway.dart';
 import 'overview_card.dart';
@@ -83,7 +84,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                 Text(
                   ref.watch(appEnvironmentProvider).usesDeviceSimulator
                       ? '최근 측정값을 확인하고 연구용 시뮬레이터로 전달합니다.'
-                      : '최근 측정값을 확인하고 알맞은 강도로 장치에 전달합니다.',
+                      : '최근 측정값을 확인하고 기기 출력 설정을 장치에 전달합니다.',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 24),
@@ -202,9 +203,9 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                   onDetails: () => _showMeasurementDetails(snapshot),
                   onSettings: _showSettings,
                   onCommand: _showCalculationEvidence,
-                  onMuscleBasisChanged: ref
+                  onBodyPartChanged: ref
                       .read(pilotControllerProvider.notifier)
-                      .selectMuscleMassBasis,
+                      .selectBodyPart,
                 ),
               if (state.session == null && state.feedbackSession == null) ...[
                 const SizedBox(height: 8),
@@ -301,59 +302,92 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
             padding: const EdgeInsets.all(20),
             children: [
               Text('계산 근거', style: Theme.of(context).textTheme.titleLarge),
+              for (final step in calculationSummary(
+                result: result,
+                profile: state.profile!,
+                selectedIntensityPct: state.selectedIntensityPct,
+              ))
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        step.title,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(step.detail),
+                    ],
+                  ),
+                ),
               const Text(
-                '연구용 시뮬레이션 전용 · 진동 후보와 근육 등급의 연결은 아직 검증되지 않았으며 실제 장치 출력은 금지됩니다.',
+                '부위별 기준 출력에 성별·연령·체지방·근육량 계수를 곱합니다. 시간과 Hz는 현재 기준값을 유지합니다.',
               ),
-              if (result.muscleAssessment != null)
-                Text(
-                  '4건 범위 ${result.muscleAssessment!.minimumKg.toStringAsFixed(2)}–${result.muscleAssessment!.maximumKg.toStringAsFixed(2)} kg · '
-                  '표준편차 ${result.muscleAssessment!.sdKg.toStringAsFixed(3)} kg · 변동계수 ${result.muscleAssessment!.cvPct.toStringAsFixed(2)}%',
-                ),
-              Text('시뮬레이션 상태: ${result.executionStatus}'),
-              Text('물리 출력: ${result.physicalExecution}'),
-              Text('검토 코드: ${result.reasonCodes.join(', ')}'),
-              const SizedBox(height: 4),
-              Text('알고리즘 ${result.algorithmVersion} · HYPOTHESIS_UNVALIDATED'),
-              const SizedBox(height: 18),
-              _DetailSection(
-                title: '시뮬레이션 후보 산출',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              const Divider(height: 24),
+              ExpansionTile(
+                title: const Text('자세한 연구·검토 정보'),
+                children: [
+                  const Text(
+                    '연구용 시뮬레이션 전용 · 진동 후보와 근육 등급의 연결은 아직 검증되지 않았으며 실제 장치 출력은 금지됩니다.',
+                  ),
+                  if (result.factors != null)
                     Text(
-                      '연구 분류 → ${result.recommendation?.intensityPct ?? '—'}% · '
-                      '${result.recommendation?.frequencyHz ?? '—'}Hz · '
-                      '${result.recommendation == null ? '—' : '${result.recommendation!.durationSec ~/ 60}분'}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      '성별 ×${result.factors!.genderCoefficient.toStringAsFixed(2)} · '
+                      '연령 ×${result.factors!.ageCoefficient.toStringAsFixed(2)} · '
+                      '체지방 ×${result.factors!.bodyFatCoefficient.toStringAsFixed(2)} · '
+                      '총 ×${result.factors!.totalCoefficient.toStringAsFixed(3)}',
                     ),
-                    const SizedBox(height: 12),
-                    for (final adjustment in result.adjustments)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.check_circle_outline,
-                              size: 19,
-                              color: Color(0xFF087F6B),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '${adjustment.label} × ${adjustment.factor.toStringAsFixed(2)}\n${adjustment.reason}',
-                              ),
-                            ),
-                          ],
+                  Text('시뮬레이션 상태: ${result.executionStatus}'),
+                  Text('물리 출력: ${result.physicalExecution}'),
+                  Text('검토 코드: ${result.reasonCodes.join(', ')}'),
+                  const SizedBox(height: 4),
+                  Text(
+                    '알고리즘 ${result.algorithmVersion} · HYPOTHESIS_UNVALIDATED',
+                  ),
+                  const SizedBox(height: 18),
+                  _DetailSection(
+                    title: '시뮬레이션 후보 산출',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '기준 출력 ${result.recommendation?.baseIntensityPct ?? '—'}% → '
+                          '보정 출력 ${result.recommendation?.intensityPct ?? '—'}% · '
+                          '${result.recommendation?.frequencyHz ?? '—'}Hz · '
+                          '${result.recommendation == null ? '—' : '${result.recommendation!.durationSec ~/ 60}분'}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                  ],
-                ),
+                        const SizedBox(height: 12),
+                        for (final adjustment in result.adjustments)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_outline,
+                                  size: 19,
+                                  color: Color(0xFF087F6B),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '${adjustment.label} × ${adjustment.factor.toStringAsFixed(2)}\n${adjustment.reason}',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ),
-              const SizedBox(height: 12),
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 title: const Text('장치 전송 정보'),
@@ -403,7 +437,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
               children: [
                 Text(
-                  '강도와 참여자 정보',
+                  '기기 출력과 참여자 정보',
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 18),

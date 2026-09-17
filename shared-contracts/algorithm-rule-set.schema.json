@@ -1,90 +1,31 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vibecare.local/contracts/algorithm-rule-set.schema.json",
-  "title": "VibeCare simulator rule set",
+  "title": "VibeCare prototype simulator rule set",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "activeFrom", "enabled", "research", "measurementPolicy", "muscle", "output"],
+  "required": ["version", "activeFrom", "enabled", "research", "measurementPolicy", "baselines", "correctionPolicy", "output"],
   "properties": {
-    "version": { "const": "pilot-0.7.0" },
+    "version": { "const": "pilot-0.8.0" },
     "activeFrom": { "type": "string", "format": "date-time" },
     "enabled": { "const": true },
-    "research": {
-      "type": "object", "additionalProperties": false,
-      "required": ["mode", "protocolEvidence", "physicalExecution"],
+    "research": { "type": "object", "additionalProperties": false, "required": ["mode", "protocolEvidence", "physicalExecution"], "properties": { "mode": { "const": "simulation_only" }, "protocolEvidence": { "const": "HYPOTHESIS_UNVALIDATED" }, "physicalExecution": { "const": "PROHIBITED" } } },
+    "measurementPolicy": { "type": "object", "additionalProperties": false, "required": ["maximumAgeDays", "maximumFutureSkewMinutes", "requiredUnit", "requireSameMethod", "requireSameAcquisitionProtocol", "policyBasis"], "properties": { "maximumAgeDays": { "type": "integer", "minimum": 1 }, "maximumFutureSkewMinutes": { "type": "integer", "minimum": 0 }, "requiredUnit": { "const": "kg" }, "requireSameMethod": { "const": true }, "requireSameAcquisitionProtocol": { "const": true }, "policyBasis": { "const": "ENGINEERING_POLICY" } } },
+    "baselines": { "type": "object", "additionalProperties": false, "required": ["wholeBody", "shoulder", "arm", "abdomen", "thigh", "calf"], "properties": { "wholeBody": { "$ref": "#/$defs/baseline" }, "shoulder": { "$ref": "#/$defs/baseline" }, "arm": { "$ref": "#/$defs/baseline" }, "abdomen": { "$ref": "#/$defs/baseline" }, "thigh": { "$ref": "#/$defs/baseline" }, "calf": { "$ref": "#/$defs/baseline" } } },
+    "correctionPolicy": {
+      "type": "object", "additionalProperties": false, "required": ["gender", "age", "bodyFat", "muscleMass"],
       "properties": {
-        "mode": { "const": "simulation_only" },
-        "protocolEvidence": { "const": "HYPOTHESIS_UNVALIDATED" },
-        "physicalExecution": { "const": "PROHIBITED" }
+        "gender": { "type": "object", "additionalProperties": false, "required": ["female", "male"], "properties": { "female": { "$ref": "#/$defs/coefficient" }, "male": { "$ref": "#/$defs/coefficient" } } },
+        "age": { "type": "object", "additionalProperties": false, "required": ["under60", "sixties", "seventies", "eightyPlus"], "properties": { "under60": { "$ref": "#/$defs/coefficient" }, "sixties": { "$ref": "#/$defs/coefficient" }, "seventies": { "$ref": "#/$defs/coefficient" }, "eightyPlus": { "$ref": "#/$defs/coefficient" } } },
+        "bodyFat": { "type": "object", "additionalProperties": false, "required": ["female", "male", "lowCoefficient", "normalCoefficient", "highCoefficient"], "properties": { "female": { "$ref": "#/$defs/fatThresholds" }, "male": { "$ref": "#/$defs/fatThresholds" }, "lowCoefficient": { "$ref": "#/$defs/coefficient" }, "normalCoefficient": { "$ref": "#/$defs/coefficient" }, "highCoefficient": { "$ref": "#/$defs/coefficient" } } },
+        "muscleMass": { "type": "object", "additionalProperties": false, "required": ["neutralCoefficient"], "properties": { "neutralCoefficient": { "const": 1 } } }
       }
     },
-    "measurementPolicy": {
-      "type": "object", "additionalProperties": false,
-      "required": ["maximumAgeDays", "maximumFutureSkewMinutes", "requiredUnit", "requireSameMethod", "requireSameAcquisitionProtocol", "policyBasis"],
-      "properties": {
-        "maximumAgeDays": { "type": "integer", "minimum": 1 },
-        "maximumFutureSkewMinutes": { "type": "integer", "minimum": 0 },
-        "requiredUnit": { "const": "kg" },
-        "requireSameMethod": { "const": true },
-        "requireSameAcquisitionProtocol": { "const": true },
-        "policyBasis": { "const": "ENGINEERING_POLICY" }
-      }
-    },
-    "muscle": {
-      "type": "object", "additionalProperties": false,
-      "required": ["definitions", "simulatorCandidates"],
-      "properties": {
-        "definitions": {
-          "type": "object", "additionalProperties": false, "required": ["ASM", "SMM"],
-          "properties": {
-            "ASM": { "$ref": "#/$defs/asmDefinition" },
-            "SMM": { "$ref": "#/$defs/smmDefinition" }
-          }
-        },
-        "simulatorCandidates": {
-          "type": "object", "additionalProperties": false, "required": ["low", "medium", "reference"],
-          "properties": {
-            "low": { "$ref": "#/$defs/candidate" },
-            "medium": { "$ref": "#/$defs/candidate" },
-            "reference": { "$ref": "#/$defs/candidate" }
-          }
-        }
-      }
-    },
-    "output": {
-      "type": "object", "additionalProperties": false, "required": ["minimumPct", "maximumPct"],
-      "properties": { "minimumPct": { "type": "number", "minimum": 0, "maximum": 100 }, "maximumPct": { "type": "number", "minimum": 0, "maximum": 100 } }
-    }
+    "output": { "type": "object", "additionalProperties": false, "required": ["minimumPct", "maximumPct"], "properties": { "minimumPct": { "type": "number", "minimum": 0, "maximum": 100 }, "maximumPct": { "type": "number", "minimum": 0, "maximum": 100 } } }
   },
   "$defs": {
-    "thresholds": {
-      "type": "object", "additionalProperties": false, "required": ["lowMaximum", "mediumMaximum"],
-      "properties": { "lowMaximum": { "type": "number", "exclusiveMinimum": 0 }, "mediumMaximum": { "type": "number", "exclusiveMinimum": 0 } }
-    },
-    "sexThresholds": {
-      "type": "object", "additionalProperties": false, "required": ["female", "male", "classificationEvidence", "applicableMethods"],
-      "properties": {
-        "female": { "$ref": "#/$defs/thresholds" }, "male": { "$ref": "#/$defs/thresholds" },
-        "classificationEvidence": { "enum": ["HYPOTHESIS_UNVALIDATED", "INDIRECT"] },
-        "applicableMethods": { "type": "array", "items": { "$ref": "#/$defs/applicableMethod" } }
-      }
-    },
-    "applicableMethod": {
-      "type": "object", "additionalProperties": false, "required": ["method", "methodEvidenceRef", "definitionRef"],
-      "properties": { "method": { "type": "string", "minLength": 1 }, "methodEvidenceRef": { "type": "string", "minLength": 1 }, "definitionRef": { "type": "string", "minLength": 1 } }
-    },
-    "asmDefinition": {
-      "allOf": [{ "$ref": "#/$defs/sexThresholds" }, { "properties": { "classificationEvidence": { "const": "HYPOTHESIS_UNVALIDATED" } } }]
-    },
-    "smmDefinition": {
-      "allOf": [{ "$ref": "#/$defs/sexThresholds" }, { "properties": { "classificationEvidence": { "const": "INDIRECT" } } }]
-    },
-    "candidate": {
-      "type": "object", "additionalProperties": false, "required": ["durationSec", "frequencyHz", "intensityPct", "evidence"],
-      "properties": {
-        "durationSec": { "type": "integer", "minimum": 1 }, "frequencyHz": { "type": "integer", "minimum": 1 },
-        "intensityPct": { "type": "number", "minimum": 0, "maximum": 100 }, "evidence": { "const": "HYPOTHESIS_UNVALIDATED" }
-      }
-    }
+    "coefficient": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+    "baseline": { "type": "object", "additionalProperties": false, "required": ["durationMin", "frequencyHz", "intensityPct"], "properties": { "durationMin": { "type": "number", "exclusiveMinimum": 0 }, "frequencyHz": { "type": "integer", "minimum": 1 }, "intensityPct": { "type": "number", "minimum": 0, "maximum": 100 } } },
+    "fatThresholds": { "type": "object", "additionalProperties": false, "required": ["lowThresholdPct", "highThresholdPct"], "properties": { "lowThresholdPct": { "type": "number", "minimum": 0, "maximum": 100 }, "highThresholdPct": { "type": "number", "minimum": 0, "maximum": 100 } } }
   }
 }

@@ -53,15 +53,21 @@ Flutter mobile-app
 
 | 버전 | 용도 | 상태 |
 |---|---|---|
-| `pilot-0.7.0` | 측정 의미 검증·4건 통계·ASM/SMM 연구 층화·Mock 후보 | 연결됨 |
+| `pilot-0.8.0` | SMM 4건 평균·6개 부위 기준값·성별/나이/체지방 연구용 보정·Mock 후보 | 연결됨 |
+| `pilot-0.7.0` | 이전 ASM/SMM 연구 층화 방식 | 폐기·감사 기록만 보존 |
 | `pilot-0.6.0` | 이전 ASM/SMM 가정 선택 방식 | 폐기·감사 기록만 보존 |
 
-현재 구현 기준은 [pilot-0.7.0 설계](docs/algorithm/pilot-0.7.0-design.md)를 따른다.
+현재 구현 기준은 [pilot-0.8.0 설계](docs/algorithm/pilot-0.8.0-design.md)를 따른다.
 
-- `pilot-0.7.0`은 확인된 근육량 정의만 연구 층화하고 `HYPOTHESIS_UNVALIDATED` Mock 후보를 선택한다.
-- 성별은 정의별 연구 경계 선택에만 사용하며, 나이·성별·체지방을 시간·Hz·강도에 곱하지 않는다.
-- 나이는 연구 코호트 범위 확인, 체지방은 입력 일관성 검사와 향후 분석 변수로만 사용한다. 근거 없는 일괄 감산이나 체지방 증가에 따른 자동 증량은 실장비 규칙으로 사용하지 않는다.
-- 앱·백엔드·공유 fixture의 평균·표본 SD·CV·범위 핵심 parity는 검증됐지만 공개 계약 전체 필드의 자동 deep parity는 **부분 완료**다.
+2026-09-14 추가 연구: [근육량 기반 반응 추론 모델 설계](docs/algorithm/response-model-design.md).
+멀티에이전트 문헌·오픈소스 조사와 오프라인 평가 도구 검증을 완료했다.
+사용자+설정→반응 예측을 먼저 검증한 후 설정 후보 선택을 평가한다.
+실측 학습 자료와 훈련된 모델은 아직 없으며 이 설계가 현재 앱 알고리즘 버전을 대체하지 않는다.
+
+- `pilot-0.8.0`은 확인된 SMM 4건과 프로젝트가 제공한 6개 부위 기준값을 사용한다.
+- 기기 출력에 성별·나이·체지방 계수를 곱하되 모두 `HYPOTHESIS_UNVALIDATED` 연구용 가설로 표시한다. 시간과 주파수는 부위 기준값을 유지한다.
+- 근육량 계수는 인과 근거가 확보될 때까지 `1.00` 중립값이며, 현재 SMM은 데이터 적격성과 화면 근거에 사용한다.
+- Flutter와 백엔드의 Case A~E, 6개 부위, 안전 차단을 검증했다. 공유 계약 전체 자동 deep parity는 **부분 완료**다.
 
 ## 4. 구현 단계
 
@@ -100,6 +106,19 @@ Flutter mobile-app
 완료 조건: 익명화된 실제 응답 fixture로 변환 테스트가 통과하고 `normalized:true`가 검증된 경우에만 반환된다.
 
 ### Phase 2 — 연구 알고리즘 고도화
+
+REQ-SIMPLE-01: 기존 계산을 바꾸지 않고 Flutter 계산 근거를 네 단계의 쉬운 설명으로 구현.
+범위: `mobile-app/lib/algorithm/calculation_summary.dart`, `mobile-app/lib/screens/pilot_screen.dart`,
+`mobile-app/test/calculation_summary_test.dart`, `mobile-app/test/widget_test.dart`,
+본 문서와 `checklist.md`.
+새 임상계수·설치·실장치 출력·백엔드 정책 변경 없음. 순수 설명 함수와 화면 연결을 검증.
+
+2026-09-15 근거 확장 (REQ-MECH-01~03): 멀티에이전트로 SMM/ASM·인구학·WBV 인과 근거를
+반대 검증하고, 처방과 분리된 물리 가설 민감도 계산을 구현한다. 범위:
+`backend-api/src/vibration-mechanics.ts`, `backend-api/test/vibration-mechanics.test.ts`,
+`docs/algorithm/exa-results/muscle-wbv-causal-design-2026-09-15.md`, 본 문서,
+`docs/README.md`와 `checklist.md`.
+기존 후보·앱·실행 인가 정책은 변경하지 않는다. 신규 설치·유료 학습·실기기 실험 제외.
 
 구현 대상:
 

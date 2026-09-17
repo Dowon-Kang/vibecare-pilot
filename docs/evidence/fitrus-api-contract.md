@@ -1,39 +1,47 @@
-# FITRUS API 연결 확인
+# FITRUS API 계약 확인
 
-확인일: 2026-09-06
+확인일: 2026-09-14
+근거 원문: 저장소 루트의 `measure-api-guide.md`
 
-## 제공된 엔드포인트
+## URL이 뜻하는 것
 
-| 용도 | URL | 알고리즘 역할 |
-|---|---|---|
-| 혈압 | `https://api.thefitrus.com/fitrus-ml/measure/bp` | 안전 보조 입력 후보 |
-| 심박 | `https://api.thefitrus.com/fitrus-ml/measure/hr` | 안전 보조 입력 후보 |
-| 스트레스 | `https://api.thefitrus.com/fitrus-ml/measure/stress` | 상태 참고값 후보 |
-| 체표면 온도 | `https://api.thefitrus.com/fitrus-ml/measure/bodytemp` | 안전 보조 입력 후보 |
-| 체성분 | `https://api.thefitrus.com/fitrus-ml/measure/bodyfat` | BIA 4회 평균의 주 입력 |
-| 스트레스 v2 | `https://api.thefitrus.com/fitrus-ml/measure/stress2` | `stress`와 비교 후 하나만 채택 |
+공통 주소는 `https://api.thefitrus.com/fitrus-ml/measure`이고 마지막 경로가 측정 종류다. 모두 `POST`이며, VibeCare 앱은 공급사 API를 직접 호출하지 않고 백엔드의 `POST /v1/fitrus/measurements/{kind}`를 통한다. `x-api-key`는 백엔드 환경변수에만 둔다.
 
-## 직접 확인된 계약
+| VibeCare `kind` | 공급사 경로 | 입력 | 공급사 출력 | 현재 처리 |
+|---|---|---|---|---|
+| `bodyFat` | `/bodyfat` | 나이, 키, 체중, 성별, 전압, 선택 보정률 | 체지방률·량, 기초대사량, 골격근량, 수분 등 | 계약 검증 후 BIA 이력 저장 |
+| `bloodPressure` | `/bp` | PPG, 기준 수축기·이완기 혈압 | `dbp`, `sbp` | 활력 이력 저장 |
+| `heartRate` | `/hr` | PPG | `hr`, `hrv`, `spo2` | 활력 이력 저장 |
+| `stress` | `/stress` | PPG, 나이 | 심박 관련 값, 스트레스 값·등급 | 활력 이력 저장 |
+| `stressV2` | `/stress2` | PPG | 시간·주파수 영역 확장 지표와 `errorcode` | `errorcode=0`일 때만 활력 이력 저장 |
+| `bodyTemperature` | `/bodytemp` | 체온 | 입력 체온 | 활력 이력 저장 |
 
-- 여섯 URL 모두 `HEAD` 요청에 `405 Method Not Allowed`, `Allow: POST`를 반환했다.
-- 빈 JSON을 API 키 없이 POST하면 `403 Forbidden`과 `x-api-key` 관련 오류를 반환했다.
-- 사용자가 제공한 키를 메모리에서만 읽어 `/bodyfat`에 전송하자 인증을 통과해 `400 Bad Request / Failed to read request`가 반환되었다. 키 값은 로그·문서·프로젝트에 복사하지 않았다.
-- 오류 응답 타입은 `application/problem+json`이다.
-- 따라서 키는 Flutter 앱이나 저장소에 두지 않고 백엔드 환경변수 `FITRUS_API_KEY`로만 주입한다.
-- 일반적인 `/v3/api-docs`와 `/swagger-ui` 경로에서는 공개 스키마를 확인할 수 없었다.
+## 코드에 적용한 계약
+
+- 엔드포인트마다 필수 입력과 숫자/정수/열거형을 백엔드에서 먼저 검사한다. 공급사가 누락 숫자를 `0`으로 처리하는 동작에 의존하지 않는다.
+- `gender`는 대소문자를 허용하고 공급사 호출 전 `male` 또는 `female` 소문자로 정규화한다.
+- `correct` 누락 또는 `null`은 명세대로 `0`으로 보낸다.
+- 체성분 요청의 나이·키·성별은 로그인한 참여자 프로필과 일치해야 한다. 다른 사람의 인구통계가 섞이면 공급사 호출 전에 거절한다.
+- `Content-Type`과 `Accept`를 `application/json`으로 보내며, 오류 판단은 본문 문구가 아니라 HTTP 상태 코드로 한다.
+- 성공 응답도 필드명과 타입을 다시 검사한다. 맞지 않으면 원본은 보관하되 앱의 정규 측정 이력에는 넣지 않는다.
+- 체성분의 체중은 요청 `weight`, BMI는 요청 `height`와 `weight`로 계산한다. 공급사 응답의 `bfp`, `bfm`, `smm`가 모두 있고 서로 일관될 때만 정규 이력에 넣는다.
+- `icw`와 `ecw`는 단위와 변환 정의가 없으므로 `bodyWaterPct`나 `ecwRatio`로 바꾸지 않는다. 원본 응답에는 그대로 보관한다.
+- 활력 수치의 단위가 명세에 없으므로 `units`를 비워 둔다. UI에서 임의 단위를 표시하지 않는다.
+
+## 알고리즘 적용 범위
+
+현재 진동 추천 알고리즘이 직접 사용하는 값은 체성분 4회 측정의 체중, BMI, 체지방률, 체지방량, 골격근량이다. 혈압·심박·스트레스·체온은 저장·조회까지 연결됐지만 추천 강도를 자동 변경하는 입력으로 아직 사용하지 않는다.
+
+`smm`이라는 필드명과 “골격근량”이라는 설명은 확인됐다. 다만 전신 SMM인지, 사지 ASM인지, 단위가 kg인지, 측정법과 측정 자세가 무엇인지는 이 명세만으로 확인되지 않는다. 따라서 `muscleProvenance`가 별도로 확인된 경우에만 시뮬레이션 추천 후보가 된다. 실제 진동 기기 전송은 계속 금지된다.
 
 ## 아직 공급사에서 받아야 하는 항목
 
-- 각 API의 요청 JSON 또는 바이너리 포맷과 필수 필드
-- 성공 응답 JSON 예시와 단위
-- `x-api-key` 발급·회전·허용 도메인/IP 정책
-- 타임아웃, 호출 제한, 재시도 가능 오류코드
-- `stress`와 `stress2`의 차이 및 권장 버전
-- bodyfat 결과의 측정 ID, 사용자/기기 ID, 측정시각, 품질 플래그
-- 개인정보 처리·보관·제3자 제공에 대한 계약 범위
+- PPG 배열의 실제 최소·최대 샘플 수, 샘플링 주파수, 값 범위, 세 채널 배치 설명의 `mod 6` 표기 확인
+- 모든 요청·응답 숫자의 단위와 정상/허용 범위
+- `smm`, `icw`, `ecw`, `protein`, `mineral`의 정확한 정의와 산출법
+- 체성분 측정 장치 모델, 전극 위치, 자세, 공복·수분 상태 등 획득 프로토콜
+- `stress`와 `stress2` 중 제품 화면에 사용할 권장 버전과 각 지표 해석 기준
+- 호출 제한, 재시도 가능 상태, 권장 타임아웃, 중복 저장 방지 방식
+- 개인정보 처리·보관·제3자 제공 계약 범위
 
-요청/응답 예시는 실사용자 정보와 API 키를 제거한 형태로 저장한다. 명세가 확보되기 전에는 공급사 응답을 추측해 표준 BIA DTO로 변환하거나 실제 진동 실행에 사용하지 않는다.
-
-## 키 보관 조치
-
-개발자가 별도로 보관 중인 로컬 평문 키 파일은 개발 확인용으로만 취급하며 저장소 경로나 파일명을 문서 계약으로 삼지 않는다. 운영 환경에서는 AWS Secrets Manager 또는 SSM Parameter Store의 암호화된 비밀값 `FITRUS_API_KEY`로 등록한다. 등록·검증 후 로컬 평문 사본은 소유자 승인 아래 안전하게 제거한다. 키를 Flutter 빌드, API 응답, 로그, Git, 문서에 포함하지 않는다.
+이 항목들이 확인되기 전에는 값 범위나 단위를 추측해 표시하지 않고, 생체 수치로 진동 강도를 자동 올리지 않는다.

@@ -162,7 +162,7 @@ class _RunningCard extends StatelessWidget {
               ),
             ),
             Text(
-              '강도 ${command.intensityPct}% · ${command.frequencyHz}Hz',
+              '기기 출력 ${command.intensityPct}% · ${command.frequencyHz}Hz',
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 16),
