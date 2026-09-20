@@ -1,0 +1,11 @@
+{
+  "name": "VibeCare Pilot",
+  "short_name": "VibeCare",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F7F8FA",
+  "theme_color": "#087F72",
+  "description": "연구용 진동 설정 시뮬레이터",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}
