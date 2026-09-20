@@ -769,9 +769,9 @@ class _MetricStatus {
 /// Status tones stay inside the neutral ladder except for `caution`, which
 /// keeps the danger red because it asks the participant to act.
 Color _toneColor(_MetricStatusTone tone) => switch (tone) {
-  _MetricStatusTone.low => AppColors.warning,
-  _MetricStatusTone.normal => AppColors.muted,
-  _MetricStatusTone.high => AppColors.inkSoft,
+  _MetricStatusTone.low => AppColors.levelLow,
+  _MetricStatusTone.normal => AppColors.levelNormal,
+  _MetricStatusTone.high => AppColors.levelHigh,
   _MetricStatusTone.caution => AppColors.danger,
 };
 

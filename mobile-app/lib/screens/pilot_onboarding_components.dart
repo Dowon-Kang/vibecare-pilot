@@ -422,6 +422,12 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
         ? '직전 측정과 동일해요.'
         : '직전 측정보다 ${delta > 0 ? '+' : ''}${delta.toStringAsFixed(1)}kg ${delta > 0 ? '증가' : '감소'}했어요.';
     final levelIndex = assessment.level.index;
+    const levelColors = <Color>[
+      AppColors.levelLow,
+      AppColors.levelNormal,
+      AppColors.levelHigh,
+    ];
+    const levelLabels = <String>['낮음', '중간', '높음'];
 
     return Card(
       key: const ValueKey('skeletal-muscle-measurement-card'),
@@ -458,9 +464,9 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
                     child: Container(
                       height: 10,
                       decoration: BoxDecoration(
-                        color: index <= levelIndex
-                            ? AppColors.brand
-                            : AppColors.hairline,
+                        color: index == levelIndex
+                            ? levelColors[index]
+                            : levelColors[index].withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
@@ -470,9 +476,26 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [Text('낮음'), Text('중간'), Text('높음')],
+            Row(
+              children: [
+                for (var index = 0; index < levelLabels.length; index++)
+                  Expanded(
+                    child: Text(
+                      levelLabels[index],
+                      textAlign: index == 0
+                          ? TextAlign.start
+                          : index == levelLabels.length - 1
+                          ? TextAlign.end
+                          : TextAlign.center,
+                      style: TextStyle(
+                        color: levelColors[index],
+                        fontWeight: index == levelIndex
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 18),
             if (latestMeasurement != null) ...[
