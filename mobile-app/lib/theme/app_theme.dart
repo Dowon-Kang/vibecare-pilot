@@ -91,7 +91,7 @@ abstract final class AppTheme {
       splashFactory: InkSparkle.splashFactory,
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
-        foregroundColor: AppColors.ink,
+        foregroundColor: AppColors.brand,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
