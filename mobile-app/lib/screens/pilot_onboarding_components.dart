@@ -26,7 +26,7 @@ class _FirstLoginProfileCard extends StatelessWidget {
               const CircleAvatar(
                 radius: 24,
                 backgroundColor: AppColors.canvasSoft,
-                foregroundColor: AppColors.ink,
+                foregroundColor: AppColors.brand,
                 child: Icon(Icons.person_outline, size: 28),
               ),
               const SizedBox(width: 14),
@@ -442,7 +442,7 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
               key: const ValueKey('skeletal-muscle-level'),
               style: Theme.of(
                 context,
-              ).textTheme.titleMedium?.copyWith(color: AppColors.ink),
+              ).textTheme.titleMedium?.copyWith(color: AppColors.brand),
             ),
             const SizedBox(height: 4),
             Text(
@@ -459,7 +459,7 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
                       height: 10,
                       decoration: BoxDecoration(
                         color: index <= levelIndex
-                            ? AppColors.ink
+                            ? AppColors.brand
                             : AppColors.hairline,
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -584,7 +584,7 @@ class _MeasurementStepStatusPanel extends StatelessWidget {
                   outsideCount == 0 ? '모두 중간' : '기준 범위 밖 $outsideCount개',
                   key: const ValueKey('measurement-step-status-summary'),
                   style: const TextStyle(
-                    color: AppColors.ink,
+                    color: AppColors.brand,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),

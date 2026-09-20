@@ -9,7 +9,7 @@ class _BrandMark extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: AppColors.ink,
+        color: AppColors.brand,
         borderRadius: AppRadius.squircle(56),
       ),
       child: const Icon(Icons.vibration, size: 28, color: AppColors.canvas),
@@ -101,7 +101,7 @@ class _JourneyProgress extends StatelessWidget {
                             ? FontWeight.w800
                             : FontWeight.w500,
                         color: index == current.index
-                            ? AppColors.ink
+                            ? AppColors.brand
                             : AppColors.muted,
                       ),
                     ),
@@ -135,7 +135,7 @@ class _StatusItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Icon(icon, size: 17, color: positive ? AppColors.ink : AppColors.muted),
+      Icon(icon, size: 17, color: positive ? AppColors.brand : AppColors.muted),
       const SizedBox(width: 7),
       Flexible(
         child: Text(
@@ -239,7 +239,7 @@ class _PulseDot extends StatelessWidget {
     height: 12,
     decoration: const BoxDecoration(
       shape: BoxShape.circle,
-      color: AppColors.ink,
+      color: AppColors.brand,
     ),
   );
 }

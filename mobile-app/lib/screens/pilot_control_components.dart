@@ -210,7 +210,7 @@ class _PrimaryActionBar extends ConsumerWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: state.isRunning
                       ? AppColors.danger
-                      : AppColors.ink,
+                      : AppColors.brand,
                   minimumSize: const Size.fromHeight(56),
                 ),
               ),
@@ -419,7 +419,7 @@ class _SafetySettings extends ConsumerWidget {
                     backgroundColor: value == answer
                         ? answer
                               ? AppColors.danger
-                              : AppColors.ink
+                              : AppColors.brand
                         : Colors.transparent,
                     foregroundColor: value == answer
                         ? AppColors.canvas

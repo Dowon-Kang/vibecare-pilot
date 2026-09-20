@@ -125,7 +125,7 @@ class _FeedbackWizardState extends ConsumerState<_FeedbackWizard> {
           const Icon(
             Icons.check_circle_outline_rounded,
             size: 48,
-            color: AppColors.ink,
+            color: AppColors.brand,
           ),
           const SizedBox(height: 16),
           Text(

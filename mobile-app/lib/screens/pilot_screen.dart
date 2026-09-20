@@ -397,7 +397,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                                 const Icon(
                                   Icons.check_circle_outline,
                                   size: 19,
-                                  color: AppColors.ink,
+                                  color: AppColors.brand,
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(

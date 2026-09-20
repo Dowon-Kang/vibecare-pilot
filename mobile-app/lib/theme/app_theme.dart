@@ -208,7 +208,7 @@ abstract final class AppTheme {
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
-          foregroundColor: AppColors.ink,
+          foregroundColor: AppColors.brand,
           disabledForegroundColor: AppColors.faint,
           minimumSize: pillMinimumSize,
         ),
@@ -279,11 +279,11 @@ abstract final class AppTheme {
         space: 1,
       ),
       listTileTheme: const ListTileThemeData(
-        iconColor: AppColors.ink,
+        iconColor: AppColors.brand,
         textColor: AppColors.ink,
       ),
       expansionTileTheme: const ExpansionTileThemeData(
-        iconColor: AppColors.ink,
+        iconColor: AppColors.brand,
         collapsedIconColor: AppColors.muted,
         textColor: AppColors.ink,
         collapsedTextColor: AppColors.ink,

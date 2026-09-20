@@ -265,7 +265,7 @@ class _ProfileFact extends StatelessWidget {
     ),
     child: Column(
       children: [
-        Icon(icon, size: 20, color: AppColors.ink),
+        Icon(icon, size: 20, color: AppColors.brand),
         const SizedBox(height: 5),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 2),
@@ -496,7 +496,7 @@ class _MeasurementComparisonRow extends StatelessWidget {
               child: Text(
                 '$index',
                 style: const TextStyle(
-                  color: AppColors.ink,
+                  color: AppColors.brand,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -965,7 +965,7 @@ class _VitalCard extends StatelessWidget {
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: apiLevel == null
                   ? Theme.of(context).colorScheme.onSurfaceVariant
-                  : AppColors.ink,
+                  : AppColors.brand,
               fontWeight: apiLevel == null
                   ? FontWeight.normal
                   : FontWeight.w800,
