@@ -13,6 +13,27 @@
 </head>
 <body>
   <noscript>VibeCare 시연판을 보려면 JavaScript를 활성화해 주세요.</noscript>
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // GitHub Pages must always show the latest pilot build. Remove service
+    // workers created by older Flutter builds before loading the application.
+    (async () => {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (registrations.length > 0) {
+          await Promise.all(registrations.map((item) => item.unregister()));
+          const refreshed = new URL(window.location.href);
+          if (refreshed.searchParams.get('cache-refresh') !== '1') {
+            refreshed.searchParams.set('cache-refresh', '1');
+            window.location.replace(refreshed.toString());
+            return;
+          }
+        }
+      }
+
+      const script = document.createElement('script');
+      script.src = `flutter_bootstrap.js?v=${Date.now()}`;
+      document.body.appendChild(script);
+    })();
+  </script>
 </body>
 </html>

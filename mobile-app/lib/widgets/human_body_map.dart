@@ -130,7 +130,9 @@ class _PartChip extends StatelessWidget {
         ),
         selectedColor: AppColors.brand,
         backgroundColor: AppColors.canvas,
-        side: BorderSide(color: selected ? AppColors.brand : AppColors.hairline),
+        side: BorderSide(
+          color: selected ? AppColors.brand : AppColors.hairline,
+        ),
         shape: const StadiumBorder(),
       ),
     ),
