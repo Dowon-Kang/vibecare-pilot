@@ -128,9 +128,9 @@ class _PartChip extends StatelessWidget {
           color: selected ? AppColors.canvas : AppColors.ink,
           fontWeight: FontWeight.w600,
         ),
-        selectedColor: AppColors.ink,
+        selectedColor: AppColors.brand,
         backgroundColor: AppColors.canvas,
-        side: BorderSide(color: selected ? AppColors.ink : AppColors.hairline),
+        side: BorderSide(color: selected ? AppColors.brand : AppColors.hairline),
         shape: const StadiumBorder(),
       ),
     ),
@@ -203,8 +203,8 @@ class _HumanSilhouettePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     const neutral = AppColors.canvas;
     const outlineColor = AppColors.faint;
-    final selectedColor = AppColors.ink.withValues(alpha: .78);
-    final wholeBodyColor = AppColors.ink.withValues(alpha: .34);
+    final selectedColor = AppColors.brand.withValues(alpha: .82);
+    final wholeBodyColor = AppColors.brand.withValues(alpha: .38);
 
     Paint fill(BodyPart part) => Paint()
       ..color = selected == BodyPart.wholeBody

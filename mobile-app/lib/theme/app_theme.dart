@@ -2,28 +2,30 @@ import 'package:flutter/material.dart';
 
 /// Design tokens.
 ///
-/// Visual language: gallery-white monochrome. Near-black ink on a white canvas,
-/// structure carried by a ladder of neutral tints and 1px hairlines instead of
-/// shadows or brand chroma. Every interactive element is a stadium pill,
-/// containers sit at 24px, inputs and inner tiles at 16px.
+/// Visual language: the original VibeCare teal on an iOS-style neutral canvas.
+/// Text stays near-black while interactive and selected states use the brand
+/// color, so controls are distinguishable without making every label colorful.
 ///
 /// Deviations kept on purpose for an assistive-device control screen used by
 /// older participants: `danger` marks BLOCKED / stop actions and `warning`
 /// marks cautions. Neither is ever the only carrier of state; text and icons
 /// always accompany them.
 abstract final class AppColors {
-  static const ink = Color(0xFF141414);
-  static const inkSoft = Color(0xFF262626);
-  static const muted = Color(0xFF707070);
-  static const faint = Color(0xFFADADAD);
+  static const brand = Color(0xFF087F6B);
+  static const brandSoft = Color(0xFFE7F4F1);
+  static const ink = Color(0xFF1C1C1E);
+  static const inkSoft = Color(0xFF3A3A3C);
+  static const muted = Color(0xFF6C6C70);
+  static const faint = Color(0xFF8E8E93);
+  static const background = Color(0xFFF2F2F7);
   static const canvas = Color(0xFFFFFFFF);
-  static const canvasSoft = Color(0xFFF3F3F3);
-  static const field = Color(0xFFF0F0F0);
-  static const hairlineSoft = Color(0xFFF0F0F0);
-  static const hairline = Color(0xFFE0E0E0);
+  static const canvasSoft = Color(0xFFF9F9FB);
+  static const field = Color(0xFFF9F9FB);
+  static const hairlineSoft = Color(0xFFE5E5EA);
+  static const hairline = Color(0xFFD1D1D6);
 
   /// Reserved: one chromatic accent for a single emphasized signal per screen.
-  static const accent = Color(0xFF0066FF);
+  static const accent = brand;
 
   static const warning = Color(0xFF9A5A00);
   static const danger = Color(0xFFB42318);
@@ -58,16 +60,16 @@ abstract final class AppTheme {
   static ThemeData get light {
     final scheme =
         ColorScheme.fromSeed(
-          seedColor: AppColors.ink,
+          seedColor: AppColors.brand,
           brightness: Brightness.light,
           surface: AppColors.canvas,
         ).copyWith(
-          primary: AppColors.ink,
+          primary: AppColors.brand,
           onPrimary: AppColors.canvas,
-          secondary: AppColors.inkSoft,
+          secondary: AppColors.brand,
           onSecondary: AppColors.canvas,
-          secondaryContainer: AppColors.ink,
-          onSecondaryContainer: AppColors.canvas,
+          secondaryContainer: AppColors.brandSoft,
+          onSecondaryContainer: AppColors.brand,
           surfaceContainerLow: AppColors.canvasSoft,
           surfaceContainerHighest: AppColors.field,
           onSurface: AppColors.ink,
@@ -85,10 +87,10 @@ abstract final class AppTheme {
     return ThemeData(
       colorScheme: scheme,
       useMaterial3: true,
-      scaffoldBackgroundColor: AppColors.canvas,
+      scaffoldBackgroundColor: AppColors.background,
       splashFactory: InkSparkle.splashFactory,
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.canvas,
+        backgroundColor: AppColors.background,
         foregroundColor: AppColors.ink,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -103,9 +105,9 @@ abstract final class AppTheme {
         ),
       ),
       tabBarTheme: const TabBarThemeData(
-        labelColor: AppColors.ink,
+        labelColor: AppColors.brand,
         unselectedLabelColor: AppColors.muted,
-        indicatorColor: AppColors.ink,
+        indicatorColor: AppColors.brand,
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: AppColors.hairline,
         labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -139,7 +141,7 @@ abstract final class AppTheme {
         fillColor: AppColors.field,
         hintStyle: TextStyle(color: AppColors.faint),
         labelStyle: TextStyle(color: AppColors.muted),
-        floatingLabelStyle: TextStyle(color: AppColors.ink),
+        floatingLabelStyle: TextStyle(color: AppColors.brand),
         prefixIconColor: AppColors.muted,
         contentPadding: EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
@@ -159,7 +161,7 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.smBorder,
-          borderSide: BorderSide(color: AppColors.ink, width: 2),
+          borderSide: BorderSide(color: AppColors.brand, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadius.smBorder,
@@ -172,7 +174,7 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.ink,
+          backgroundColor: AppColors.brand,
           foregroundColor: AppColors.canvas,
           disabledBackgroundColor: AppColors.canvasSoft,
           disabledForegroundColor: AppColors.faint,
@@ -188,7 +190,7 @@ abstract final class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           backgroundColor: AppColors.canvas,
-          foregroundColor: AppColors.ink,
+          foregroundColor: AppColors.brand,
           minimumSize: const Size.fromHeight(52),
           side: const BorderSide(color: AppColors.hairline),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -197,7 +199,7 @@ abstract final class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.ink,
+          foregroundColor: AppColors.brand,
           disabledForegroundColor: AppColors.faint,
           minimumSize: pillMinimumSize,
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -221,7 +223,7 @@ abstract final class AppTheme {
           ),
           backgroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.selected)
-                ? AppColors.ink
+                ? AppColors.brand
                 : AppColors.canvasSoft,
           ),
           foregroundColor: WidgetStateProperty.resolveWith(
@@ -234,13 +236,13 @@ abstract final class AppTheme {
           iconColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.selected)
                 ? AppColors.canvas
-                : AppColors.ink,
+                : AppColors.brand,
           ),
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.canvas,
-        selectedColor: AppColors.ink,
+        selectedColor: AppColors.brand,
         side: const BorderSide(color: AppColors.hairline),
         shape: stadium,
         labelStyle: const TextStyle(
@@ -260,14 +262,14 @@ abstract final class AppTheme {
         showCheckmark: false,
       ),
       sliderTheme: const SliderThemeData(
-        activeTrackColor: AppColors.ink,
-        thumbColor: AppColors.ink,
+        activeTrackColor: AppColors.brand,
+        thumbColor: AppColors.brand,
         inactiveTrackColor: AppColors.hairline,
-        valueIndicatorColor: AppColors.ink,
+        valueIndicatorColor: AppColors.brand,
         showValueIndicator: ShowValueIndicator.onDrag,
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.ink,
+        color: AppColors.brand,
         linearTrackColor: AppColors.hairline,
         circularTrackColor: AppColors.hairline,
       ),
