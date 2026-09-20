@@ -57,21 +57,69 @@ const pilotRuleSet = AlgorithmRuleSet(
 );
 
 const _lowBodyFatSettings = {
-  BodyPart.wholeBody: VibrationBaseSetting(durationMin: 25, frequencyHz: 8, intensityPct: 80),
-  BodyPart.shoulder: VibrationBaseSetting(durationMin: 20, frequencyHz: 15, intensityPct: 75),
-  BodyPart.arm: VibrationBaseSetting(durationMin: 15, frequencyHz: 20, intensityPct: 70),
-  BodyPart.abdomen: VibrationBaseSetting(durationMin: 10, frequencyHz: 25, intensityPct: 65),
-  BodyPart.thigh: VibrationBaseSetting(durationMin: 5, frequencyHz: 35, intensityPct: 60),
-  BodyPart.calf: VibrationBaseSetting(durationMin: 5, frequencyHz: 35, intensityPct: 60),
+  BodyPart.wholeBody: VibrationBaseSetting(
+    durationMin: 25,
+    frequencyHz: 8,
+    intensityPct: 80,
+  ),
+  BodyPart.shoulder: VibrationBaseSetting(
+    durationMin: 20,
+    frequencyHz: 15,
+    intensityPct: 75,
+  ),
+  BodyPart.arm: VibrationBaseSetting(
+    durationMin: 15,
+    frequencyHz: 20,
+    intensityPct: 70,
+  ),
+  BodyPart.abdomen: VibrationBaseSetting(
+    durationMin: 10,
+    frequencyHz: 25,
+    intensityPct: 65,
+  ),
+  BodyPart.thigh: VibrationBaseSetting(
+    durationMin: 5,
+    frequencyHz: 35,
+    intensityPct: 60,
+  ),
+  BodyPart.calf: VibrationBaseSetting(
+    durationMin: 5,
+    frequencyHz: 35,
+    intensityPct: 60,
+  ),
 };
 
 const _highBodyFatSettings = {
-  BodyPart.wholeBody: VibrationBaseSetting(durationMin: 35, frequencyHz: 8, intensityPct: 99),
-  BodyPart.shoulder: VibrationBaseSetting(durationMin: 30, frequencyHz: 15, intensityPct: 90),
-  BodyPart.arm: VibrationBaseSetting(durationMin: 25, frequencyHz: 20, intensityPct: 85),
-  BodyPart.abdomen: VibrationBaseSetting(durationMin: 20, frequencyHz: 25, intensityPct: 80),
-  BodyPart.thigh: VibrationBaseSetting(durationMin: 15, frequencyHz: 35, intensityPct: 75),
-  BodyPart.calf: VibrationBaseSetting(durationMin: 15, frequencyHz: 35, intensityPct: 75),
+  BodyPart.wholeBody: VibrationBaseSetting(
+    durationMin: 35,
+    frequencyHz: 8,
+    intensityPct: 99,
+  ),
+  BodyPart.shoulder: VibrationBaseSetting(
+    durationMin: 30,
+    frequencyHz: 15,
+    intensityPct: 90,
+  ),
+  BodyPart.arm: VibrationBaseSetting(
+    durationMin: 25,
+    frequencyHz: 20,
+    intensityPct: 85,
+  ),
+  BodyPart.abdomen: VibrationBaseSetting(
+    durationMin: 20,
+    frequencyHz: 25,
+    intensityPct: 80,
+  ),
+  BodyPart.thigh: VibrationBaseSetting(
+    durationMin: 15,
+    frequencyHz: 35,
+    intensityPct: 75,
+  ),
+  BodyPart.calf: VibrationBaseSetting(
+    durationMin: 15,
+    frequencyHz: 35,
+    intensityPct: 75,
+  ),
 };
 
 VibrationBaseSetting _settingForBodyFatBand(
@@ -320,7 +368,8 @@ AlgorithmResult calculateRecommendation({
         id: 'body-fat',
         label: '체지방 계수',
         factor: 1,
-        reason: '${measurementsByNewest.first.values.bodyFatPct.toStringAsFixed(1)}% · ${fat.band} 구간',
+        reason:
+            '${measurementsByNewest.first.values.bodyFatPct.toStringAsFixed(1)}% · ${fat.band} 구간',
       ),
       Adjustment(
         id: 'muscle-mass',

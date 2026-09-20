@@ -23,10 +23,7 @@ List<({String title, String detail})> calculationSummary({
       title: '2. 체지방 등급',
       detail: '최신 API 체지방률을 ${factors.bodyFatBand} 등급으로 분류했습니다.',
     ),
-    (
-      title: '3. 고정 매핑 적용',
-      detail: '등급과 선택 부위에 정해진 시간·Hz·강도를 추가 보정 없이 적용합니다.',
-    ),
+    (title: '3. 고정 매핑 적용', detail: '등급과 선택 부위에 정해진 시간·Hz·강도를 추가 보정 없이 적용합니다.'),
     (
       title: '4. 추천 설정',
       detail:

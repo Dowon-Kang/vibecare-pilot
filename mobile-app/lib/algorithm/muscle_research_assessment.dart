@@ -13,7 +13,8 @@ class BodyFatResearchAssessment {
   final double currentPct;
   final double? previousPct;
 
-  double? get deltaPct => previousPct == null ? null : currentPct - previousPct!;
+  double? get deltaPct =>
+      previousPct == null ? null : currentPct - previousPct!;
 }
 
 BodyFatResearchAssessment? buildBodyFatResearchAssessment({

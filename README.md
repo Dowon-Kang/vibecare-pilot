@@ -54,3 +54,9 @@ Pop-Location
 테스트 통과는 코드 흐름의 재현성을 뜻하며 임상 효과나 물리 장치 안전을 증명하지 않습니다. 정량 결과와 원격 빌드 상태는 [검증 체크리스트](checklist.md)와 최신 GitHub Actions 실행을 함께 확인하세요.
 
 자세한 내용은 [문서 안내](docs/README.md), [계획](plan.md), [검증 체크리스트](checklist.md)를 확인하세요.
+
+## 웹 데모
+
+- 공개 주소: <https://dowon-kang.github.io/vibecare-pilot/>
+- `main` 브랜치가 갱신되면 `.github/workflows/deploy-pages.yml`이 Flutter 웹 릴리스 빌드를 생성해 GitHub Pages에 배포합니다.
+- 웹 데모도 실제 진동기를 제어하지 않으며 Mock 시뮬레이터만 실행합니다.

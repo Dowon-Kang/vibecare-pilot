@@ -7,7 +7,10 @@ void main() {
   test('최신 체지방률을 여성 경계로 분류하고 직전값과 비교한다', () {
     final assessment = buildBodyFatResearchAssessment(
       profile: const ParticipantProfile(
-        id: 'P1', age: 72, sex: ParticipantSex.female, heightCm: 150,
+        id: 'P1',
+        age: 72,
+        sex: ParticipantSex.female,
+        heightCm: 150,
       ),
       history: [
         _measurement('new', 18.8, DateTime.utc(2026, 9, 18)),
@@ -24,13 +27,18 @@ void main() {
 
   test('남성 체지방 경계는 낮음, 중간, 높음을 구분한다', () {
     const profile = ParticipantProfile(
-      id: 'P1', age: 45, sex: ParticipantSex.male, heightCm: 180,
+      id: 'P1',
+      age: 45,
+      sex: ParticipantSex.male,
+      heightCm: 180,
     );
 
     BodyFatResearchAssessment? assess(double bodyFat) =>
         buildBodyFatResearchAssessment(
           profile: profile,
-          history: [_measurement('M-$bodyFat', bodyFat, DateTime.utc(2026, 9, 18))],
+          history: [
+            _measurement('M-$bodyFat', bodyFat, DateTime.utc(2026, 9, 18)),
+          ],
           ruleSet: pilotRuleSet,
         );
 
@@ -40,18 +48,21 @@ void main() {
   });
 }
 
-BiaMeasurement _measurement(String id, double bodyFatPct, DateTime measuredAt) =>
-    BiaMeasurement(
-      id: id,
-      participantId: 'P1',
-      deviceId: 'BIA-1',
-      measuredAt: measuredAt,
-      qualityPassed: true,
-      values: BiaValues(
-        weightKg: 60,
-        bmi: 22,
-        bodyFatPct: bodyFatPct,
-        fatMassKg: 60 * bodyFatPct / 100,
-        skeletalMuscleMassKg: 24,
-      ),
-    );
+BiaMeasurement _measurement(
+  String id,
+  double bodyFatPct,
+  DateTime measuredAt,
+) => BiaMeasurement(
+  id: id,
+  participantId: 'P1',
+  deviceId: 'BIA-1',
+  measuredAt: measuredAt,
+  qualityPassed: true,
+  values: BiaValues(
+    weightKg: 60,
+    bmi: 22,
+    bodyFatPct: bodyFatPct,
+    fatMassKg: 60 * bodyFatPct / 100,
+    skeletalMuscleMassKg: 24,
+  ),
+);

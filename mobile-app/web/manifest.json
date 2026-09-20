@@ -1,0 +1,35 @@
+{
+    "name": "VibeCare Pilot",
+    "short_name": "VibeCare",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#F7F8FA",
+    "theme_color": "#006B5F",
+    "description": "연구용 진동 설정 계산 및 장치 시뮬레이션 앱",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
