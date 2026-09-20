@@ -16,7 +16,6 @@ class MockFitrusRepository implements FitrusRepository {
     required ParticipantProfile participant,
     required String deviceId,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
     final base = DateTime.utc(2026, 8, 22, 23, 20);
     final history = <BiaMeasurement>[
       _body(
@@ -120,36 +119,55 @@ class MockFitrusRepository implements FitrusRepository {
         id: 'BP-001',
         kind: VitalKind.bloodPressure,
         measuredAt: base.add(const Duration(minutes: 5)),
-        values: const {'systolic': 118, 'diastolic': 76},
-        units: const {'systolic': 'mmHg', 'diastolic': 'mmHg'},
+        values: const {'sbp': 118, 'dbp': 76},
+        units: const {'sbp': 'mmHg', 'dbp': 'mmHg'},
       ),
       VitalMeasurement(
         id: 'HR-001',
         kind: VitalKind.heartRate,
         measuredAt: base.add(const Duration(minutes: 6)),
-        values: const {'heartRate': 68},
-        units: const {'heartRate': 'bpm'},
+        values: const {'hr': 68, 'hrv': 41, 'spo2': 98},
+        units: const {'hr': 'bpm', 'hrv': '', 'spo2': '%'},
       ),
       VitalMeasurement(
         id: 'STRESS-001',
         kind: VitalKind.stress,
         measuredAt: base.add(const Duration(minutes: 7)),
-        values: const {'score': 32},
-        units: const {'score': '점'},
+        values: const {'hr': 68, 'hrv': 41, 'spo2': 98, 'value': 32},
+        units: const {'hr': 'bpm', 'hrv': '', 'spo2': '%', 'value': '점'},
+        level: 'LOW',
       ),
       VitalMeasurement(
         id: 'STRESS2-001',
         kind: VitalKind.stressV2,
         measuredAt: base.add(const Duration(minutes: 7)),
-        values: const {'score': 35},
-        units: const {'score': '점'},
+        values: const {
+          'hr': 68,
+          'hrv': 41,
+          'sdnn': 38,
+          'rmssd': 31,
+          'sd1': 22,
+          'sd2': 49,
+          'pnn50': 18,
+          'spo2': 98,
+          'errorcode': 0,
+          'min_hr': 64,
+          'max_hr': 83,
+          'lf_power': 425.2,
+          'hf_power': 318.7,
+          'lf_hf_ratio': 1.33,
+          'sri': 27.5,
+          'fatigue_index': 21,
+          'health_index': 78,
+        },
+        units: const {'hr': 'bpm', 'spo2': '%'},
       ),
       VitalMeasurement(
         id: 'TEMP-001',
         kind: VitalKind.bodyTemperature,
         measuredAt: base.add(const Duration(minutes: 8)),
-        values: const {'temperature': 36.5},
-        units: const {'temperature': '°C'},
+        values: const {'temp': 36.5},
+        units: const {'temp': '°C'},
       ),
     ];
     return MeasurementSnapshot(
@@ -201,7 +219,7 @@ class BackendFitrusRepository implements FitrusRepository {
       selectedMeasurements: selected,
       vitals: ((vitalJson['items'] as List?) ?? const [])
           .cast<Map<String, dynamic>>()
-          .map(_parseVital)
+          .map(parseBackendVitalMeasurement)
           .toList(growable: false),
       syncedAt: DateTime.parse(measurementJson['syncedAt'] as String),
       ruleSet: parseAlgorithmRuleSet(ruleJson),
@@ -226,6 +244,8 @@ class BackendFitrusRepository implements FitrusRepository {
     final femaleFat = fat['female'] as Map<String, dynamic>;
     final maleFat = fat['male'] as Map<String, dynamic>;
     final muscle = correction['muscleMass'] as Map<String, dynamic>;
+    final femaleMuscle = muscle['female'] as Map<String, dynamic>;
+    final maleMuscle = muscle['male'] as Map<String, dynamic>;
     VibrationBaseSetting baseline(BodyPart part) {
       final value = baselinesJson[part.name] as Map<String, dynamic>;
       return VibrationBaseSetting(
@@ -252,6 +272,14 @@ class BackendFitrusRepository implements FitrusRepository {
       maleBodyFat: BodyFatThresholds(
         lowPct: (maleFat['lowThresholdPct'] as num).toDouble(),
         highPct: (maleFat['highThresholdPct'] as num).toDouble(),
+      ),
+      femaleMuscleIndex: MuscleIndexThresholds(
+        lowMaximum: (femaleMuscle['lowMaximum'] as num).toDouble(),
+        mediumMaximum: (femaleMuscle['mediumMaximum'] as num).toDouble(),
+      ),
+      maleMuscleIndex: MuscleIndexThresholds(
+        lowMaximum: (maleMuscle['lowMaximum'] as num).toDouble(),
+        mediumMaximum: (maleMuscle['mediumMaximum'] as num).toDouble(),
       ),
       lowBodyFatCoefficient: (fat['lowCoefficient'] as num).toDouble(),
       normalBodyFatCoefficient: (fat['normalCoefficient'] as num).toDouble(),
@@ -300,20 +328,30 @@ class BackendFitrusRepository implements FitrusRepository {
         ecwRatio: optional('ecwRatio'),
         waistCm: optional('waistCm'),
         visceralFatLevel: optional('visceralFatLevel'),
+        obesityIndex: optional('obesityIndex'),
+        abdomenIndex: optional('abdomenIndex'),
+        dailyCalorie: optional('dailyCalorie'),
+        intracellularWater: optional('intracellularWater'),
+        extracellularWater: optional('extracellularWater'),
+        bodyAge: optional('bodyAge'),
       ),
     );
   }
+}
 
-  static VitalMeasurement _parseVital(Map<String, dynamic> json) =>
-      VitalMeasurement(
-        id: json['id'] as String,
-        kind: VitalKind.values.byName(json['kind'] as String),
-        measuredAt: DateTime.parse(json['measuredAt'] as String),
-        values: (json['values'] as Map<String, dynamic>).map(
-          (key, value) => MapEntry(key, (value as num).toDouble()),
-        ),
-        units: Map<String, String>.from(json['units'] as Map),
-      );
+VitalMeasurement parseBackendVitalMeasurement(Map<String, dynamic> json) {
+  final rawValues = json['values'] as Map<String, dynamic>;
+  return VitalMeasurement(
+    id: json['id'] as String,
+    kind: VitalKind.values.byName(json['kind'] as String),
+    measuredAt: DateTime.parse(json['measuredAt'] as String),
+    values: {
+      for (final entry in rawValues.entries)
+        if (entry.value is num) entry.key: (entry.value as num).toDouble(),
+    },
+    units: Map<String, String>.from(json['units'] as Map),
+    level: rawValues['level']?.toString(),
+  );
 }
 
 BiaMeasurement _body(

@@ -65,7 +65,6 @@ class MockAuthRepository implements AuthRepository {
     required String participantCode,
     required String pin,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
     if (participantCode.trim().toUpperCase() != 'USER-001' || pin != '123456') {
       throw StateError('참여자 코드 또는 PIN을 확인해 주세요.');
     }

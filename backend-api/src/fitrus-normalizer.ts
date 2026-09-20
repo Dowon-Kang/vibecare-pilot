@@ -1,9 +1,9 @@
-import type { FitrusMeasurementKind, FitrusPayload } from './fitrus-client';
+import type { FitrusMeasurementKind, FitrusPayload } from './fitrus-client.js';
 import {
   fitrusResponseSchemas,
   type FitrusBodyFatRequest,
   type FitrusBodyFatResponse,
-} from './fitrus-contract';
+} from './fitrus-contract.js';
 
 export type NormalizedBodyComposition = {
   weightKg: number;
@@ -12,12 +12,18 @@ export type NormalizedBodyComposition = {
   fatMassKg: number;
   skeletalMuscleMassKg: number;
   basalMetabolicRateKcal: number | null;
-  bodyWaterPct: null;
+  bodyWaterPct: number | null;
   proteinKg: number | null;
   mineralKg: number | null;
-  ecwRatio: null;
+  ecwRatio: number | null;
   waistCm: null;
-  visceralFatLevel: null;
+  visceralFatLevel: number | null;
+  obesityIndex: number | null;
+  abdomenIndex: number | null;
+  dailyCalorie: number | null;
+  intracellularWater: number | null;
+  extracellularWater: number | null;
+  bodyAge: number | null;
 };
 
 export type NormalizationResult<T> =
@@ -34,6 +40,11 @@ export function normalizeFitrusBodyComposition(
   if (value.bfp === null || value.bfm === null || value.smm === null) {
     return { success: false, reason: 'UNSUPPORTED_RESPONSE_SHAPE' };
   }
+  const totalBodyWater = value.icw !== null && value.ecw !== null
+    ? value.icw + value.ecw
+    : null;
+  const hasValidWater = totalBodyWater !== null && totalBodyWater > 0 &&
+    value.icw! >= 0 && value.ecw! >= 0 && totalBodyWater <= request.weight;
   const normalized = {
     weightKg: request.weight,
     bmi: request.weight / ((request.height / 100) ** 2),
@@ -41,12 +52,18 @@ export function normalizeFitrusBodyComposition(
     fatMassKg: value.bfm,
     skeletalMuscleMassKg: value.smm,
     basalMetabolicRateKcal: value.bmr,
-    bodyWaterPct: null,
+    bodyWaterPct: hasValidWater ? (totalBodyWater! / request.weight) * 100 : null,
     proteinKg: value.protein,
     mineralKg: value.mineral,
-    ecwRatio: null,
+    ecwRatio: hasValidWater ? value.ecw! / totalBodyWater! : null,
     waistCm: null,
-    visceralFatLevel: null,
+    visceralFatLevel: value.vfl ?? null,
+    obesityIndex: value.obesity ?? null,
+    abdomenIndex: value.abdomen ?? null,
+    dailyCalorie: value.calorie ?? null,
+    intracellularWater: value.icw,
+    extracellularWater: value.ecw,
+    bodyAge: value.bodyAge,
   };
   if (
     normalized.bodyFatPct <= 0 || normalized.bodyFatPct > 100 ||

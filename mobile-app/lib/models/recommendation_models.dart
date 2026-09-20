@@ -32,7 +32,8 @@ class AlgorithmFactors {
     required this.muscleMassCoefficient,
     required this.totalCoefficient,
     required this.calculatedIntensityPct,
-    required this.bodyFatBand,
+    required this.muscleLevel,
+    required this.muscleIndexKgM2,
   });
   final double genderCoefficient,
       ageCoefficient,
@@ -40,7 +41,8 @@ class AlgorithmFactors {
       muscleMassCoefficient,
       totalCoefficient,
       calculatedIntensityPct;
-  final String bodyFatBand;
+  final String muscleLevel;
+  final double muscleIndexKgM2;
 }
 
 class AlgorithmResult {
@@ -67,8 +69,8 @@ class AlgorithmResult {
   bool get canRequestAuthorization => status == RecommendationStatus.ready;
   bool get realDeviceSendAllowed => false;
   Map<String, String> get evidence => const {
-    'bodyFatAnchors': 'PROJECT_HYPOTHESIS',
-    'smmAdjustment': 'HYPOTHESIS_UNVALIDATED',
+    'muscleIndexThresholds': 'JANSSEN_2004_RESEARCH_STRATIFICATION',
+    'musclePresetMapping': 'HYPOTHESIS_UNVALIDATED',
     'averaging': 'ENGINEERING_POLICY',
     'physicalExecution': 'PROHIBITED',
   };

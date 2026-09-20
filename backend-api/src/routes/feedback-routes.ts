@@ -1,9 +1,9 @@
-import { feedbackAdjustment } from '../feedback';
-import { readFeedbackAdjustment } from '../feedback-store';
-import { accessParticipantId, jsonBody } from '../http';
-import { feedbackSchema } from '../request-schemas';
-import { ownedSession } from '../session-store';
-import type { VibeCareApp } from '../app-context';
+import { feedbackAdjustment } from '../feedback.js';
+import { readFeedbackAdjustment } from '../feedback-store.js';
+import { accessParticipantId, jsonBody } from '../http.js';
+import { feedbackSchema } from '../request-schemas.js';
+import { ownedSession } from '../session-store.js';
+import type { VibeCareApp } from '../app-context.js';
 
 export function registerFeedbackRoutes(app: VibeCareApp): void {
   app.get('/v1/feedback-adjustment', async (context) => {
@@ -96,8 +96,12 @@ export function registerFeedbackRoutes(app: VibeCareApp): void {
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(participant_id) DO UPDATE SET
           source_session_id = excluded.source_session_id,
-          intensity_cap = MIN(feedback_adjustments.intensity_cap, excluded.intensity_cap),
-          requires_review = MAX(feedback_adjustments.requires_review, excluded.requires_review),
+          intensity_cap = CASE
+            WHEN feedback_adjustments.intensity_cap < excluded.intensity_cap
+            THEN feedback_adjustments.intensity_cap ELSE excluded.intensity_cap END,
+          requires_review = CASE
+            WHEN feedback_adjustments.requires_review > excluded.requires_review
+            THEN feedback_adjustments.requires_review ELSE excluded.requires_review END,
           reason = excluded.reason,
           policy_version = excluded.policy_version,
           updated_at = excluded.updated_at`,

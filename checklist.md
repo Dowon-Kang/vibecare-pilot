@@ -1,6 +1,6 @@
 # VibeCare 검증 체크리스트
 
-기준일: 2026-09-10
+기준일: 2026-09-19
 상태: [x] 코드와 검증 증거 있음 · [~] 일부 구현 · [ ] 미구현/외부 차단
 
 ## A. 저장소 품질 게이트
@@ -17,15 +17,15 @@
 
 | 검사 | 마지막 결과 | 합격 기준 |
 |---|---:|---:|
-| 백엔드 전체 Vitest | 141/141 통과 (2026-09-15, 역학 연구 시험 포함) | 실패 0 |
-| Flutter 전체 테스트 | 45/45 통과 (2026-09-15 쉬운 설명 포함) | 실패 0 |
+| 백엔드 전체 Vitest | 77/77 통과 (2026-09-19, PostgreSQL adapter·Supabase 비공개 schema 설정·seed 안전정책 포함) | 실패 0 |
+| Flutter 전체 테스트 | 54/54 통과 (2026-09-19 프로필/측정 탭 분리·4회 비교, Mock 인위 지연 제거, 로그인·새로고침 병렬 조회, 현재 적용 설정만 표시, stale 허가 재연결, 320px·글자 2배 포함) | 실패 0 |
 | 백엔드 TypeScript | 통과 | 오류 0 |
-| Flutter format/analyze | 변경 4파일 format 통과 / analyze 재검증 도구 오류로 미완료 | 오류 0 |
-| Flutter debug APK | GitHub Actions 빌드 통과 | 빌드 실패 0 |
+| Flutter format/analyze | V: 영문 경로에서 format·analyze 통과 (2026-09-19) | 오류 0 |
+| Flutter debug APK | V: 영문 경로 로컬 debug APK 빌드 통과 (2026-09-19) | 빌드 실패 0 |
 | API 계약 | OpenAPI·핵심 JSON Schema 유지 | 참조 오류 0 |
 
 수치는 실행한 자동 검사 기준이며 임상 안전성 수치가 아니다.
-2026-09-15에는 백엔드·OpenAPI 파싱/참조를 재검증했다. Flutter 및 APK 행은 과거 결과이며 이번에 재실행하지 않았다.
+2026-09-19에는 골격근량 기준 변경 후 백엔드·Flutter 전체 테스트와 debug APK를 다시 검증했다.
 
 ## C. 데이터와 FITRUS
 
@@ -74,18 +74,32 @@ DSPy 후속:
 - [x] 현재/과거 통증·어지럼·사용보류 실패 폐쇄
 - [x] `UNKNOWN`·ASM/SMM 기준 불일치·방법/단위/프로토콜 혼합 시 층화·인가 차단
 - [x] 공급사가 확인한 ASM/SMM 정의만 앱에서 활성화하고 임의 재해석 차단
-- [x] 성별·연령·체지방 연구용 계수와 6개 부위 기준값 구현(`pilot-0.8.0`)
+- [x] 최신 골격근량/키²의 낮음·중간·높음과 6개 부위 고정 시간·Hz·강도 구현(`pilot-0.9.0`)
 - [x] Flutter·백엔드 Case A~E와 6개 부위 계산 검증
 - [~] 앱·백엔드 핵심 결과 parity; 공개 계약 전체 자동 parity는 미완료
 - [x] 모든 결과 `physicalExecution=PROHIBITED`, 모든 Mock 명령 `SIMULATOR_ONLY`
 - [ ] FITRUS 정의 동등성 검증
 - [ ] 신뢰된 정책·이력 Repository와 안전보류 해제 감사
 - [ ] 근육량→특정 시간·Hz·물리량의 전향 검증
-- [ ] 나이·성별·체지방 계수의 임상 추정·외부 검증(현재 값은 프로젝트 가설)
+- [ ] 근육지수 연구 경계와 확정 고정값의 임상·기기 검증
 
 ## E. Flutter 사용자 흐름
 
-- [x] 측정 입력·네 건 평균·추천 결과 표시
+- [x] GitHub Pages 공개 Web 시연판 배포, HTTPS·HTTP 200·한글 렌더링 확인; 샘플 데이터와 Mock 전용
+- [x] 로그인 직후 프로필 하단에 통증·어지럼·사용 보류·연구용 시뮬레이션 주의사항 표시
+- [x] Mock 로그인에서 낮음·중간·높음 페르소나 선택 및 나이·성별·키 프로필 설문 자동 입력
+- [x] 최신 API 골격근량의 낮음·중간·높음 등급과 DB 직전 기록 대비 변화 표시
+- [x] 부위별 설정 화면에서 인체 부위와 골격근량 등급별 고정 시간·Hz·강도 표시
+- [x] 프로필→골격근량→장치 설정 진행 상태와 비활성 행동의 이유 표시
+- [x] 장치 화면의 중복 고정 설정 카드 제거, 추천 카드로 단일화
+- [x] 측정 입력·네 건 평균은 내부 계산 및 프로필/측정 시트에 유지하고 메인에는 추천 결과만 우선 표시
+- [x] Stepper 없이 인체 부위 선택 → 즉시 설정 결과 → 실행 CTA 맥락 연결
+- [x] 공통 ThemeData·디자인 토큰과 균형 잡힌 곡선형 인체·실제 부위 shape 강조 적용
+- [x] 정규화 인체 좌표와 분리된 visual/touch 영역, 48dp 부위 선택칩 6개 전체 노출
+- [x] 추천값과 중복되는 `설정 계산됨` READY 상태 배지 제거
+- [x] 추천값 3열 비교, 추천 출력 강조, 프로필·측정 정보 분리로 중첩 카드·정보 밀도 축소
+- [x] `내 정보`와 `측정 기록` 탭 분리, 성별·나이·키 우선 표시와 최신 상태 요약
+- [x] 최근 4회 원본을 긴 카드 대신 골격근량·체지방·체중 비교 행으로 표시하고 전체 지표는 별도 상세 화면 제공
 - [x] 강도 확인·수동 하향·자동값 복귀
 - [x] 장치로 보내기→Mock 시작→실행 상태→중지
 - [x] 사용 후 RPE·통증·어지럼·시간/Hz/강도 체감 수집
@@ -103,7 +117,10 @@ DSPy 후속:
 - [x] Mock 세션·ACK·중지·피드백 감사 흐름
 - [x] 실제 장치 모드는 의도적으로 차단
 - [x] Hono Web Fetch API와 공급사 중립 `SqlDatabase` 포트
-- [~] D1은 `SqlDatabase` 포트로 사용 중; AWS DB adapter는 미구현
+- [x] 공급자 중립 PostgreSQL adapter·Node 런타임·통합 schema·합성 seed 구현
+- [x] DB 포트 loopback 제한, 개발 seed 명시 플래그+loopback 제한, schema version 기동 검사
+- [x] Supabase Data API와 분리된 `vibecare` schema·서버 전용 search path·TLS 검증 설정
+- [~] Supabase `vibecare-pilot`(서울) 생성 및 비공개 `vibecare` schema remote migration 완료; `anon`/`authenticated` schema·table 권한 없음 확인, RLS 방어 심층화·성능 index·실제 HTTP 통합은 미완료
 - [ ] ECS/Lambda 선택, HTTPS, CORS, IAM, Secrets Manager/SSM
 - [ ] 운영 migration·백업·롤백·CloudWatch 경보
 - [ ] 부하·장애·보안 시험과 보존기간 적용

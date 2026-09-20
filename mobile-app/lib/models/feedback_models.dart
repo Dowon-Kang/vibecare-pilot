@@ -64,7 +64,7 @@ class FeedbackAdjustment {
     this.requiresReview = false,
     this.reason = '측정값에 따라 자동 계산합니다.',
     this.reasonCode = 'FEEDBACK_MAINTAINED',
-    this.policyVersion = 'feedback-0.2.0',
+    this.policyVersion = 'feedback-0.3.0',
   });
 
   final int? intensityCap;
@@ -99,7 +99,6 @@ class FeedbackAdjustment {
         requiresReview ||
         feedback.pain > 0 ||
         feedback.dizziness ||
-        feedback.earlyStopped ||
         feedback.durationRating == FeedbackRating.strong ||
         feedback.frequencyRating == FeedbackRating.strong;
     return FeedbackAdjustment(
@@ -111,10 +110,13 @@ class FeedbackAdjustment {
           ? 'FEEDBACK_INTENSITY_REDUCED'
           : 'FEEDBACK_MAINTAINED',
       reason: hold
-          ? '증상·중단 또는 시간·주파수 불편 보고가 있어 담당자 확인 전 사용을 보류합니다.'
+          ? '통증·어지럼 또는 시간·주파수 불편 보고가 있어 담당자 확인 전 사용을 보류합니다.'
           : reduce
           ? '지난 사용이 힘들었다는 응답을 반영해 강도를 10% 낮췄습니다.'
+          : feedback.earlyStopped
+          ? '사용자 중지는 기록했으며 불편 보고가 없어 다음 사용을 보류하지 않습니다.'
           : '지난 사용 강도를 유지합니다. 자동으로 높이지 않습니다.',
+      policyVersion: 'feedback-0.3.0',
     );
   }
 

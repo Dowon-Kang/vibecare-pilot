@@ -1,6 +1,6 @@
 import { cors } from 'hono/cors';
 import type { MiddlewareHandler } from 'hono';
-import type { AppContext, AppEnvironment, Bindings } from './app-context';
+import type { AppContext, AppEnvironment, Bindings } from './app-context.js';
 
 const requestIdPattern = /^[A-Za-z0-9._:-]{8,128}$/;
 

@@ -7,6 +7,7 @@ import 'package:vibecare_pilot/controllers/pilot_controller.dart';
 import 'package:vibecare_pilot/models/models.dart';
 import 'package:vibecare_pilot/services/auth_repository.dart';
 import 'package:vibecare_pilot/services/device_gateway.dart';
+import 'package:vibecare_pilot/services/feedback_repository.dart';
 import 'package:vibecare_pilot/services/fitrus_repository.dart';
 
 void main() {
@@ -20,6 +21,45 @@ void main() {
     expect(backend.usesSampleData, isFalse);
     expect(backend.usesBackendApi, isTrue);
     expect(backend.usesDeviceSimulator, isTrue);
+  });
+
+  test('Mock 데이터 소스는 인위적인 대기 타이머를 만들지 않는다', () async {
+    var timerCount = 0;
+    final zone = ZoneSpecification(
+      createTimer: (self, parent, zone, duration, callback) {
+        timerCount += 1;
+        return parent.createTimer(zone, duration, callback);
+      },
+    );
+    late Future<AuthSession> auth;
+    late Future<MeasurementSnapshot> snapshot;
+
+    auth = runZoned(
+      () => MockAuthRepository().login(
+        participantCode: 'USER-001',
+        pin: '123456',
+      ),
+      zoneSpecification: zone,
+    );
+    snapshot = runZoned(
+      () => MockFitrusRepository().loadSnapshot(
+        participant: const ParticipantProfile(
+          id: 'USER-001',
+          code: 'USER-001',
+          age: 72,
+          sex: ParticipantSex.female,
+          heightCm: 150,
+        ),
+        deviceId: 'FITRUS-PLUS',
+      ),
+      zoneSpecification: zone,
+    );
+
+    try {
+      expect(timerCount, 0);
+    } finally {
+      await Future.wait([auth, snapshot]);
+    }
   });
 
   test('로그인 후 입력 변경은 계산을 갱신하고 기존 실행 허가를 취소한다', () async {
@@ -85,6 +125,58 @@ void main() {
     expect(state.error, '로그인 거부');
   });
 
+  test('로그인 후 측정값과 피드백 설정을 동시에 조회한다', () async {
+    final gateway = _FakeDeviceGateway();
+    final snapshots = _GatedSnapshotRepository();
+    final feedback = _GatedFeedbackRepository();
+    final container = _container(
+      gateway: gateway,
+      fitrusRepository: snapshots,
+      feedbackRepository: feedback,
+    );
+    addTearDown(container.dispose);
+
+    final login = container
+        .read(pilotControllerProvider.notifier)
+        .login('TEST-001', '123456');
+    await Future<void>.delayed(Duration.zero);
+
+    try {
+      expect(snapshots.started, isTrue);
+      expect(feedback.started, isTrue);
+    } finally {
+      snapshots.release();
+      feedback.release();
+      await login;
+    }
+  });
+
+  test('새로고침도 측정값과 피드백 설정을 동시에 조회한다', () async {
+    final gateway = _FakeDeviceGateway();
+    final snapshots = _RefreshGatedSnapshotRepository();
+    final feedback = _RefreshGatedFeedbackRepository();
+    final container = _container(
+      gateway: gateway,
+      fitrusRepository: snapshots,
+      feedbackRepository: feedback,
+    );
+    addTearDown(container.dispose);
+
+    final controller = container.read(pilotControllerProvider.notifier);
+    await controller.login('TEST-001', '123456');
+    final refresh = controller.refreshMeasurements();
+    await Future<void>.delayed(Duration.zero);
+
+    try {
+      expect(snapshots.refreshStarted, isTrue);
+      expect(feedback.refreshStarted, isTrue);
+    } finally {
+      snapshots.release();
+      feedback.release();
+      await refresh;
+    }
+  });
+
   test('피드백 조정값은 nullable intensityCap 응답을 허용한다', () {
     final adjustment = FeedbackAdjustment.fromJson({
       'intensityCap': null,
@@ -94,6 +186,45 @@ void main() {
     });
     expect(adjustment.intensityCap, isNull);
     expect(adjustment.requiresReview, isFalse);
+  });
+
+  test('일반 중지는 기록하지만 불편 응답이 없으면 다음 사용을 보류하지 않는다', () {
+    const previous = FeedbackAdjustment();
+    final adjustment = previous.next(
+      const SessionFeedback(
+        rpe: 2,
+        pain: 0,
+        dizziness: false,
+        intensityRating: FeedbackRating.suitable,
+        durationRating: FeedbackRating.suitable,
+        frequencyRating: FeedbackRating.suitable,
+        earlyStopped: true,
+      ),
+      80,
+    );
+
+    expect(adjustment.requiresReview, isFalse);
+    expect(adjustment.intensityCap, 80);
+    expect(adjustment.policyVersion, 'feedback-0.3.0');
+    expect(adjustment.reason, contains('다음 사용을 보류하지 않습니다'));
+  });
+
+  test('강한 주파수 불편은 일반 중지 여부와 관계없이 사용을 보류한다', () {
+    final adjustment = const FeedbackAdjustment().next(
+      const SessionFeedback(
+        rpe: 2,
+        pain: 0,
+        dizziness: false,
+        intensityRating: FeedbackRating.suitable,
+        durationRating: FeedbackRating.suitable,
+        frequencyRating: FeedbackRating.strong,
+        earlyStopped: true,
+      ),
+      80,
+    );
+
+    expect(adjustment.requiresReview, isTrue);
+    expect(adjustment.reasonCode, 'FEEDBACK_HOLD');
   });
 
   test('백그라운드 전환은 미사용 허가를 폐기하고 연결을 해제한다', () async {
@@ -121,6 +252,8 @@ void main() {
 ProviderContainer _container({
   required DeviceGateway gateway,
   AuthRepository authRepository = const _SuccessfulAuthRepository(),
+  FitrusRepository fitrusRepository = const _SnapshotRepository(),
+  FeedbackRepository? feedbackRepository,
 }) => ProviderContainer(
   overrides: [
     appEnvironmentProvider.overrideWithValue(
@@ -131,7 +264,9 @@ ProviderContainer _container({
       ),
     ),
     authRepositoryProvider.overrideWithValue(authRepository),
-    fitrusRepositoryProvider.overrideWithValue(const _SnapshotRepository()),
+    fitrusRepositoryProvider.overrideWithValue(fitrusRepository),
+    if (feedbackRepository != null)
+      feedbackRepositoryProvider.overrideWithValue(feedbackRepository),
     deviceGatewayProvider.overrideWithValue(gateway),
   ],
 );
@@ -201,6 +336,90 @@ class _SnapshotRepository implements FitrusRepository {
       syncedAt: DateTime.utc(2026, 9, 1, 12, 4),
       ruleSet: pilotRuleSet,
     );
+  }
+}
+
+class _GatedSnapshotRepository implements FitrusRepository {
+  final _gate = Completer<void>();
+  bool started = false;
+
+  void release() {
+    if (!_gate.isCompleted) _gate.complete();
+  }
+
+  @override
+  Future<MeasurementSnapshot> loadSnapshot({
+    required ParticipantProfile participant,
+    required String deviceId,
+  }) async {
+    started = true;
+    await _gate.future;
+    return const _SnapshotRepository().loadSnapshot(
+      participant: participant,
+      deviceId: deviceId,
+    );
+  }
+}
+
+class _GatedFeedbackRepository extends FeedbackRepository {
+  final _gate = Completer<void>();
+  bool started = false;
+
+  void release() {
+    if (!_gate.isCompleted) _gate.complete();
+  }
+
+  @override
+  Future<FeedbackAdjustment> load(String participantId) async {
+    started = true;
+    await _gate.future;
+    return super.load(participantId);
+  }
+}
+
+class _RefreshGatedSnapshotRepository implements FitrusRepository {
+  final _gate = Completer<void>();
+  var calls = 0;
+  bool refreshStarted = false;
+
+  void release() {
+    if (!_gate.isCompleted) _gate.complete();
+  }
+
+  @override
+  Future<MeasurementSnapshot> loadSnapshot({
+    required ParticipantProfile participant,
+    required String deviceId,
+  }) async {
+    calls += 1;
+    if (calls > 1) {
+      refreshStarted = true;
+      await _gate.future;
+    }
+    return const _SnapshotRepository().loadSnapshot(
+      participant: participant,
+      deviceId: deviceId,
+    );
+  }
+}
+
+class _RefreshGatedFeedbackRepository extends FeedbackRepository {
+  final _gate = Completer<void>();
+  var calls = 0;
+  bool refreshStarted = false;
+
+  void release() {
+    if (!_gate.isCompleted) _gate.complete();
+  }
+
+  @override
+  Future<FeedbackAdjustment> load(String participantId) async {
+    calls += 1;
+    if (calls > 1) {
+      refreshStarted = true;
+      await _gate.future;
+    }
+    return super.load(participantId);
   }
 }
 

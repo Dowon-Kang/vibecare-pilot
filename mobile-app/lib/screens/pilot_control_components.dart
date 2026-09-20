@@ -95,8 +95,16 @@ class _IntensityControlCard extends ConsumerWidget {
 }
 
 class _PrimaryActionBar extends ConsumerWidget {
-  const _PrimaryActionBar({required this.state});
+  const _PrimaryActionBar({
+    required this.state,
+    required this.step,
+    required this.onProfileContinue,
+    required this.onOpenDeviceSetup,
+  });
   final PilotState state;
+  final _PilotStep step;
+  final VoidCallback onProfileContinue;
+  final VoidCallback onOpenDeviceSetup;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(pilotControllerProvider.notifier);
@@ -112,12 +120,8 @@ class _PrimaryActionBar extends ConsumerWidget {
     final String label;
     final String helper;
 
-    if (state.feedbackSession != null) {
-      action = null;
-      icon = Icons.fact_check_outlined;
-      label = '사용 후 상태를 입력해 주세요';
-      helper = '위의 6개 항목을 저장하면 다음 사용을 준비할 수 있습니다.';
-    } else if (state.isRunning) {
+    Key buttonKey = const ValueKey('send-button');
+    if (state.isRunning) {
       action = state.isBusy ? null : () => controller.stopSession();
       icon = Icons.stop_circle_outlined;
       label = state.isBusy
@@ -135,10 +139,24 @@ class _PrimaryActionBar extends ConsumerWidget {
       helper = environment.usesDeviceSimulator
           ? '설정 준비 완료 · 서버 시뮬레이터만 실행하며 실제 진동은 없습니다.'
           : '장치가 설정을 받았습니다. 시작 전 주변을 확인해 주세요.';
+    } else if (step == _PilotStep.profile) {
+      action = onProfileContinue;
+      icon = Icons.arrow_forward_rounded;
+      label = '프로필 확인 완료';
+      helper = '다음 화면에서 API 골격근량과 판정 근거를 확인합니다.';
+      buttonKey = const ValueKey('profile-continue-button');
+    } else if (step == _PilotStep.measurement) {
+      action = onOpenDeviceSetup;
+      icon = Icons.accessibility_new_rounded;
+      label = '부위별 설정 확인';
+      helper = '골격근량 등급에 맞는 부위별 설정을 확인합니다.';
+      buttonKey = const ValueKey('device-setup-button');
     } else {
       action = canSend ? controller.sendToDevice : null;
       icon = Icons.send_to_mobile_outlined;
-      label = state.isBusy
+      label = !state.safety.isComplete
+          ? '안전 문진을 완료해 주세요'
+          : state.isBusy
           ? '설정 보내는 중…'
           : environment.usesDeviceSimulator
           ? '$simulationLabel 설정 보내기'
@@ -153,8 +171,9 @@ class _PrimaryActionBar extends ConsumerWidget {
     }
 
     return Material(
-      color: const Color(0xFFF9F9FB),
+      color: AppColors.canvas,
       elevation: 0,
+      shape: const Border(top: BorderSide(color: AppColors.hairline)),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -172,13 +191,11 @@ class _PrimaryActionBar extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               FilledButton.icon(
-                key: ValueKey(
-                  state.isRunning
-                      ? 'stop-button'
-                      : state.isTransmitted
-                      ? 'start-button'
-                      : 'send-button',
-                ),
+                key: state.isRunning
+                    ? const ValueKey('stop-button')
+                    : state.isTransmitted
+                    ? const ValueKey('start-button')
+                    : buttonKey,
                 onPressed: action,
                 icon: state.isBusy && !state.isRunning
                     ? const SizedBox.square(
@@ -192,9 +209,9 @@ class _PrimaryActionBar extends ConsumerWidget {
                 label: Text(label),
                 style: FilledButton.styleFrom(
                   backgroundColor: state.isRunning
-                      ? const Color(0xFFB42318)
-                      : const Color(0xFF087F6B),
-                  minimumSize: const Size.fromHeight(52),
+                      ? AppColors.danger
+                      : AppColors.ink,
+                  minimumSize: const Size.fromHeight(56),
                 ),
               ),
             ],
@@ -214,7 +231,7 @@ class _ProfileSettings extends ConsumerWidget {
     final controller = ref.read(pilotControllerProvider.notifier);
     final environment = ref.watch(appEnvironmentProvider);
     return _DetailSection(
-      title: '보정 조건',
+      title: '체지방 분류 조건',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -222,9 +239,9 @@ class _ProfileSettings extends ConsumerWidget {
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF2F2F7),
-              borderRadius: BorderRadius.circular(12),
+            decoration: const BoxDecoration(
+              color: AppColors.canvasSoft,
+              borderRadius: AppRadius.smBorder,
             ),
             child: Row(
               children: [
@@ -313,7 +330,7 @@ class _SafetySettings extends ConsumerWidget {
     final controller = ref.read(pilotControllerProvider.notifier);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -339,7 +356,6 @@ class _SafetySettings extends ConsumerWidget {
               child: LinearProgressIndicator(
                 minHeight: 5,
                 value: state.safety.answeredCount / 3,
-                backgroundColor: const Color(0xFFE5EBE9),
               ),
             ),
             const SizedBox(height: 2),
@@ -379,9 +395,9 @@ class _SafetySettings extends ConsumerWidget {
   ) {
     final choices = Container(
       padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F0F4),
-        borderRadius: BorderRadius.circular(11),
+      decoration: const BoxDecoration(
+        color: AppColors.canvasSoft,
+        borderRadius: AppRadius.fullBorder,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -389,29 +405,26 @@ class _SafetySettings extends ConsumerWidget {
           for (final answer in [true, false])
             Semantics(
               selected: value == answer,
-              child: SizedBox(
-                width: 66,
-                height: 38,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 68, minHeight: 42),
                 child: TextButton(
                   key: ValueKey('safety-$id-${answer ? 'yes' : 'no'}'),
                   onPressed: state.isBusy || state.isRunning
                       ? null
                       : () => onChanged(answer),
                   style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    minimumSize: const Size(68, 42),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     backgroundColor: value == answer
                         ? answer
-                              ? Theme.of(context).colorScheme.errorContainer
-                              : Colors.white
+                              ? AppColors.danger
+                              : AppColors.ink
                         : Colors.transparent,
-                    foregroundColor: value == answer && answer
-                        ? Theme.of(context).colorScheme.onErrorContainer
-                        : value == answer
-                        ? const Color(0xFF087F6B)
-                        : const Color(0xFF6C6C70),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    foregroundColor: value == answer
+                        ? AppColors.canvas
+                        : AppColors.muted,
+                    shape: const StadiumBorder(),
                   ),
                   child: Text(
                     answer ? '예' : '아니요',
@@ -435,7 +448,7 @@ class _SafetySettings extends ConsumerWidget {
             : Row(
                 children: [
                   Expanded(
-                    child: Text(title, style: const TextStyle(fontSize: 16)),
+                    child: Text(title, style: const TextStyle(fontSize: 17)),
                   ),
                   choices,
                 ],

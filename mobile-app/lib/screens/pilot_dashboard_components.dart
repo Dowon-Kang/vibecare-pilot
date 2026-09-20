@@ -5,15 +5,14 @@ class _BrandMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Align(
     alignment: Alignment.centerLeft,
-    child: DecoratedBox(
+    child: Container(
+      width: 56,
+      height: 56,
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF5F2),
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.ink,
+        borderRadius: AppRadius.squircle(56),
       ),
-      child: const Padding(
-        padding: EdgeInsets.all(12),
-        child: Icon(Icons.vibration, size: 30, color: Color(0xFF087F6B)),
-      ),
+      child: const Icon(Icons.vibration, size: 28, color: AppColors.canvas),
     ),
   );
 }
@@ -38,27 +37,83 @@ class _SystemStatusStrip extends StatelessWidget {
     return Semantics(
       container: true,
       label: '데이터 ${isSample ? '샘플' : '동기화됨'}, 장치 $deviceLabel',
-      child: Row(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: const BoxDecoration(
+          color: AppColors.canvasSoft,
+          borderRadius: AppRadius.fullBorder,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _StatusItem(
+                icon: isSample
+                    ? Icons.science_outlined
+                    : Icons.cloud_done_outlined,
+                label: isSample ? '샘플 데이터' : '데이터 수신됨',
+                positive: true,
+              ),
+            ),
+            const SizedBox(height: 20, child: VerticalDivider(width: 17)),
+            Expanded(
+              child: _StatusItem(
+                icon: state.isRunning
+                    ? Icons.vibration
+                    : state.isTransmitted
+                    ? Icons.check_circle_outline
+                    : Icons.portable_wifi_off,
+                label: deviceLabel,
+                positive: state.isRunning || state.isTransmitted,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _JourneyProgress extends StatelessWidget {
+  const _JourneyProgress({required this.current});
+  final _PilotStep current;
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = ['프로필', '골격근량', '장치 설정'];
+    return Semantics(
+      container: true,
+      label: '진행 단계 ${current.index + 1}/3, ${labels[current.index]}',
+      child: Column(
+        key: const ValueKey('journey-progress'),
         children: [
-          Expanded(
-            child: _StatusItem(
-              icon: isSample
-                  ? Icons.science_outlined
-                  : Icons.cloud_done_outlined,
-              label: isSample ? '샘플 데이터' : '데이터 수신됨',
-              positive: true,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+            child: Row(
+              children: [
+                for (var index = 0; index < labels.length; index++)
+                  Expanded(
+                    child: Text(
+                      '${index + 1}  ${labels[index]}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: index == current.index
+                            ? FontWeight.w800
+                            : FontWeight.w500,
+                        color: index == current.index
+                            ? AppColors.ink
+                            : AppColors.muted,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _StatusItem(
-              icon: state.isRunning
-                  ? Icons.vibration
-                  : state.isTransmitted
-                  ? Icons.check_circle_outline
-                  : Icons.portable_wifi_off,
-              label: deviceLabel,
-              positive: state.isRunning || state.isTransmitted,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              minHeight: 4,
+              value: (current.index + 1) / labels.length,
             ),
           ),
         ],
@@ -78,31 +133,19 @@ class _StatusItem extends StatelessWidget {
   final bool positive;
 
   @override
-  Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(minHeight: 38),
-    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-    decoration: BoxDecoration(
-      color: positive ? const Color(0xFFE7F2EF) : const Color(0xFFEDEDF2),
-      borderRadius: BorderRadius.circular(19),
-    ),
-    child: Row(
-      children: [
-        Icon(
-          icon,
-          size: 17,
-          color: positive ? const Color(0xFF087F6B) : const Color(0xFF6C6C70),
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(icon, size: 17, color: positive ? AppColors.ink : AppColors.muted),
+      const SizedBox(width: 7),
+      Flexible(
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
-    ),
+      ),
+    ],
   );
 }
 
@@ -127,7 +170,6 @@ class _RunningCard extends StatelessWidget {
     final seconds = state.remainingSec % 60;
     final command = state.session!.command;
     return Card(
-      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
         child: Column(
@@ -156,8 +198,9 @@ class _RunningCard extends StatelessWidget {
                 '$minutes:${seconds.toString().padLeft(2, '0')}',
                 style: const TextStyle(
                   fontSize: 60,
+                  height: 1.0,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1C1C1E),
+                  color: AppColors.ink,
                 ),
               ),
             ),
@@ -169,9 +212,9 @@ class _RunningCard extends StatelessWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF4E5),
-                borderRadius: BorderRadius.circular(12),
+              decoration: const BoxDecoration(
+                color: AppColors.canvasSoft,
+                borderRadius: AppRadius.smBorder,
               ),
               child: const Row(
                 children: [
@@ -196,7 +239,7 @@ class _PulseDot extends StatelessWidget {
     height: 12,
     decoration: const BoxDecoration(
       shape: BoxShape.circle,
-      color: Color(0xFF159570),
+      color: AppColors.ink,
     ),
   );
 }

@@ -24,6 +24,14 @@ class BodyFatThresholds {
   final double lowPct, highPct;
 }
 
+class MuscleIndexThresholds {
+  const MuscleIndexThresholds({
+    required this.lowMaximum,
+    required this.mediumMaximum,
+  });
+  final double lowMaximum, mediumMaximum;
+}
+
 class AlgorithmRuleSet {
   const AlgorithmRuleSet({
     required this.version,
@@ -37,6 +45,8 @@ class AlgorithmRuleSet {
     required this.ageEightyPlusCoefficient,
     required this.femaleBodyFat,
     required this.maleBodyFat,
+    required this.femaleMuscleIndex,
+    required this.maleMuscleIndex,
     required this.lowBodyFatCoefficient,
     required this.normalBodyFatCoefficient,
     required this.highBodyFatCoefficient,
@@ -58,6 +68,7 @@ class AlgorithmRuleSet {
       ageSeventiesCoefficient,
       ageEightyPlusCoefficient;
   final BodyFatThresholds femaleBodyFat, maleBodyFat;
+  final MuscleIndexThresholds femaleMuscleIndex, maleMuscleIndex;
   final double lowBodyFatCoefficient,
       normalBodyFatCoefficient,
       highBodyFatCoefficient;
@@ -79,14 +90,17 @@ class ParticipantProfile {
   final int age;
   final ParticipantSex sex;
   final double heightCm;
-  ParticipantProfile copyWith({int? age, ParticipantSex? sex}) =>
-      ParticipantProfile(
-        id: id,
-        code: code,
-        age: age ?? this.age,
-        sex: sex ?? this.sex,
-        heightCm: heightCm,
-      );
+  ParticipantProfile copyWith({
+    int? age,
+    ParticipantSex? sex,
+    double? heightCm,
+  }) => ParticipantProfile(
+    id: id,
+    code: code,
+    age: age ?? this.age,
+    sex: sex ?? this.sex,
+    heightCm: heightCm ?? this.heightCm,
+  );
 }
 
 class BiaValues {
@@ -103,6 +117,12 @@ class BiaValues {
     this.ecwRatio,
     this.waistCm,
     this.visceralFatLevel,
+    this.obesityIndex,
+    this.abdomenIndex,
+    this.dailyCalorie,
+    this.intracellularWater,
+    this.extracellularWater,
+    this.bodyAge,
   });
   final double weightKg, bmi, bodyFatPct, fatMassKg, skeletalMuscleMassKg;
   final double? basalMetabolicRateKcal,
@@ -111,7 +131,13 @@ class BiaValues {
       mineralKg,
       ecwRatio,
       waistCm,
-      visceralFatLevel;
+      visceralFatLevel,
+      obesityIndex,
+      abdomenIndex,
+      dailyCalorie,
+      intracellularWater,
+      extracellularWater,
+      bodyAge;
   List<double> get requiredValues => [
     weightKg,
     bmi,
@@ -132,6 +158,12 @@ class BiaValues {
     'ecwRatio': ecwRatio,
     'waistCm': waistCm,
     'visceralFatLevel': visceralFatLevel,
+    'obesityIndex': obesityIndex,
+    'abdomenIndex': abdomenIndex,
+    'dailyCalorie': dailyCalorie,
+    'intracellularWater': intracellularWater,
+    'extracellularWater': extracellularWater,
+    'bodyAge': bodyAge,
   };
 }
 
@@ -169,12 +201,14 @@ class VitalMeasurement {
     required this.measuredAt,
     required this.values,
     required this.units,
+    this.level,
   });
   final String id;
   final VitalKind kind;
   final DateTime measuredAt;
   final Map<String, double> values;
   final Map<String, String> units;
+  final String? level;
 }
 
 class MeasurementSnapshot {

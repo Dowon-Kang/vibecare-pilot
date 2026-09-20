@@ -18,6 +18,40 @@ final pilotControllerProvider = NotifierProvider<PilotController, PilotState>(
   PilotController.new,
 );
 
+enum DemoPersona { low, medium, high }
+
+extension DemoPersonaProfile on DemoPersona {
+  String get label => switch (this) {
+    DemoPersona.low => '낮은 근육량',
+    DemoPersona.medium => '중간 근육량',
+    DemoPersona.high => '높은 근육량',
+  };
+
+  int get age => switch (this) {
+    DemoPersona.low => 72,
+    DemoPersona.medium => 65,
+    DemoPersona.high => 58,
+  };
+
+  ParticipantSex get sex => switch (this) {
+    DemoPersona.low => ParticipantSex.female,
+    DemoPersona.medium => ParticipantSex.male,
+    DemoPersona.high => ParticipantSex.female,
+  };
+
+  double get heightCm => switch (this) {
+    DemoPersona.low => 150,
+    DemoPersona.medium => 170,
+    DemoPersona.high => 160,
+  };
+
+  double get skeletalMuscleMassKg => switch (this) {
+    DemoPersona.low => 12.5,
+    DemoPersona.medium => 27.5,
+    DemoPersona.high => 19.2,
+  };
+}
+
 class PilotController extends Notifier<PilotState> {
   StreamSubscription<DeviceConnectionState>? _deviceSubscription;
   Timer? _countdown;
@@ -88,7 +122,11 @@ class PilotController extends Notifier<PilotState> {
     return const PilotState();
   }
 
-  Future<void> login(String participantCode, String pin) async {
+  Future<void> login(
+    String participantCode,
+    String pin, {
+    DemoPersona? persona,
+  }) async {
     if (state.isBusy) return;
     state = state.copyWith(isBusy: true, error: null);
     try {
@@ -96,18 +134,29 @@ class PilotController extends Notifier<PilotState> {
           .read(authRepositoryProvider)
           .login(participantCode: participantCode, pin: pin);
       await ref.read(sessionStoreProvider).save(session);
-      final snapshot = await ref
+      var profile = session.participant;
+      final snapshotFuture = ref
           .read(fitrusRepositoryProvider)
           .loadSnapshot(
-            participant: session.participant,
+            participant: profile,
             deviceId: _environment.sourceDeviceId,
           );
-      final adjustment = await ref
+      final adjustmentFuture = ref
           .read(feedbackRepositoryProvider)
-          .load(session.participant.id);
+          .load(profile.id);
+      var snapshot = await snapshotFuture;
+      final adjustment = await adjustmentFuture;
+      if (_environment.usesSampleData && persona != null) {
+        profile = profile.copyWith(
+          age: persona.age,
+          sex: persona.sex,
+          heightCm: persona.heightCm,
+        );
+        snapshot = _snapshotForPersona(snapshot, persona);
+      }
       state = _recalculated(
         state,
-        profile: session.participant,
+        profile: profile,
         snapshot: snapshot,
         safety: const SafetyCheck(),
         adjustment: adjustment,
@@ -127,15 +176,17 @@ class PilotController extends Notifier<PilotState> {
     }
     state = state.copyWith(isBusy: true, error: null);
     try {
-      final snapshot = await ref
+      final snapshotFuture = ref
           .read(fitrusRepositoryProvider)
           .loadSnapshot(
             participant: profile,
             deviceId: _environment.sourceDeviceId,
           );
-      final adjustment = await ref
+      final adjustmentFuture = ref
           .read(feedbackRepositoryProvider)
           .load(profile.id);
+      final snapshot = await snapshotFuture;
+      final adjustment = await adjustmentFuture;
       state = _recalculated(
         state,
         profile: profile,
@@ -171,7 +222,7 @@ class PilotController extends Notifier<PilotState> {
     );
   }
 
-  void updateProfile({int? age, ParticipantSex? sex}) {
+  void updateProfile({int? age, ParticipantSex? sex, double? heightCm}) {
     if (!ref.read(appEnvironmentProvider).usesSampleData) return;
     final profile = state.profile;
     final snapshot = state.snapshot;
@@ -181,13 +232,76 @@ class PilotController extends Notifier<PilotState> {
         state.isBusy) {
       return;
     }
-    final next = profile.copyWith(age: age?.clamp(18, 100), sex: sex);
+    final next = profile.copyWith(
+      age: age?.clamp(18, 100),
+      sex: sex,
+      heightCm: heightCm?.clamp(120, 220),
+    );
     state = _recalculated(
       state,
       profile: next,
       snapshot: snapshot,
       safety: state.safety,
       adjustment: state.feedbackAdjustment,
+    );
+  }
+
+  MeasurementSnapshot _snapshotForPersona(
+    MeasurementSnapshot snapshot,
+    DemoPersona persona,
+  ) {
+    final newest = [...snapshot.bodyCompositionHistory]
+      ..sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
+    final muscleById = <String, double>{
+      for (var index = 0; index < newest.length; index++)
+        newest[index].id: persona.skeletalMuscleMassKg - index * .1,
+    };
+    BiaMeasurement convert(BiaMeasurement item) {
+      final muscle = muscleById[item.id] ?? persona.skeletalMuscleMassKg;
+      final values = item.values;
+      return BiaMeasurement(
+        id: item.id,
+        participantId: item.participantId,
+        deviceId: item.deviceId,
+        measuredAt: item.measuredAt,
+        qualityPassed: item.qualityPassed,
+        muscleDefinition: item.muscleDefinition,
+        muscleMeasurementMethod: item.muscleMeasurementMethod,
+        methodEvidenceRef: item.methodEvidenceRef,
+        muscleMassUnit: item.muscleMassUnit,
+        definitionRef: item.definitionRef,
+        acquisitionProtocolRef: item.acquisitionProtocolRef,
+        values: BiaValues(
+          weightKg: values.weightKg,
+          bmi: values.bmi,
+          bodyFatPct: values.bodyFatPct,
+          fatMassKg: values.fatMassKg,
+          skeletalMuscleMassKg: muscle,
+          basalMetabolicRateKcal: values.basalMetabolicRateKcal,
+          bodyWaterPct: values.bodyWaterPct,
+          proteinKg: values.proteinKg,
+          mineralKg: values.mineralKg,
+          ecwRatio: values.ecwRatio,
+          waistCm: values.waistCm,
+          visceralFatLevel: values.visceralFatLevel,
+          obesityIndex: values.obesityIndex,
+          abdomenIndex: values.abdomenIndex,
+          dailyCalorie: values.dailyCalorie,
+          intracellularWater: values.intracellularWater,
+          extracellularWater: values.extracellularWater,
+          bodyAge: values.bodyAge,
+        ),
+      );
+    }
+
+    return MeasurementSnapshot(
+      bodyCompositionHistory: snapshot.bodyCompositionHistory
+          .map(convert)
+          .toList(),
+      selectedMeasurements: snapshot.selectedMeasurements.map(convert).toList(),
+      vitals: snapshot.vitals,
+      syncedAt: snapshot.syncedAt,
+      ruleSet: snapshot.ruleSet,
     );
   }
 
@@ -430,7 +544,13 @@ class PilotController extends Notifier<PilotState> {
   }
 
   static String _message(Object error) {
-    if (error is StateError) return error.message.toString();
+    if (error is StateError) {
+      final message = error.message.toString();
+      if (message.contains('허용되지 않은 장치 상태 전이')) {
+        return '장치 상태를 다시 확인해 주세요.';
+      }
+      return message;
+    }
     if (error is DioException) {
       final data = error.response?.data;
       final code = data is Map ? data['error'] : null;

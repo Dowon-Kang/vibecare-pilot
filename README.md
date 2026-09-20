@@ -1,15 +1,21 @@
 # VibeCare Pilot
 
-FITRUS 체성분 측정 4건의 출처와 품질을 확인하고, 확인된 `ASM`(사지근육량) 또는 `SMM`(전신 골격근량)을 연구 층화한 뒤 **검증되지 않은 시뮬레이터 후보값**을 보여주는 Flutter 연구 프로토타입입니다.
+FITRUS 체성분 측정 이력을 저장·검증하고, 최신 API 골격근량의 근육지수를 낮음·중간·높음으로 분류해 확정된 부위별 시간·Hz·강도를 보여주는 Flutter 연구 프로토타입입니다.
 
-> `pilot-0.8.0`은 의료 처방이 아닙니다. 물리 장치 실행은 모든 경로에서 `PROHIBITED`이며, 현재 허가는 Mock 시뮬레이션에만 발급됩니다.
+> `pilot-0.9.0`은 의료 처방이 아닙니다. 물리 장치 실행은 모든 경로에서 `PROHIBITED`이며, 현재 허가는 Mock 시뮬레이션에만 발급됩니다.
+
+## 공개 시연판
+
+[VibeCare Web 시연판 열기](https://dowon-kang.github.io/vibecare-pilot/)
+
+시연 계정은 `USER-001 / 123456`이다. 공개판은 합성 샘플 데이터와 Mock 시뮬레이터만 사용하며 Supabase 실사용 데이터, FITRUS API 키 또는 실제 진동기에 연결되지 않는다.
 
 ## 핵심 흐름
 
 ```text
 로그인 → 최근 측정 4건의 출처·품질 확인
       → 평균·표본 SD·CV·범위 계산
-      → 확인된 ASM 또는 SMM 연구 층화
+      → 최신 골격근량의 근육지수 등급과 부위별 고정 설정 선택
       → 안전 문진 → Mock 후보 확인 → 시뮬레이션 시작/중지 → 피드백
 ```
 
@@ -42,11 +48,13 @@ Pop-Location
 
 백엔드 연결 앱은 `--dart-define=VIBECARE_API_BASE_URL=https://...`를 사용합니다. FITRUS 키는 앱이나 Git에 넣지 않고 백엔드 환경변수 `FITRUS_API_KEY`로만 주입합니다.
 
+Supabase DB, 백엔드 API와 Android APK의 배포 순서는 [배포 Runbook](docs/deployment.md)을 따릅니다.
+
 ## 구현 경계
 
-- Backend algorithm: `pilot-0.8.0`의 측정 적격성, SMM 4건 평균, 6개 부위 기준값, 성별·나이·체지방 연구용 보정, 안전 차단 구현
+- Backend algorithm: SMM 정의 검증, 최신 골격근량/키² 근육지수 등급, 6개 부위 고정값, 안전 차단 구현
 - Baselines and coefficients: 프로젝트 제공값을 코드·서버 규칙·화면에서 추적하며 모두 `HYPOTHESIS_UNVALIDATED`로 표시
-- Demographics: 나이·성별·체지방을 진동량에 곱하는 보정은 사용하지 않음. 성별은 정의별 연구 경계 선택에만 사용
+- Demographics: 나이·성별·체지방을 진동량에 곱하지 않음. 성별과 키는 근육지수 연구 경계 판정에만 사용
 - FITRUS: 공식 요청·응답 필드에 맞춘 서버 전용 프록시와 체성분·활력 자동 저장 경로가 구현됨. 단위·유효 범위·근육 산출법이 미확인인 값은 추정하지 않고 미지원 응답은 raw로 보존
 - Device: 앱 내부 Mock과 서버 시뮬레이터만 구현. REST/BLE 물리 장치 어댑터는 없음
 - AWS: 인계 문서와 저장소 포트만 있음. 운영 인프라·AWS DB 어댑터는 미구현

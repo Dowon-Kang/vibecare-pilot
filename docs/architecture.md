@@ -61,7 +61,7 @@ sequenceDiagram
 
 FITRUS 프록시의 URL·인증 경계는 준비되어 있지만 공급사 성공 응답 계약과 정규화가 미완료다. 실제 REST/BLE 기기 어댑터도 없다. 두 외부 연동은 현재 흐름이 아니라 후속 작업이다.
 
-`pilot-0.8.0`은 SMM 4건 평균을 입력 근거로 사용하고, 선택한 6개 부위 기준 출력에 성별·나이·체지방 연구용 계수를 곱한다. 계수는 임상 확정값이 아닌 서버 버전 가설이며, 실제 장치 실행은 금지한다.
+`pilot-0.9.0`은 검증된 BIA 이력 중 최신 API 골격근량을 키²로 정규화해 등급화하고, 선택한 6개 부위에 확정 시간·Hz·강도를 추가 보정 없이 적용한다. 실제 장치 실행은 금지한다.
 
 ## 백엔드 경계
 
@@ -75,12 +75,12 @@ flowchart LR
     subgraph Backend[백엔드 API]
         AUTH[PIN 인증·잠금]
         ADAPTER[BIA 정규화 어댑터]
-        ENGINE[pilot-0.8.0 연구용 계산 엔진]
+        ENGINE[pilot-0.9.0 연구용 계산 엔진]
         AUTHORIZE[1회성 Mock 허가]
         SESSION[시뮬레이션 세션·합성 ACK·피드백 API]
     end
 
-    subgraph Storage[SqlDatabase 포트: 현재 D1, AWS adapter 미구현]
+    subgraph Storage[SqlDatabase 포트: D1 또는 Supabase/PostgreSQL adapter]
         RAW[(BIA 원본)]
         RULES[(버전 규칙)]
         AUDIT[(추천·명령 감사로그)]
@@ -115,6 +115,8 @@ stateDiagram-v2
 ```
 
 현재 `DeviceGateway` 구현은 앱 내부 `MockDeviceGateway`와 서버 시뮬레이터를 호출하는 `BackendDeviceGateway`다. 어느 쪽도 물리 장치와 통신하지 않는다. REST/BLE 실장비 구현은 장치 명세·교정표·안전 승인을 확보한 뒤 같은 인터페이스 뒤에 별도 어댑터로 추가한다.
+
+Flutter 화면은 로그인 후 `프로필·주의사항 → 골격근량 결과·직전 기록 비교 → 인체 부위·고정 설정 확인`의 로컬 표시 단계로 이동한다. 표시 단계는 서버 상태를 변경하지 않는다. 마지막 단계에서만 기존 `DeviceGateway.authorize`를 호출한다. 근육지수 등급과 부위별 고정값은 `pilot-0.9.0` 공통 알고리즘 결과를 정본으로 사용한다.
 
 ## 상태 어휘와 책임
 

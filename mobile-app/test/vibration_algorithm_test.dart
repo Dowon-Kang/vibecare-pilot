@@ -4,37 +4,39 @@ import 'package:vibecare_pilot/models/models.dart';
 
 const safety = SafetyCheck.confirmedClear();
 
-List<BiaMeasurement> measurements(double bodyFatPct) => [1, 2, 3, 4]
-    .map(
-      (index) => BiaMeasurement(
-        id: 'M$index',
-        participantId: 'P1',
-        deviceId: 'BIA',
-        measuredAt: DateTime.utc(2026, 9, index),
-        qualityPassed: true,
-        muscleDefinition: MuscleMassBasis.smm,
-        muscleMeasurementMethod: 'BIA',
-        acquisitionProtocolRef: 'TEST',
-        values: BiaValues(
-          weightKg: 60,
-          bmi: 22,
-          bodyFatPct: bodyFatPct,
-          fatMassKg: 60 * bodyFatPct / 100,
-          skeletalMuscleMassKg: 24,
-        ),
-      ),
-    )
-    .toList();
+List<BiaMeasurement> measurements(double bodyFatPct, double muscleKg) =>
+    [1, 2, 3, 4]
+        .map(
+          (index) => BiaMeasurement(
+            id: 'M$index',
+            participantId: 'P1',
+            deviceId: 'BIA',
+            measuredAt: DateTime.utc(2026, 9, index),
+            qualityPassed: true,
+            muscleDefinition: MuscleMassBasis.smm,
+            muscleMeasurementMethod: 'BIA',
+            acquisitionProtocolRef: 'TEST',
+            values: BiaValues(
+              weightKg: 60,
+              bmi: 22,
+              bodyFatPct: bodyFatPct,
+              fatMassKg: 60 * bodyFatPct / 100,
+              skeletalMuscleMassKg: muscleKg,
+            ),
+          ),
+        )
+        .toList();
 
 AlgorithmResult evaluate({
   required int age,
   required ParticipantSex sex,
   required double bodyFat,
+  required double muscleKg,
   BodyPart part = BodyPart.wholeBody,
   AlgorithmRuleSet rules = pilotRuleSet,
 }) => calculateRecommendation(
   profile: ParticipantProfile(id: 'P1', age: age, sex: sex, heightCm: 170),
-  measurements: measurements(bodyFat),
+  measurements: measurements(bodyFat, muscleKg),
   safety: safety,
   bodyPart: part,
   ruleSet: rules,
@@ -42,62 +44,73 @@ AlgorithmResult evaluate({
 );
 
 void main() {
-  test('Case A: male under 60 and normal body fat keeps baseline', () {
-    final result = evaluate(age: 30, sex: ParticipantSex.male, bodyFat: 20);
+  test('Case A: male medium muscle index keeps baseline', () {
+    final result = evaluate(
+      age: 30,
+      sex: ParticipantSex.male,
+      bodyFat: 20,
+      muscleKg: 28,
+    );
     expect(result.recommendation?.baseIntensityPct, 90);
     expect(result.recommendation?.intensityPct, 90);
     expect(result.factors?.totalCoefficient, 1);
   });
 
-  test('Case B: female coefficient only', () {
-    final result = evaluate(age: 30, sex: ParticipantSex.female, bodyFat: 25);
-    expect(result.recommendation?.intensityPct, 86);
-    expect(result.factors?.genderCoefficient, .95);
-  });
-
-  test('Case C: female and age-70 coefficients multiply', () {
-    final result = evaluate(age: 75, sex: ParticipantSex.female, bodyFat: 25);
-    expect(result.recommendation?.intensityPct, 77);
-    expect(result.factors?.totalCoefficient, .855);
-  });
-
-  test('Case D: low body fat adds another five-percent reduction', () {
-    final result = evaluate(age: 75, sex: ParticipantSex.female, bodyFat: 18);
-    expect(result.recommendation?.intensityPct, 73);
-    expect(result.factors?.bodyFatCoefficient, .95);
-    expect(result.factors?.bodyFatBand, 'low');
-  });
-
-  test('Case E: clamp prevents output below configured minimum', () {
-    final rules = AlgorithmRuleSet(
-      version: pilotRuleSet.version,
-      enabled: true,
-      baselines: pilotRuleSet.baselines,
-      femaleCoefficient: .5,
-      maleCoefficient: 1,
-      ageUnder60Coefficient: 1,
-      ageSixtiesCoefficient: .95,
-      ageSeventiesCoefficient: .9,
-      ageEightyPlusCoefficient: .85,
-      femaleBodyFat: pilotRuleSet.femaleBodyFat,
-      maleBodyFat: pilotRuleSet.maleBodyFat,
-      lowBodyFatCoefficient: .95,
-      normalBodyFatCoefficient: 1,
-      highBodyFatCoefficient: .95,
-      muscleMassCoefficient: 1,
-      minimumPct: 70,
-      maximumPct: 99,
-    );
+  test('Case B: female medium muscle index uses the fixed medium preset', () {
     final result = evaluate(
-      age: 85,
+      age: 30,
       sex: ParticipantSex.female,
-      bodyFat: 18,
-      part: BodyPart.calf,
-      rules: rules,
+      bodyFat: 20,
+      muscleKg: 18,
     );
-    expect(result.factors!.calculatedIntensityPct, lessThan(70));
-    expect(result.recommendation?.intensityPct, 70);
+    expect(result.recommendation?.intensityPct, 90);
+    expect(result.recommendation?.durationSec, 1800);
+    expect(result.factors?.genderCoefficient, 1);
   });
+
+  test('Case C: age does not alter the fixed skeletal-muscle preset', () {
+    final result = evaluate(
+      age: 75,
+      sex: ParticipantSex.female,
+      bodyFat: 20,
+      muscleKg: 18,
+    );
+    expect(result.recommendation?.intensityPct, 90);
+    expect(result.factors?.totalCoefficient, 1);
+  });
+
+  test(
+    'Case D: low skeletal muscle index selects the exact low whole-body preset',
+    () {
+      final result = evaluate(
+        age: 75,
+        sex: ParticipantSex.female,
+        bodyFat: 20,
+        muscleKg: 14,
+      );
+      expect(result.recommendation?.durationSec, 1500);
+      expect(result.recommendation?.frequencyHz, 8);
+      expect(result.recommendation?.intensityPct, 80);
+      expect(result.factors?.bodyFatCoefficient, 1);
+      expect(result.factors?.muscleLevel, 'low');
+    },
+  );
+
+  test(
+    'Case E: high skeletal muscle index selects the exact high whole-body preset',
+    () {
+      final result = evaluate(
+        age: 85,
+        sex: ParticipantSex.female,
+        bodyFat: 20,
+        muscleKg: 22,
+      );
+      expect(result.recommendation?.durationSec, 2100);
+      expect(result.recommendation?.frequencyHz, 8);
+      expect(result.recommendation?.intensityPct, 99);
+      expect(result.factors?.muscleLevel, 'high');
+    },
+  );
 
   test('calculates all six body parts from data', () {
     final all = calculateAllRecommendations(
@@ -107,7 +120,7 @@ void main() {
         sex: ParticipantSex.male,
         heightCm: 170,
       ),
-      measurements: measurements(20),
+      measurements: measurements(20, 28),
       safety: safety,
       evaluatedAt: DateTime.utc(2026, 9, 10),
     );

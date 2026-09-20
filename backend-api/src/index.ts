@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
-import type { AppEnvironment } from './app-context';
-import { FitrusApiError, FitrusNetworkError, FitrusTimeoutError } from './fitrus-client';
-import { registerAuthRoutes } from './routes/auth-routes';
-import { registerFeedbackRoutes } from './routes/feedback-routes';
-import { registerMeasurementRoutes } from './routes/measurement-routes';
-import { registerRecommendationRoutes } from './routes/recommendation-routes';
-import { registerSessionRoutes } from './routes/session-routes';
-import { corsMiddleware, readiness, requestId, runtimeMiddleware } from './runtime';
+import type { AppEnvironment } from './app-context.js';
+import { FitrusApiError, FitrusNetworkError, FitrusTimeoutError } from './fitrus-client.js';
+import { registerAuthRoutes } from './routes/auth-routes.js';
+import { registerFeedbackRoutes } from './routes/feedback-routes.js';
+import { registerMeasurementRoutes } from './routes/measurement-routes.js';
+import { registerRecommendationRoutes } from './routes/recommendation-routes.js';
+import { registerSessionRoutes } from './routes/session-routes.js';
+import { corsMiddleware, readiness, requestId, runtimeMiddleware } from './runtime.js';
 
 export function createApp(): Hono<AppEnvironment> {
   const app = new Hono<AppEnvironment>();
@@ -49,7 +49,10 @@ export function createApp(): Hono<AppEnvironment> {
     if (error.message.includes('DEVICE_BUSY')) {
       return context.json({ error: 'DEVICE_BUSY' }, 409);
     }
-    if (error.message.includes('UNIQUE constraint failed: device_sessions')) {
+    if (
+      error.message.includes('UNIQUE constraint failed: device_sessions') ||
+      (typeof error === 'object' && error !== null && 'code' in error && error.code === '23505')
+    ) {
       return context.json({ error: 'SESSION_CONFLICT' }, 409);
     }
     console.error(JSON.stringify({

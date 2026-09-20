@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import '../models/models.dart';
 
-const algorithmVersion = 'pilot-0.8.0';
+const algorithmVersion = 'pilot-0.9.0';
 const requiredMeasurementCount = 4;
 
 const pilotRuleSet = AlgorithmRuleSet(
@@ -40,21 +40,102 @@ const pilotRuleSet = AlgorithmRuleSet(
       intensityPct: 70,
     ),
   },
-  femaleCoefficient: .95,
+  femaleCoefficient: 1,
   maleCoefficient: 1,
   ageUnder60Coefficient: 1,
-  ageSixtiesCoefficient: .95,
-  ageSeventiesCoefficient: .90,
-  ageEightyPlusCoefficient: .85,
+  ageSixtiesCoefficient: 1,
+  ageSeventiesCoefficient: 1,
+  ageEightyPlusCoefficient: 1,
   femaleBodyFat: BodyFatThresholds(lowPct: 20, highPct: 35),
   maleBodyFat: BodyFatThresholds(lowPct: 10, highPct: 28),
-  lowBodyFatCoefficient: .95,
+  femaleMuscleIndex: MuscleIndexThresholds(
+    lowMaximum: 5.75,
+    mediumMaximum: 6.75,
+  ),
+  maleMuscleIndex: MuscleIndexThresholds(lowMaximum: 8.5, mediumMaximum: 10.75),
+  lowBodyFatCoefficient: 1,
   normalBodyFatCoefficient: 1,
-  highBodyFatCoefficient: .95,
+  highBodyFatCoefficient: 1,
   muscleMassCoefficient: 1,
   minimumPct: 20,
   maximumPct: 99,
 );
+
+const _lowMuscleSettings = {
+  BodyPart.wholeBody: VibrationBaseSetting(
+    durationMin: 25,
+    frequencyHz: 8,
+    intensityPct: 80,
+  ),
+  BodyPart.shoulder: VibrationBaseSetting(
+    durationMin: 20,
+    frequencyHz: 15,
+    intensityPct: 75,
+  ),
+  BodyPart.arm: VibrationBaseSetting(
+    durationMin: 15,
+    frequencyHz: 20,
+    intensityPct: 70,
+  ),
+  BodyPart.abdomen: VibrationBaseSetting(
+    durationMin: 10,
+    frequencyHz: 25,
+    intensityPct: 65,
+  ),
+  BodyPart.thigh: VibrationBaseSetting(
+    durationMin: 5,
+    frequencyHz: 35,
+    intensityPct: 60,
+  ),
+  BodyPart.calf: VibrationBaseSetting(
+    durationMin: 5,
+    frequencyHz: 35,
+    intensityPct: 60,
+  ),
+};
+
+const _highMuscleSettings = {
+  BodyPart.wholeBody: VibrationBaseSetting(
+    durationMin: 35,
+    frequencyHz: 8,
+    intensityPct: 99,
+  ),
+  BodyPart.shoulder: VibrationBaseSetting(
+    durationMin: 30,
+    frequencyHz: 15,
+    intensityPct: 90,
+  ),
+  BodyPart.arm: VibrationBaseSetting(
+    durationMin: 25,
+    frequencyHz: 20,
+    intensityPct: 85,
+  ),
+  BodyPart.abdomen: VibrationBaseSetting(
+    durationMin: 20,
+    frequencyHz: 25,
+    intensityPct: 80,
+  ),
+  BodyPart.thigh: VibrationBaseSetting(
+    durationMin: 15,
+    frequencyHz: 35,
+    intensityPct: 75,
+  ),
+  BodyPart.calf: VibrationBaseSetting(
+    durationMin: 15,
+    frequencyHz: 35,
+    intensityPct: 75,
+  ),
+};
+
+VibrationBaseSetting settingForMuscleLevel(
+  String level,
+  BodyPart bodyPart,
+  AlgorithmRuleSet rules,
+) => switch (level) {
+  'low' => _lowMuscleSettings[bodyPart]!,
+  'high' => _highMuscleSettings[bodyPart]!,
+  _ => rules.baselines[bodyPart]!,
+};
 
 double _round(double value, int digits) {
   final scale = math.pow(10, digits).toDouble();
@@ -125,21 +206,24 @@ double calculateAgeCoefficient(int age, AlgorithmRuleSet rules) {
   return rules.ageEightyPlusCoefficient;
 }
 
-({double coefficient, String band}) calculateBodyFatCoefficient(
-  double bodyFatPct,
+({String level, double indexKgM2}) calculateMuscleLevel(
+  double skeletalMuscleMassKg,
+  double heightCm,
   ParticipantSex sex,
   AlgorithmRuleSet rules,
 ) {
-  final range = sex == ParticipantSex.female
-      ? rules.femaleBodyFat
-      : rules.maleBodyFat;
-  if (bodyFatPct < range.lowPct) {
-    return (coefficient: rules.lowBodyFatCoefficient, band: 'low');
+  final thresholds = sex == ParticipantSex.female
+      ? rules.femaleMuscleIndex
+      : rules.maleMuscleIndex;
+  final heightM = heightCm / 100;
+  final index = skeletalMuscleMassKg / (heightM * heightM);
+  if (index <= thresholds.lowMaximum) {
+    return (level: 'low', indexKgM2: _round(index, 2));
   }
-  if (bodyFatPct > range.highPct) {
-    return (coefficient: rules.highBodyFatCoefficient, band: 'high');
+  if (index <= thresholds.mediumMaximum) {
+    return (level: 'medium', indexKgM2: _round(index, 2));
   }
-  return (coefficient: rules.normalBodyFatCoefficient, band: 'normal');
+  return (level: 'high', indexKgM2: _round(index, 2));
 }
 
 AlgorithmResult calculateRecommendation({
@@ -236,6 +320,22 @@ AlgorithmResult calculateRecommendation({
       visceralFatLevel: _optionalMean(
         measurements.map((m) => m.values.visceralFatLevel),
       ),
+      obesityIndex: _optionalMean(
+        measurements.map((m) => m.values.obesityIndex),
+      ),
+      abdomenIndex: _optionalMean(
+        measurements.map((m) => m.values.abdomenIndex),
+      ),
+      dailyCalorie: _optionalMean(
+        measurements.map((m) => m.values.dailyCalorie),
+      ),
+      intracellularWater: _optionalMean(
+        measurements.map((m) => m.values.intracellularWater),
+      ),
+      extracellularWater: _optionalMean(
+        measurements.map((m) => m.values.extracellularWater),
+      ),
+      bodyAge: _optionalMean(measurements.map((m) => m.values.bodyAge)),
     );
   }
   AlgorithmResult rejected(
@@ -262,53 +362,27 @@ AlgorithmResult calculateRecommendation({
     return rejected(RecommendationStatus.review, warnings);
   }
 
-  final base = ruleSet.baselines[bodyPart]!;
-  final gender = calculateGenderCoefficient(profile.sex, ruleSet);
-  final age = calculateAgeCoefficient(profile.age, ruleSet);
-  final fat = calculateBodyFatCoefficient(
-    average.bodyFatPct,
+  final measurementsByNewest = [...measurements]
+    ..sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
+  final muscle = calculateMuscleLevel(
+    measurementsByNewest.first.values.skeletalMuscleMassKg,
+    profile.heightCm,
     profile.sex,
     ruleSet,
   );
-  final muscle = ruleSet.muscleMassCoefficient;
-  final total = gender * age * fat.coefficient * muscle;
-  final calculated = base.intensityPct * total;
-  final finalIntensity = calculated
-      .clamp(
-        ruleSet.minimumPct,
-        math.min(ruleSet.maximumPct, base.intensityPct),
-      )
-      .round();
+  final base = settingForMuscleLevel(muscle.level, bodyPart, ruleSet);
+  final finalIntensity = base.intensityPct.round();
   return AlgorithmResult(
     status: RecommendationStatus.ready,
     average: average,
     warnings: const [],
     adjustments: [
       Adjustment(
-        id: 'gender',
-        label: '성별 계수',
-        factor: gender,
-        reason: profile.sex == ParticipantSex.female
-            ? '여성 프로토타입 가설'
-            : '남성 기준 유지',
-      ),
-      Adjustment(
-        id: 'age',
-        label: '연령 계수',
-        factor: age,
-        reason: '${profile.age}세 구간',
-      ),
-      Adjustment(
-        id: 'body-fat',
-        label: '체지방 계수',
-        factor: fat.coefficient,
-        reason: '${average.bodyFatPct.toStringAsFixed(1)}% · ${fat.band} 구간',
-      ),
-      Adjustment(
         id: 'muscle-mass',
-        label: '근육량 계수',
-        factor: muscle,
-        reason: '향후 검증용 확장 지점 · 현재 중립',
+        label: '골격근량 등급',
+        factor: 1,
+        reason:
+            '${muscle.indexKgM2.toStringAsFixed(2)}kg/m² · ${muscle.level} 등급',
       ),
     ],
     recommendation: Recommendation(
@@ -320,13 +394,14 @@ AlgorithmResult calculateRecommendation({
     algorithmVersion: ruleSet.version,
     bodyPart: bodyPart,
     factors: AlgorithmFactors(
-      genderCoefficient: gender,
-      ageCoefficient: age,
-      bodyFatCoefficient: fat.coefficient,
-      muscleMassCoefficient: muscle,
-      totalCoefficient: _round(total, 4),
-      calculatedIntensityPct: _round(calculated, 2),
-      bodyFatBand: fat.band,
+      genderCoefficient: 1,
+      ageCoefficient: 1,
+      bodyFatCoefficient: 1,
+      muscleMassCoefficient: 1,
+      totalCoefficient: 1,
+      calculatedIntensityPct: base.intensityPct,
+      muscleLevel: muscle.level,
+      muscleIndexKgM2: muscle.indexKgM2,
     ),
     measurementIds: measurements.map((m) => m.id).toList(),
   );

@@ -42,9 +42,28 @@ void main() {
     await gateway.stop(session.id, 'user_stop');
     await gateway.disconnect('background');
   });
+
+  test('mock discards a stale authorization before reconnecting', () async {
+    final gateway = MockDeviceGateway(
+      connectDelay: Duration.zero,
+      ackDelay: Duration.zero,
+    );
+    addTearDown(gateway.dispose);
+
+    await _authorization(gateway);
+    await expectLater(gateway.connect('SIMULATOR'), completes);
+    await expectLater(_authorizeConnected(gateway), completes);
+  });
 }
 
 Future<DeviceAuthorization> _authorization(MockDeviceGateway gateway) async {
+  await gateway.connect('SIMULATOR');
+  return _authorizeConnected(gateway);
+}
+
+Future<DeviceAuthorization> _authorizeConnected(
+  MockDeviceGateway gateway,
+) async {
   const participant = ParticipantProfile(
     id: 'TEST',
     age: 72,
@@ -79,7 +98,6 @@ Future<DeviceAuthorization> _authorization(MockDeviceGateway gateway) async {
     measurements: measurements,
     safety: safety,
   );
-  await gateway.connect('SIMULATOR');
   return gateway.authorize(
     result: result,
     participant: participant,

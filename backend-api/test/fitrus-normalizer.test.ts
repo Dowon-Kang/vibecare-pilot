@@ -9,18 +9,33 @@ const bodyFatRequest = {
 const bodyFatResponse = {
   bfp: 20.4, bfm: 14, bmr: 1542.7, smm: 29.8, icw: 24.1, ecw: 14.7,
   protein: 10.3, mineral: 3.5, bodyAge: 45,
+  obesity: 108.07, abdomen: 80.199, calorie: 2389.215, vfl: 2,
   createdAt: '2026-09-14T05:30:00.000+00:00',
 };
 
 describe('FITRUS provider contract', () => {
+  it('preserves the provider LOW, MID, HIGH stress level', () => {
+    const response = { hr: 68, hrv: 42, spo2: 98, value: 32, level: 'LOW' };
+    expect(normalizeFitrusVital('stress', response)).toEqual({
+      success: true,
+      value: response,
+    });
+  });
+
   it('normalizes the documented bodyfat response without guessed aliases', () => {
     const result = normalizeFitrusBodyComposition(bodyFatRequest, bodyFatResponse);
     expect(result).toMatchObject({ success: true, value: {
       weightKg: 68.6, bodyFatPct: 20.4, fatMassKg: 14,
       skeletalMuscleMassKg: 29.8, basalMetabolicRateKcal: 1542.7,
-      bodyWaterPct: null, ecwRatio: null,
+      obesityIndex: 108.07,
+      abdomenIndex: 80.199, dailyCalorie: 2389.215, visceralFatLevel: 2,
+      intracellularWater: 24.1, extracellularWater: 14.7, bodyAge: 45,
     } });
-    if (result.success) expect(result.value.bmi).toBeCloseTo(23.82, 2);
+    if (result.success) {
+      expect(result.value.bmi).toBeCloseTo(23.82, 2);
+      expect(result.value.bodyWaterPct).toBeCloseTo(56.56, 2);
+      expect(result.value.ecwRatio).toBeCloseTo(0.379, 3);
+    }
   });
 
   it('fails closed for nullable required algorithm values or inconsistent composition', () => {

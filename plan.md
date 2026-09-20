@@ -71,24 +71,24 @@ Flutter mobile-app
 
 ## 4. 구현 단계
 
-### 현재 Build — 앱 재시작 후 진행 세션 복구
+### 현재 Build — Supabase PostgreSQL 저장소 연결
 
-상태: **Not started**
+상태: **Supabase project and private schema provisioned / backend hosting and HTTP integration pending**
 
 이 단계는 외부 FITRUS·실장비·AWS 계약을 추측하지 않고도 현재 체크리스트의 실제 공백을 줄이는 다음 세로 슬라이스다.
 
 | 계약 항목 | 내용 |
 |---|---|
-| 목표 | 앱이 종료·재시작된 뒤 진행 중이던 Mock/서버 시뮬레이션을 조회해 안전한 화면 상태로 복구한다. |
-| 비목표 | 물리 장치 연동, FITRUS 정규화, AWS adapter, 알고리즘·후보값 변경 |
-| 진입 조건 | 현재 세션 상태와 조회 API/저장 경계를 코드·OpenAPI에서 확인하고, 복구 동작의 단일 기준을 합의한다. |
-| 허용 파일 | 승인 뒤 `mobile-app/lib/services/`, `mobile-app/lib/controllers/`, 관련 Flutter 테스트, 필요 시 기존 세션 조회 계약·라우트와 `shared-contracts/openapi.yaml` |
+| 목표 | 기존 `SqlDatabase` 포트에 공급자 중립 PostgreSQL 어댑터를 유지하고 Supabase PostgreSQL에 연결한다. |
+| 비목표 | Flutter의 DB 직접 접근, Supabase Auth/Data API 도입, 물리 장치 연동, 알고리즘 변경 |
+| 선정 | Supabase managed PostgreSQL. 현재 Hono API와 자체 PIN 인증은 유지하고 Session pooler를 서버에서만 사용한다. |
+| 허용 파일 | `backend-api/src/storage/`, Node 진입점, PostgreSQL 스키마·환경 예제, 백엔드 테스트·문서·계획 |
 | 보존 동작 | 확인 전 실행 금지, 중복 시작 차단, `PROHIBITED`/`SIMULATOR_ONLY`, 실패를 성공으로 표시하지 않기 |
-| RED | 재시작 뒤 진행 세션이 있어도 초기 상태로 돌아가는 회귀 테스트가 의도한 이유로 실패해야 한다. |
-| GREEN | 저장·조회된 세션을 한 번 복구하고, 만료·불일치·조회 실패는 실행 가능 상태로 만들지 않는 최소 구현만 한다. |
-| VERIFY | 집중 Flutter 테스트 → `flutter analyze`와 전체 Flutter 테스트 → Mock/서버 시뮬레이터 실제 재시작 흐름. 실환경이 없으면 해당 항목은 `NOT RUN`이다. |
-| 중단 조건 | 조회 계약 부재·모순, 허용 파일 밖 변경 필요, 물리 장치 동작 필요, RED가 다른 이유로 실패 |
-| 완료 증거 | 정상·만료·불일치·오프라인 테스트 결과, 실행한 명령, 실제 재시작 흐름의 상태/로그, 남은 `NOT RUN` 항목 |
+| RED | 어댑터 모듈 부재로 PostgreSQL 포트 회귀 테스트가 실패한다. |
+| GREEN | placeholder 변환, `first/all/run`, 원자적 batch, Node 진입점, PostgreSQL 스키마와 합성 seed를 최소 구현한다. |
+| VERIFY | 어댑터 집중 테스트 → typecheck/전체 백엔드 테스트 → Docker PostgreSQL migration/seed/HTTP 로그인. AWS 실환경은 `NOT RUN`. |
+| 중단 조건 | 기존 SQL 의미 변경, 비밀값 커밋, 실장비 활성화, Docker/AWS 환경 부재 |
+| 완료 증거 | 테스트 명령·결과, `/ready`·로그인·측정 조회 응답, 남은 `NOT RUN` 항목 |
 
 이 계약은 구현 승인이 아니다. 구현 전 관련 코드·계약을 다시 조사하고 RED 결과를 확인한다.
 
@@ -128,19 +128,19 @@ REQ-SIMPLE-01: 기존 계산을 바꾸지 않고 Flutter 계산 근거를 네 �
 
 완료 조건: Mock 화면에서 `SIMULATION_READY/REVIEW/BLOCKED`, 데이터 결정과 이유 코드가 재현된다. 준비 상태에서도 `SIMULATOR_ONLY` 명령만 만들고 물리 장치 명령은 생성하지 않는다.
 
-### Phase 3 — AWS 저장·실행 기반
+### Phase 3 — Supabase 저장·서버 실행 기반
 
 구현 대상:
 
 - 라우트에서 D1 구체 타입을 제거하고 도입한 `SqlDatabase` 포트를 유지
-- `SqlDatabase`의 prepare/bind/first/all/run/batch 계약을 구현하는 AWS DB adapter 작성
-- RDS PostgreSQL 등 확정 DB adapter와 migration 작성
-- 컨테이너 또는 Lambda 진입점, Secrets Manager/SSM, CloudWatch
+- `SqlDatabase`의 prepare/bind/first/all/run/batch 계약을 구현하는 공급자 중립 PostgreSQL adapter 유지
+- Supabase의 비공개 `vibecare` schema와 migration 적용
+- Node 서버 진입점, TLS, 배포 환경 비밀 주입과 관측성 준비
 - 정책·보류해제·추천·세션의 변경 불가 감사 이력
 
-완료 조건: [AWS 인계 기준](deployment/aws/README.md), OpenAPI 계약, 장애·롤백·백업 시험이 모두 통과한다.
+완료 조건: Supabase remote migration·security/performance advisor·HTTP 통합과 OpenAPI 계약, 장애·롤백·백업 시험이 모두 통과한다. AWS 인프라는 별도 담당자가 [AWS 인계 기준](deployment/aws/README.md)에 따라 이어서 적용할 수 있다.
 
-현재 상태: `SqlDatabase` 포트 분리는 완료됐고 D1이 이를 구현한다. RDS PostgreSQL 등 AWS adapter, migration과 운영 인프라는 미구현이다.
+현재 상태: `SqlDatabase` 포트, PostgreSQL adapter, Node 진입점, 통합 migration을 구현했고 서울 리전의 `vibecare-pilot` Supabase 프로젝트에 비공개 schema를 적용했다. 원격 스키마 버전과 활성 규칙을 확인했으며, 백엔드 호스팅·비밀 주입·HTTP 종단간·RLS 방어 심층화·성능 index 검증은 아직 수행하지 않았다. AWS 운영 인프라는 후속 담당 범위다.
 
 ### Phase 4 — 실제 장치 어댑터
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { FitrusMeasurementKind, FitrusPayload } from './fitrus-client';
+import type { FitrusMeasurementKind, FitrusPayload } from './fitrus-client.js';
 
 const finite = z.number().finite();
 const positive = finite.positive();
@@ -31,6 +31,8 @@ export const fitrusResponseSchemas = {
     bfp: finite.nullable(), bfm: finite.nullable(), bmr: finite.nullable(),
     smm: finite.nullable(), icw: finite.nullable(), ecw: finite.nullable(),
     protein: finite.nullable(), mineral: finite.nullable(), bodyAge: z.number().int().nullable(),
+    obesity: finite.nullable().optional(), abdomen: finite.nullable().optional(),
+    calorie: finite.nullable().optional(), vfl: finite.nullable().optional(),
     createdAt: z.iso.datetime({ offset: true }),
   }),
   stressV2: z.object({

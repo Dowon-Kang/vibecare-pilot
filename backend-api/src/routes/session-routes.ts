@@ -1,9 +1,9 @@
-import { readFeedbackAdjustment } from '../feedback-store';
-import { accessParticipantId, jsonBody } from '../http';
-import { eventSchema, sessionSchema, stopSchema } from '../request-schemas';
-import { loadRuleSet } from '../rule-store';
-import { ownedSession } from '../session-store';
-import type { VibeCareApp } from '../app-context';
+import { readFeedbackAdjustment } from '../feedback-store.js';
+import { accessParticipantId, jsonBody } from '../http.js';
+import { eventSchema, sessionSchema, stopSchema } from '../request-schemas.js';
+import { loadRuleSet } from '../rule-store.js';
+import { ownedSession } from '../session-store.js';
+import type { VibeCareApp } from '../app-context.js';
 
 export function registerSessionRoutes(app: VibeCareApp): void {
   app.post('/v1/device-sessions', async (context) => {

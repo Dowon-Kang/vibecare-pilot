@@ -1,7 +1,7 @@
-import { issueToken, verifyPin, verifyToken } from '../auth';
-import { jsonBody } from '../http';
-import { pinSchema, refreshSchema } from '../request-schemas';
-import type { VibeCareApp } from '../app-context';
+import { issueToken, verifyPin, verifyToken } from '../auth.js';
+import { jsonBody } from '../http.js';
+import { pinSchema, refreshSchema } from '../request-schemas.js';
+import type { VibeCareApp } from '../app-context.js';
 
 export function registerAuthRoutes(app: VibeCareApp): void {
   app.post('/v1/auth/pin', async (context) => {

@@ -1,4 +1,4 @@
-import type { CanonicalMeasurement } from './algorithm';
+import type { CanonicalMeasurement } from './algorithm.js';
 
 // This query is shared by display and authorization so both select the same four rows.
 export const latestValidSql = `SELECT * FROM bia_measurements
@@ -24,6 +24,12 @@ export const bodyValues = (row: Record<string, unknown>) => ({
   ecwRatio: row.ecw_ratio == null ? null : Number(row.ecw_ratio),
   waistCm: row.waist_cm == null ? null : Number(row.waist_cm),
   visceralFatLevel: row.visceral_fat_level == null ? null : Number(row.visceral_fat_level),
+  obesityIndex: row.obesity_index == null ? null : Number(row.obesity_index),
+  abdomenIndex: row.abdomen_index == null ? null : Number(row.abdomen_index),
+  dailyCalorie: row.daily_calorie == null ? null : Number(row.daily_calorie),
+  intracellularWater: row.intracellular_water == null ? null : Number(row.intracellular_water),
+  extracellularWater: row.extracellular_water == null ? null : Number(row.extracellular_water),
+  bodyAge: row.body_age == null ? null : Number(row.body_age),
 });
 
 export const canonicalMeasurement = (

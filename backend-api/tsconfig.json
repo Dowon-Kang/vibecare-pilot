@@ -9,5 +9,5 @@
     "allowImportingTsExtensions": true,
     "types": ["@cloudflare/workers-types"]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": ["server.ts", "src/**/*.ts", "test/**/*.ts"]
 }

@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["version", "activeFrom", "enabled", "research", "measurementPolicy", "baselines", "correctionPolicy", "output"],
   "properties": {
-    "version": { "const": "pilot-0.8.0" },
+    "version": { "const": "pilot-0.9.0" },
     "activeFrom": { "type": "string", "format": "date-time" },
     "enabled": { "const": true },
     "research": { "type": "object", "additionalProperties": false, "required": ["mode", "protocolEvidence", "physicalExecution"], "properties": { "mode": { "const": "simulation_only" }, "protocolEvidence": { "const": "HYPOTHESIS_UNVALIDATED" }, "physicalExecution": { "const": "PROHIBITED" } } },
@@ -18,7 +18,7 @@
         "gender": { "type": "object", "additionalProperties": false, "required": ["female", "male"], "properties": { "female": { "$ref": "#/$defs/coefficient" }, "male": { "$ref": "#/$defs/coefficient" } } },
         "age": { "type": "object", "additionalProperties": false, "required": ["under60", "sixties", "seventies", "eightyPlus"], "properties": { "under60": { "$ref": "#/$defs/coefficient" }, "sixties": { "$ref": "#/$defs/coefficient" }, "seventies": { "$ref": "#/$defs/coefficient" }, "eightyPlus": { "$ref": "#/$defs/coefficient" } } },
         "bodyFat": { "type": "object", "additionalProperties": false, "required": ["female", "male", "lowCoefficient", "normalCoefficient", "highCoefficient"], "properties": { "female": { "$ref": "#/$defs/fatThresholds" }, "male": { "$ref": "#/$defs/fatThresholds" }, "lowCoefficient": { "$ref": "#/$defs/coefficient" }, "normalCoefficient": { "$ref": "#/$defs/coefficient" }, "highCoefficient": { "$ref": "#/$defs/coefficient" } } },
-        "muscleMass": { "type": "object", "additionalProperties": false, "required": ["neutralCoefficient"], "properties": { "neutralCoefficient": { "const": 1 } } }
+        "muscleMass": { "type": "object", "additionalProperties": false, "required": ["female", "male", "neutralCoefficient"], "properties": { "female": { "$ref": "#/$defs/muscleIndexThresholds" }, "male": { "$ref": "#/$defs/muscleIndexThresholds" }, "neutralCoefficient": { "const": 1 } } }
       }
     },
     "output": { "type": "object", "additionalProperties": false, "required": ["minimumPct", "maximumPct"], "properties": { "minimumPct": { "type": "number", "minimum": 0, "maximum": 100 }, "maximumPct": { "type": "number", "minimum": 0, "maximum": 100 } } }
@@ -26,6 +26,7 @@
   "$defs": {
     "coefficient": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
     "baseline": { "type": "object", "additionalProperties": false, "required": ["durationMin", "frequencyHz", "intensityPct"], "properties": { "durationMin": { "type": "number", "exclusiveMinimum": 0 }, "frequencyHz": { "type": "integer", "minimum": 1 }, "intensityPct": { "type": "number", "minimum": 0, "maximum": 100 } } },
-    "fatThresholds": { "type": "object", "additionalProperties": false, "required": ["lowThresholdPct", "highThresholdPct"], "properties": { "lowThresholdPct": { "type": "number", "minimum": 0, "maximum": 100 }, "highThresholdPct": { "type": "number", "minimum": 0, "maximum": 100 } } }
+    "fatThresholds": { "type": "object", "additionalProperties": false, "required": ["lowThresholdPct", "highThresholdPct"], "properties": { "lowThresholdPct": { "type": "number", "minimum": 0, "maximum": 100 }, "highThresholdPct": { "type": "number", "minimum": 0, "maximum": 100 } } },
+    "muscleIndexThresholds": { "type": "object", "additionalProperties": false, "required": ["lowMaximum", "mediumMaximum"], "properties": { "lowMaximum": { "type": "number", "exclusiveMinimum": 0 }, "mediumMaximum": { "type": "number", "exclusiveMinimum": 0 } } }
   }
 }

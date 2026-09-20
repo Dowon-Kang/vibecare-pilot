@@ -37,6 +37,10 @@ class BackendDeviceGateway implements DeviceGateway {
 
   @override
   Future<void> connect(String deviceId) async {
+    if (_machine.state == DeviceConnectionState.authorized) {
+      _deviceId = null;
+      _emit(DeviceConnectionState.disconnected);
+    }
     _emit(DeviceConnectionState.connecting);
     try {
       final response = await _dio.get<Map<String, dynamic>>('/ready');

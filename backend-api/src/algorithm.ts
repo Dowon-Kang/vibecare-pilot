@@ -1,4 +1,4 @@
-import { ruleSchema } from './rule-schema';
+import { ruleSchema } from './rule-schema.js';
 
 export type Sex = 'female' | 'male';
 export type BodyPart = 'wholeBody' | 'shoulder' | 'arm' | 'abdomen' | 'thigh' | 'calf';
@@ -10,7 +10,7 @@ export type CanonicalMeasurement = {
 };
 type BaseSetting = { durationMin: number; frequencyHz: number; intensityPct: number };
 export type AlgorithmRuleSet = {
-  version: 'pilot-0.8.0'; activeFrom: string; enabled: true;
+  version: 'pilot-0.9.0'; activeFrom: string; enabled: true;
   research: { mode: 'simulation_only'; protocolEvidence: 'HYPOTHESIS_UNVALIDATED'; physicalExecution: 'PROHIBITED' };
   measurementPolicy: { maximumAgeDays: number; maximumFutureSkewMinutes: number; requiredUnit: 'kg'; requireSameMethod: true; requireSameAcquisitionProtocol: true; policyBasis: 'ENGINEERING_POLICY' };
   baselines: Record<BodyPart, BaseSetting>;
@@ -22,7 +22,11 @@ export type AlgorithmRuleSet = {
       male: { lowThresholdPct: number; highThresholdPct: number };
       lowCoefficient: number; normalCoefficient: number; highCoefficient: number;
     };
-    muscleMass: { neutralCoefficient: 1 };
+    muscleMass: {
+      female: { lowMaximum: number; mediumMaximum: number };
+      male: { lowMaximum: number; mediumMaximum: number };
+      neutralCoefficient: 1;
+    };
   };
   output: { minimumPct: number; maximumPct: number };
 };
@@ -36,7 +40,7 @@ export type AlgorithmInput = {
 };
 
 export const defaultRuleSet: AlgorithmRuleSet = {
-  version: 'pilot-0.8.0', activeFrom: '2026-09-17T00:00:00Z', enabled: true,
+  version: 'pilot-0.9.0', activeFrom: '2026-09-18T00:00:00Z', enabled: true,
   research: { mode: 'simulation_only', protocolEvidence: 'HYPOTHESIS_UNVALIDATED', physicalExecution: 'PROHIBITED' },
   measurementPolicy: { maximumAgeDays: 30, maximumFutureSkewMinutes: 5, requiredUnit: 'kg', requireSameMethod: true, requireSameAcquisitionProtocol: true, policyBasis: 'ENGINEERING_POLICY' },
   baselines: {
@@ -47,18 +51,38 @@ export const defaultRuleSet: AlgorithmRuleSet = {
     thigh: { durationMin: 10, frequencyHz: 35, intensityPct: 70 },
     calf: { durationMin: 10, frequencyHz: 35, intensityPct: 70 },
   },
-  // Every coefficient below is a configurable prototype hypothesis, not a clinical safety limit.
   correctionPolicy: {
-    gender: { female: 0.95, male: 1 },
-    age: { under60: 1, sixties: 0.95, seventies: 0.90, eightyPlus: 0.85 },
+    gender: { female: 1, male: 1 },
+    age: { under60: 1, sixties: 1, seventies: 1, eightyPlus: 1 },
     bodyFat: {
       female: { lowThresholdPct: 20, highThresholdPct: 35 },
       male: { lowThresholdPct: 10, highThresholdPct: 28 },
-      lowCoefficient: 0.95, normalCoefficient: 1, highCoefficient: 0.95,
+      lowCoefficient: 1, normalCoefficient: 1, highCoefficient: 1,
     },
-    muscleMass: { neutralCoefficient: 1 },
+    muscleMass: {
+      female: { lowMaximum: 5.75, mediumMaximum: 6.75 },
+      male: { lowMaximum: 8.5, mediumMaximum: 10.75 },
+      neutralCoefficient: 1,
+    },
   },
   output: { minimumPct: 20, maximumPct: 99 },
+};
+
+const lowMuscleSettings: Record<BodyPart, BaseSetting> = {
+  wholeBody: { durationMin: 25, frequencyHz: 8, intensityPct: 80 },
+  shoulder: { durationMin: 20, frequencyHz: 15, intensityPct: 75 },
+  arm: { durationMin: 15, frequencyHz: 20, intensityPct: 70 },
+  abdomen: { durationMin: 10, frequencyHz: 25, intensityPct: 65 },
+  thigh: { durationMin: 5, frequencyHz: 35, intensityPct: 60 },
+  calf: { durationMin: 5, frequencyHz: 35, intensityPct: 60 },
+};
+const highMuscleSettings: Record<BodyPart, BaseSetting> = {
+  wholeBody: { durationMin: 35, frequencyHz: 8, intensityPct: 99 },
+  shoulder: { durationMin: 30, frequencyHz: 15, intensityPct: 90 },
+  arm: { durationMin: 25, frequencyHz: 20, intensityPct: 85 },
+  abdomen: { durationMin: 20, frequencyHz: 25, intensityPct: 80 },
+  thigh: { durationMin: 15, frequencyHz: 35, intensityPct: 75 },
+  calf: { durationMin: 15, frequencyHz: 35, intensityPct: 75 },
 };
 
 export type RecommendationResult = {
@@ -70,7 +94,7 @@ export type RecommendationResult = {
   recommendation: null | { durationSec: number; frequencyHz: number; intensityPct: number; baseIntensityPct: number; purpose: 'SIMULATION_CANDIDATE'; evidence: 'HYPOTHESIS_UNVALIDATED' };
   factors: null | {
     genderCoefficient: number; ageCoefficient: number; bodyFatCoefficient: number; muscleMassCoefficient: number;
-    totalCoefficient: number; calculatedIntensityPct: number; bodyFatBand: 'low' | 'normal' | 'high';
+    totalCoefficient: number; calculatedIntensityPct: number; muscleLevel: 'low' | 'medium' | 'high'; muscleIndexKgM2: number;
   };
 };
 
@@ -95,6 +119,15 @@ export function bodyFatCoefficient(bodyFatPct: number, sex: Sex, rules: Algorith
   if (bodyFatPct < range.lowThresholdPct) return { coefficient: rules.correctionPolicy.bodyFat.lowCoefficient, band: 'low' };
   if (bodyFatPct > range.highThresholdPct) return { coefficient: rules.correctionPolicy.bodyFat.highCoefficient, band: 'high' };
   return { coefficient: rules.correctionPolicy.bodyFat.normalCoefficient, band: 'normal' };
+}
+
+export function skeletalMuscleLevel(skeletalMuscleMassKg: number, heightCm: number, sex: Sex, rules: AlgorithmRuleSet): { level: 'low' | 'medium' | 'high'; indexKgM2: number } {
+  const heightM = heightCm / 100;
+  const indexKgM2 = round(skeletalMuscleMassKg / (heightM * heightM));
+  const thresholds = rules.correctionPolicy.muscleMass[sex];
+  if (indexKgM2 <= thresholds.lowMaximum) return { level: 'low', indexKgM2 };
+  if (indexKgM2 <= thresholds.mediumMaximum) return { level: 'medium', indexKgM2 };
+  return { level: 'high', indexKgM2 };
 }
 
 function rejected(bodyPart: BodyPart, ruleSet: AlgorithmRuleSet, status: 'REVIEW' | 'BLOCKED', warnings: string[], average: RecommendationResult['average'] = null): RecommendationResult {
@@ -138,19 +171,15 @@ export function calculateRecommendation(input: AlgorithmInput): RecommendationRe
   if (safetyWarnings.length) return rejected(bodyPart, ruleSet, 'BLOCKED', [...warnings, ...safetyWarnings], average);
   if (warnings.length || !average) return rejected(bodyPart, ruleSet, 'REVIEW', warnings, average);
 
-  const base = ruleSet.baselines[bodyPart];
-  const gender = genderCoefficient(profile.sex, ruleSet);
-  const age = ageCoefficient(profile.age, ruleSet);
-  const bodyFat = bodyFatCoefficient(average.bodyFatPct, profile.sex, ruleSet);
-  const muscle = ruleSet.correctionPolicy.muscleMass.neutralCoefficient;
-  const total = gender * age * bodyFat.coefficient * muscle;
-  const calculated = base.intensityPct * total;
-  const intensity = Math.round(clamp(calculated, ruleSet.output.minimumPct, Math.min(ruleSet.output.maximumPct, base.intensityPct)));
+  const latest = [...measurements].sort((a, b) => Date.parse(b.measuredAt) - Date.parse(a.measuredAt))[0];
+  const muscle = skeletalMuscleLevel(latest.skeletalMuscleMassKg, profile.heightCm, profile.sex, ruleSet);
+  const base = muscle.level === 'low' ? lowMuscleSettings[bodyPart] : muscle.level === 'high' ? highMuscleSettings[bodyPart] : ruleSet.baselines[bodyPart];
+  const intensity = base.intensityPct;
   return {
     status: 'READY', dataDecision: 'ACCEPTED', executionStatus: 'SIMULATION_READY', simulationEligibility: 'ELIGIBLE', physicalExecution: 'PROHIBITED', realDeviceSendAllowed: false,
     reasonCodes: ['SIMULATION_ONLY', 'HYPOTHESIS_UNVALIDATED', 'PHYSICAL_EXECUTION_PROHIBITED'], warnings: [], algorithmVersion: ruleSet.version, bodyPart, muscleMassBasis: 'SMM', average,
     recommendation: { durationSec: base.durationMin * 60, frequencyHz: base.frequencyHz, intensityPct: intensity, baseIntensityPct: base.intensityPct, purpose: 'SIMULATION_CANDIDATE', evidence: 'HYPOTHESIS_UNVALIDATED' },
-    factors: { genderCoefficient: gender, ageCoefficient: age, bodyFatCoefficient: bodyFat.coefficient, muscleMassCoefficient: muscle, totalCoefficient: round(total, 4), calculatedIntensityPct: round(calculated, 2), bodyFatBand: bodyFat.band },
+    factors: { genderCoefficient: 1, ageCoefficient: 1, bodyFatCoefficient: 1, muscleMassCoefficient: 1, totalCoefficient: 1, calculatedIntensityPct: intensity, muscleLevel: muscle.level, muscleIndexKgM2: muscle.indexKgM2 },
   };
 }
 

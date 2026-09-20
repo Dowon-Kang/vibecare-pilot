@@ -1,5 +1,5 @@
-import { verifyToken } from './auth';
-import type { AppContext } from './app-context';
+import { verifyToken } from './auth.js';
+import type { AppContext } from './app-context.js';
 
 export const jsonBody = async (context: AppContext): Promise<unknown> =>
   context.req.json().catch(() => null);

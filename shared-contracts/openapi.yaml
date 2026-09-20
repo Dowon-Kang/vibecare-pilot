@@ -158,7 +158,7 @@ paths:
         '200': { description: Display-only vital history }
   /v1/recommendations/authorize:
     post:
-      description: pilot-0.8.0 accepts four provenance-matched SMM measurements and a body part. It applies configurable prototype gender, age, and body-fat coefficients to the selected part baseline. Physical execution is always PROHIBITED.
+      description: pilot-0.9.0 accepts four provenance-matched SMM measurements and uses the latest height-normalized skeletal-muscle level with the selected part's fixed time, frequency, and intensity. Physical execution is always PROHIBITED.
       requestBody:
         required: true
         content:
@@ -454,7 +454,7 @@ components:
         simulationEligibility: { type: string, enum: [ELIGIBLE, INELIGIBLE] }
         physicalExecution: { const: PROHIBITED }
         realDeviceSendAllowed: { const: false }
-        algorithmVersion: { const: pilot-0.8.0 }
+        algorithmVersion: { const: pilot-0.9.0 }
         bodyPart: { type: string, enum: [wholeBody, shoulder, arm, abdomen, thigh, calf] }
         muscleMassBasis: { const: SMM }
         reasonCodes: { type: array, items: { type: string } }
@@ -486,7 +486,7 @@ components:
           oneOf:
             - type: 'null'
             - type: object
-              required: [genderCoefficient, ageCoefficient, bodyFatCoefficient, muscleMassCoefficient, totalCoefficient, calculatedIntensityPct, bodyFatBand]
+              required: [genderCoefficient, ageCoefficient, bodyFatCoefficient, muscleMassCoefficient, totalCoefficient, calculatedIntensityPct, muscleLevel, muscleIndexKgM2]
               properties:
                 genderCoefficient: { type: number, exclusiveMinimum: 0, maximum: 1 }
                 ageCoefficient: { type: number, exclusiveMinimum: 0, maximum: 1 }
@@ -494,7 +494,8 @@ components:
                 muscleMassCoefficient: { const: 1 }
                 totalCoefficient: { type: number, exclusiveMinimum: 0, maximum: 1 }
                 calculatedIntensityPct: { type: number, minimum: 0, maximum: 100 }
-                bodyFatBand: { type: string, enum: [low, normal, high] }
+                muscleLevel: { type: string, enum: [low, medium, high] }
+                muscleIndexKgM2: { type: number, exclusiveMinimum: 0 }
     SafetyCheck:
       description: All three answers must be explicitly provided; null or omitted is not false. Any true answer blocks execution.
       type: object

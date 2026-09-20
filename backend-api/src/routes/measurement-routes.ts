@@ -1,11 +1,11 @@
-import { FitrusClient, type FitrusMeasurementKind } from '../fitrus-client';
-import { parseFitrusRequest, type FitrusBodyFatRequest } from '../fitrus-contract';
-import { normalizeFitrusBodyComposition, normalizeFitrusVital } from '../fitrus-normalizer';
-import { accessParticipantId, jsonBody } from '../http';
-import { bodyValues, latestValidSql } from '../measurement-store';
-import { fitrusKindSchema, fitrusProxySchema } from '../request-schemas';
-import type { VibeCareApp } from '../app-context';
-import { requestId } from '../runtime';
+import { FitrusClient, type FitrusMeasurementKind } from '../fitrus-client.js';
+import { parseFitrusRequest, type FitrusBodyFatRequest } from '../fitrus-contract.js';
+import { normalizeFitrusBodyComposition, normalizeFitrusVital } from '../fitrus-normalizer.js';
+import { accessParticipantId, jsonBody } from '../http.js';
+import { bodyValues, latestValidSql } from '../measurement-store.js';
+import { fitrusKindSchema, fitrusProxySchema } from '../request-schemas.js';
+import type { VibeCareApp } from '../app-context.js';
+import { requestId } from '../runtime.js';
 
 export function registerMeasurementRoutes(app: VibeCareApp): void {
   app.post('/v1/fitrus/measurements/:kind', async (context) => {
@@ -93,8 +93,9 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
            basal_metabolic_rate_kcal, body_water_pct, protein_kg, mineral_kg, ecw_ratio,
            waist_cm, visceral_fat_level, muscle_definition, muscle_definition_ref,
            muscle_measurement_method, muscle_method_evidence_ref, muscle_mass_unit,
-           acquisition_protocol)
-         VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           acquisition_protocol, obesity_index, abdomen_index, daily_calorie,
+           intracellular_water, extracellular_water, body_age)
+         VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(
         rawId,
         participantId,
@@ -119,6 +120,12 @@ export function registerMeasurementRoutes(app: VibeCareApp): void {
         provenance.methodEvidenceRef,
         provenance.muscleMassUnit,
         provenance.acquisitionProtocol,
+        value.obesityIndex,
+        value.abdomenIndex,
+        value.dailyCalorie,
+        value.intracellularWater,
+        value.extracellularWater,
+        value.bodyAge,
       ).run();
       return context.json({
         requestId: providerRequestId,

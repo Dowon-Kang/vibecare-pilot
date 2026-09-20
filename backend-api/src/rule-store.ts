@@ -1,6 +1,6 @@
-import type { AlgorithmRuleSet } from './algorithm';
-import type { AppContext } from './app-context';
-import { ruleSchema } from './rule-schema';
+import type { AlgorithmRuleSet } from './algorithm.js';
+import type { AppContext } from './app-context.js';
+import { ruleSchema } from './rule-schema.js';
 
 export async function loadRuleSet(context: AppContext): Promise<AlgorithmRuleSet | null> {
   const row = await context.env.DB.prepare(

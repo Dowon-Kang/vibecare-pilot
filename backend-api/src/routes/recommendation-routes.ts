@@ -1,10 +1,10 @@
-import { applyRequestedIntensity, calculateRecommendation } from '../algorithm';
-import { readFeedbackAdjustment } from '../feedback-store';
-import { accessParticipantId, jsonBody } from '../http';
-import { canonicalMeasurement, latestValidSql } from '../measurement-store';
-import { authorizeSchema } from '../request-schemas';
-import { loadRuleSet } from '../rule-store';
-import type { VibeCareApp } from '../app-context';
+import { applyRequestedIntensity, calculateRecommendation } from '../algorithm.js';
+import { readFeedbackAdjustment } from '../feedback-store.js';
+import { accessParticipantId, jsonBody } from '../http.js';
+import { canonicalMeasurement, latestValidSql } from '../measurement-store.js';
+import { authorizeSchema } from '../request-schemas.js';
+import { loadRuleSet } from '../rule-store.js';
+import type { VibeCareApp } from '../app-context.js';
 
 export function registerRecommendationRoutes(app: VibeCareApp): void {
   app.get('/v1/algorithm-rules/current', async (context) => {
