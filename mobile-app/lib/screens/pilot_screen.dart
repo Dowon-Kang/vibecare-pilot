@@ -20,12 +20,6 @@ part 'pilot_onboarding_components.dart';
 
 enum _PilotStep { profile, measurement, device }
 
-Color _personaColor(DemoPersona persona) => switch (persona) {
-  DemoPersona.low => AppColors.levelLow,
-  DemoPersona.medium => AppColors.levelNormal,
-  DemoPersona.high => AppColors.levelHigh,
-};
-
 class PilotScreen extends ConsumerStatefulWidget {
   const PilotScreen({super.key});
 
@@ -114,14 +108,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                       for (final persona in DemoPersona.values)
                         ButtonSegment(
                           value: persona,
-                          label: Text(
-                            persona.label,
-                            style: TextStyle(
-                              color: _persona == persona
-                                  ? AppColors.canvas
-                                  : _personaColor(persona),
-                            ),
-                          ),
+                          label: Text(persona.label),
                         ),
                     ],
                     selected: {_persona},
