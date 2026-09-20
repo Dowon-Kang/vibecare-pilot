@@ -5,14 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../controllers/pilot_controller.dart';
 import '../algorithm/calculation_summary.dart';
+import '../algorithm/muscle_research_assessment.dart';
 import '../models/models.dart';
 import '../services/device_gateway.dart';
+import '../theme/app_theme.dart';
 import 'overview_card.dart';
 
 part 'pilot_control_components.dart';
 part 'pilot_dashboard_components.dart';
 part 'pilot_detail_components.dart';
 part 'pilot_feedback_components.dart';
+part 'pilot_onboarding_components.dart';
+
+enum _PilotStep { profile, measurement, device }
 
 class PilotScreen extends ConsumerStatefulWidget {
   const PilotScreen({super.key});
@@ -25,6 +30,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
     with WidgetsBindingObserver {
   late final TextEditingController _participantCode;
   late final TextEditingController _pin;
+  _PilotStep _step = _PilotStep.profile;
 
   @override
   void initState() {
@@ -139,9 +145,14 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
     ),
   );
 
-  Future<void> _doLogin() => ref
-      .read(pilotControllerProvider.notifier)
-      .login(_participantCode.text, _pin.text);
+  Future<void> _doLogin() async {
+    await ref
+        .read(pilotControllerProvider.notifier)
+        .login(_participantCode.text, _pin.text);
+    if (mounted && ref.read(pilotControllerProvider).isLoggedIn) {
+      setState(() => _step = _PilotStep.profile);
+    }
+  }
 
   Widget _dashboard(PilotState state) {
     final snapshot = state.snapshot!;
@@ -161,6 +172,12 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
           ],
         ),
         actions: [
+          IconButton(
+            key: const ValueKey('profile-data-button'),
+            tooltip: '프로필 및 측정 정보',
+            onPressed: () => _showMeasurementDetails(snapshot),
+            icon: const Icon(Icons.person_outline),
+          ),
           IconButton(
             tooltip: '측정값 새로고침',
             onPressed: state.isBusy || state.isRunning
@@ -196,26 +213,92 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                 _RunningCard(state: state)
               else if (state.feedbackSession != null)
                 _FeedbackCard(state: state)
-              else
+              else if (_step == _PilotStep.profile)
+                _FirstLoginProfileCard(profile: state.profile!)
+              else if (_step == _PilotStep.measurement)
+                _BodyFatMeasurementCard(
+                  profile: state.profile!,
+                  snapshot: snapshot,
+                  onDetails: () => _showMeasurementDetails(snapshot),
+                )
+              else ...[
                 OverviewCard(
                   state: state,
-                  environment: environment,
-                  onDetails: () => _showMeasurementDetails(snapshot),
                   onSettings: _showSettings,
                   onCommand: _showCalculationEvidence,
                   onBodyPartChanged: ref
                       .read(pilotControllerProvider.notifier)
                       .selectBodyPart,
                 ),
-              if (state.session == null && state.feedbackSession == null) ...[
+              ],
+              if (state.session == null &&
+                  state.feedbackSession == null &&
+                  _step == _PilotStep.device) ...[
                 const SizedBox(height: 8),
-                _SafetySettings(state: state),
+                _SafetySettings(state: state, onTap: _showSafetyCheck),
               ],
             ],
           ),
         ),
       ),
-      bottomNavigationBar: _PrimaryActionBar(state: state),
+      bottomNavigationBar: _PrimaryActionBar(
+        state: state,
+        step: _step,
+        onProfileContinue: () => setState(() => _step = _PilotStep.measurement),
+        onOpenDeviceSetup: () => setState(() => _step = _PilotStep.device),
+      ),
+    );
+  }
+
+  Future<void> _showSafetyCheck() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => Consumer(
+        builder: (context, ref, _) {
+          final state = ref.watch(pilotControllerProvider);
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              0,
+              20,
+              20 + MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '사용 전 상태 확인',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '오늘 몸 상태를 확인해야 설정을 보낼 수 있습니다.',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 16),
+                _SafetyQuestionnaire(state: state),
+                const SizedBox(height: 18),
+                FilledButton(
+                  key: const ValueKey('safety-done-button'),
+                  onPressed: state.safety.isComplete
+                      ? () => Navigator.of(context).pop()
+                      : null,
+                  child: Text(
+                    state.safety.isComplete
+                        ? state.safety.hasSymptoms
+                              ? '확인하고 닫기'
+                              : '확인 완료'
+                        : '${3 - state.safety.answeredCount}문항 남음',
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -235,15 +318,24 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
             final current = ref.watch(pilotControllerProvider);
             final currentSnapshot = current.snapshot ?? snapshot;
             final average = current.result?.average;
+            final profile = current.profile!;
             return ListView(
               controller: scrollController,
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
               children: [
                 Text(
-                  '측정값 상세',
+                  '프로필 및 측정 정보',
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 4),
+                Text(
+                  profile.code,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Text(
+                  '${profile.age}세 · ${profile.sex == ParticipantSex.female ? '여성' : '남성'}',
+                ),
+                const SizedBox(height: 12),
                 Text(
                   '${ref.read(appEnvironmentProvider).usesSampleData ? '샘플 데이터' : '서버 저장 데이터'} · ${_dateTime(currentSnapshot.syncedAt)}',
                 ),
@@ -301,7 +393,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Text('계산 근거', style: Theme.of(context).textTheme.titleLarge),
+              Text('설정 근거', style: Theme.of(context).textTheme.titleLarge),
               for (final step in calculationSummary(
                 result: result,
                 profile: state.profile!,
@@ -322,15 +414,13 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                   ),
                 ),
               const Text(
-                '부위별 기준 출력에 성별·연령·체지방·근육량 계수를 곱합니다. 시간과 Hz는 현재 기준값을 유지합니다.',
+                '최신 API 체지방률 등급과 선택 부위에 맞는 교수님 확정 시간·Hz·강도를 그대로 적용합니다.',
               ),
               const Divider(height: 24),
               ExpansionTile(
                 title: const Text('자세한 연구·검토 정보'),
                 children: [
-                  const Text(
-                    '연구용 시뮬레이션 전용 · 진동 후보와 근육 등급의 연결은 아직 검증되지 않았으며 실제 장치 출력은 금지됩니다.',
-                  ),
+                  const Text('연구용 시뮬레이션 전용 · 체지방 등급별 고정 매핑이며 실제 장치 출력은 금지됩니다.'),
                   if (result.factors != null)
                     Text(
                       '성별 ×${result.factors!.genderCoefficient.toStringAsFixed(2)} · '
@@ -352,8 +442,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '기준 출력 ${result.recommendation?.baseIntensityPct ?? '—'}% → '
-                          '보정 출력 ${result.recommendation?.intensityPct ?? '—'}% · '
+                          '고정 강도 ${result.recommendation?.intensityPct ?? '—'}% · '
                           '${result.recommendation?.frequencyHz ?? '—'}Hz · '
                           '${result.recommendation == null ? '—' : '${result.recommendation!.durationSec ~/ 60}분'}',
                           style: const TextStyle(

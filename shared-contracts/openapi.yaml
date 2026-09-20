@@ -316,7 +316,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [sessionId, rpe, pain, dizziness]
+              required: [sessionId, pain, dizziness]
               properties:
                 sessionId: { type: string }
                 rpe: { type: integer, minimum: 0, maximum: 10 }

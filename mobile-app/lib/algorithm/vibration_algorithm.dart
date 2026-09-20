@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import '../models/models.dart';
 
-const algorithmVersion = 'pilot-0.8.0';
+const algorithmVersion = 'pilot-0.9.0';
 const requiredMeasurementCount = 4;
 
 const pilotRuleSet = AlgorithmRuleSet(
@@ -40,21 +40,49 @@ const pilotRuleSet = AlgorithmRuleSet(
       intensityPct: 70,
     ),
   },
-  femaleCoefficient: .95,
+  femaleCoefficient: 1,
   maleCoefficient: 1,
   ageUnder60Coefficient: 1,
-  ageSixtiesCoefficient: .95,
-  ageSeventiesCoefficient: .90,
-  ageEightyPlusCoefficient: .85,
+  ageSixtiesCoefficient: 1,
+  ageSeventiesCoefficient: 1,
+  ageEightyPlusCoefficient: 1,
   femaleBodyFat: BodyFatThresholds(lowPct: 20, highPct: 35),
   maleBodyFat: BodyFatThresholds(lowPct: 10, highPct: 28),
-  lowBodyFatCoefficient: .95,
+  lowBodyFatCoefficient: 1,
   normalBodyFatCoefficient: 1,
-  highBodyFatCoefficient: .95,
+  highBodyFatCoefficient: 1,
   muscleMassCoefficient: 1,
   minimumPct: 20,
   maximumPct: 99,
 );
+
+const _lowBodyFatSettings = {
+  BodyPart.wholeBody: VibrationBaseSetting(durationMin: 25, frequencyHz: 8, intensityPct: 80),
+  BodyPart.shoulder: VibrationBaseSetting(durationMin: 20, frequencyHz: 15, intensityPct: 75),
+  BodyPart.arm: VibrationBaseSetting(durationMin: 15, frequencyHz: 20, intensityPct: 70),
+  BodyPart.abdomen: VibrationBaseSetting(durationMin: 10, frequencyHz: 25, intensityPct: 65),
+  BodyPart.thigh: VibrationBaseSetting(durationMin: 5, frequencyHz: 35, intensityPct: 60),
+  BodyPart.calf: VibrationBaseSetting(durationMin: 5, frequencyHz: 35, intensityPct: 60),
+};
+
+const _highBodyFatSettings = {
+  BodyPart.wholeBody: VibrationBaseSetting(durationMin: 35, frequencyHz: 8, intensityPct: 99),
+  BodyPart.shoulder: VibrationBaseSetting(durationMin: 30, frequencyHz: 15, intensityPct: 90),
+  BodyPart.arm: VibrationBaseSetting(durationMin: 25, frequencyHz: 20, intensityPct: 85),
+  BodyPart.abdomen: VibrationBaseSetting(durationMin: 20, frequencyHz: 25, intensityPct: 80),
+  BodyPart.thigh: VibrationBaseSetting(durationMin: 15, frequencyHz: 35, intensityPct: 75),
+  BodyPart.calf: VibrationBaseSetting(durationMin: 15, frequencyHz: 35, intensityPct: 75),
+};
+
+VibrationBaseSetting _settingForBodyFatBand(
+  String band,
+  BodyPart bodyPart,
+  AlgorithmRuleSet rules,
+) => switch (band) {
+  'low' => _lowBodyFatSettings[bodyPart]!,
+  'high' => _highBodyFatSettings[bodyPart]!,
+  _ => rules.baselines[bodyPart]!,
+};
 
 double _round(double value, int digits) {
   final scale = math.pow(10, digits).toDouble();
@@ -262,23 +290,15 @@ AlgorithmResult calculateRecommendation({
     return rejected(RecommendationStatus.review, warnings);
   }
 
-  final base = ruleSet.baselines[bodyPart]!;
-  final gender = calculateGenderCoefficient(profile.sex, ruleSet);
-  final age = calculateAgeCoefficient(profile.age, ruleSet);
+  final measurementsByNewest = [...measurements]
+    ..sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
   final fat = calculateBodyFatCoefficient(
-    average.bodyFatPct,
+    measurementsByNewest.first.values.bodyFatPct,
     profile.sex,
     ruleSet,
   );
-  final muscle = ruleSet.muscleMassCoefficient;
-  final total = gender * age * fat.coefficient * muscle;
-  final calculated = base.intensityPct * total;
-  final finalIntensity = calculated
-      .clamp(
-        ruleSet.minimumPct,
-        math.min(ruleSet.maximumPct, base.intensityPct),
-      )
-      .round();
+  final base = _settingForBodyFatBand(fat.band, bodyPart, ruleSet);
+  final finalIntensity = base.intensityPct.round();
   return AlgorithmResult(
     status: RecommendationStatus.ready,
     average: average,
@@ -287,28 +307,26 @@ AlgorithmResult calculateRecommendation({
       Adjustment(
         id: 'gender',
         label: '성별 계수',
-        factor: gender,
-        reason: profile.sex == ParticipantSex.female
-            ? '여성 프로토타입 가설'
-            : '남성 기준 유지',
+        factor: 1,
+        reason: '체지방 등급별 고정값 사용',
       ),
       Adjustment(
         id: 'age',
         label: '연령 계수',
-        factor: age,
-        reason: '${profile.age}세 구간',
+        factor: 1,
+        reason: '체지방 등급별 고정값 사용',
       ),
       Adjustment(
         id: 'body-fat',
         label: '체지방 계수',
-        factor: fat.coefficient,
-        reason: '${average.bodyFatPct.toStringAsFixed(1)}% · ${fat.band} 구간',
+        factor: 1,
+        reason: '${measurementsByNewest.first.values.bodyFatPct.toStringAsFixed(1)}% · ${fat.band} 구간',
       ),
       Adjustment(
         id: 'muscle-mass',
         label: '근육량 계수',
-        factor: muscle,
-        reason: '향후 검증용 확장 지점 · 현재 중립',
+        factor: 1,
+        reason: '체지방 등급별 고정값 사용',
       ),
     ],
     recommendation: Recommendation(
@@ -320,12 +338,12 @@ AlgorithmResult calculateRecommendation({
     algorithmVersion: ruleSet.version,
     bodyPart: bodyPart,
     factors: AlgorithmFactors(
-      genderCoefficient: gender,
-      ageCoefficient: age,
-      bodyFatCoefficient: fat.coefficient,
-      muscleMassCoefficient: muscle,
-      totalCoefficient: _round(total, 4),
-      calculatedIntensityPct: _round(calculated, 2),
+      genderCoefficient: 1,
+      ageCoefficient: 1,
+      bodyFatCoefficient: 1,
+      muscleMassCoefficient: 1,
+      totalCoefficient: 1,
+      calculatedIntensityPct: base.intensityPct,
       bodyFatBand: fat.band,
     ),
     measurementIds: measurements.map((m) => m.id).toList(),

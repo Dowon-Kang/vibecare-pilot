@@ -39,6 +39,14 @@ class MockDeviceGateway implements DeviceGateway {
     if (_activeSessionId != null || _starting) {
       throw StateError('이미 실행 중인 세션이 있습니다.');
     }
+    if (_machine.state == DeviceConnectionState.authorized) {
+      _deviceId = null;
+      _emit(DeviceConnectionState.disconnected);
+    }
+    if (_machine.state == DeviceConnectionState.ready &&
+        _deviceId == deviceId) {
+      return;
+    }
     _emit(DeviceConnectionState.connecting);
     await Future<void>.delayed(connectDelay);
     _deviceId = deviceId;

@@ -44,7 +44,7 @@ export function registerFeedbackRoutes(app: VibeCareApp): void {
         return context.json({ error: 'FEEDBACK_ALREADY_SAVED' }, 409);
       }
       if (
-        existing.rpe !== parsed.data.rpe ||
+        (existing.rpe ?? null) !== (parsed.data.rpe ?? null) ||
         existing.pain !== parsed.data.pain ||
         Number(existing.dizziness) !== Number(parsed.data.dizziness) ||
         (existing.intensity_rating ?? null) !== (parsed.data.intensityRating ?? null) ||
@@ -80,7 +80,7 @@ export function registerFeedbackRoutes(app: VibeCareApp): void {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(
         session.id,
-        parsed.data.rpe,
+        parsed.data.rpe ?? null,
         parsed.data.pain,
         Number(parsed.data.dizziness),
         parsed.data.intensityRating ?? null,

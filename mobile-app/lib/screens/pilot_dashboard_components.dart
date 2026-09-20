@@ -38,72 +38,63 @@ class _SystemStatusStrip extends StatelessWidget {
     return Semantics(
       container: true,
       label: '데이터 ${isSample ? '샘플' : '동기화됨'}, 장치 $deviceLabel',
-      child: Row(
-        children: [
-          Expanded(
-            child: _StatusItem(
-              icon: isSample
-                  ? Icons.science_outlined
-                  : Icons.cloud_done_outlined,
-              label: isSample ? '샘플 데이터' : '데이터 수신됨',
-              positive: true,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 42),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.outline, width: .7),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSample ? Icons.science_outlined : Icons.cloud_done_outlined,
+              size: 18,
+              color: AppColors.primary,
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _StatusItem(
-              icon: state.isRunning
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                isSample ? '샘플 데이터' : '데이터 수신됨',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Container(width: 1, height: 20, color: AppColors.outline),
+            const SizedBox(width: 10),
+            Icon(
+              state.isRunning
                   ? Icons.vibration
                   : state.isTransmitted
                   ? Icons.check_circle_outline
                   : Icons.portable_wifi_off,
-              label: deviceLabel,
-              positive: state.isRunning || state.isTransmitted,
+              size: 18,
+              color: state.isRunning || state.isTransmitted
+                  ? AppColors.primary
+                  : AppColors.muted,
             ),
-          ),
-        ],
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                deviceLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-}
-
-class _StatusItem extends StatelessWidget {
-  const _StatusItem({
-    required this.icon,
-    required this.label,
-    required this.positive,
-  });
-  final IconData icon;
-  final String label;
-  final bool positive;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(minHeight: 38),
-    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-    decoration: BoxDecoration(
-      color: positive ? const Color(0xFFE7F2EF) : const Color(0xFFEDEDF2),
-      borderRadius: BorderRadius.circular(19),
-    ),
-    child: Row(
-      children: [
-        Icon(
-          icon,
-          size: 17,
-          color: positive ? const Color(0xFF087F6B) : const Color(0xFF6C6C70),
-        ),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
-    ),
-  );
 }
 
 String _deviceLabel(DeviceConnectionState state) => switch (state) {
@@ -166,20 +157,10 @@ class _RunningCard extends StatelessWidget {
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF4E5),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, size: 21),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('시연 모드입니다. 실제 진동은 발생하지 않습니다.')),
-                ],
-              ),
+            Text(
+              '시뮬레이션 · 실제 진동 없음',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),

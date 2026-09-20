@@ -49,54 +49,34 @@ void main() {
     expect(result.factors?.totalCoefficient, 1);
   });
 
-  test('Case B: female coefficient only', () {
+  test('Case B: female medium body fat uses the fixed medium preset', () {
     final result = evaluate(age: 30, sex: ParticipantSex.female, bodyFat: 25);
-    expect(result.recommendation?.intensityPct, 86);
-    expect(result.factors?.genderCoefficient, .95);
+    expect(result.recommendation?.intensityPct, 90);
+    expect(result.recommendation?.durationSec, 1800);
+    expect(result.factors?.genderCoefficient, 1);
   });
 
-  test('Case C: female and age-70 coefficients multiply', () {
+  test('Case C: age does not alter the fixed body-fat preset', () {
     final result = evaluate(age: 75, sex: ParticipantSex.female, bodyFat: 25);
-    expect(result.recommendation?.intensityPct, 77);
-    expect(result.factors?.totalCoefficient, .855);
+    expect(result.recommendation?.intensityPct, 90);
+    expect(result.factors?.totalCoefficient, 1);
   });
 
-  test('Case D: low body fat adds another five-percent reduction', () {
+  test('Case D: low body fat selects the exact low whole-body preset', () {
     final result = evaluate(age: 75, sex: ParticipantSex.female, bodyFat: 18);
-    expect(result.recommendation?.intensityPct, 73);
-    expect(result.factors?.bodyFatCoefficient, .95);
+    expect(result.recommendation?.durationSec, 1500);
+    expect(result.recommendation?.frequencyHz, 8);
+    expect(result.recommendation?.intensityPct, 80);
+    expect(result.factors?.bodyFatCoefficient, 1);
     expect(result.factors?.bodyFatBand, 'low');
   });
 
-  test('Case E: clamp prevents output below configured minimum', () {
-    final rules = AlgorithmRuleSet(
-      version: pilotRuleSet.version,
-      enabled: true,
-      baselines: pilotRuleSet.baselines,
-      femaleCoefficient: .5,
-      maleCoefficient: 1,
-      ageUnder60Coefficient: 1,
-      ageSixtiesCoefficient: .95,
-      ageSeventiesCoefficient: .9,
-      ageEightyPlusCoefficient: .85,
-      femaleBodyFat: pilotRuleSet.femaleBodyFat,
-      maleBodyFat: pilotRuleSet.maleBodyFat,
-      lowBodyFatCoefficient: .95,
-      normalBodyFatCoefficient: 1,
-      highBodyFatCoefficient: .95,
-      muscleMassCoefficient: 1,
-      minimumPct: 70,
-      maximumPct: 99,
-    );
-    final result = evaluate(
-      age: 85,
-      sex: ParticipantSex.female,
-      bodyFat: 18,
-      part: BodyPart.calf,
-      rules: rules,
-    );
-    expect(result.factors!.calculatedIntensityPct, lessThan(70));
-    expect(result.recommendation?.intensityPct, 70);
+  test('Case E: high body fat selects the exact high whole-body preset', () {
+    final result = evaluate(age: 85, sex: ParticipantSex.female, bodyFat: 36);
+    expect(result.recommendation?.durationSec, 2100);
+    expect(result.recommendation?.frequencyHz, 8);
+    expect(result.recommendation?.intensityPct, 99);
+    expect(result.factors?.bodyFatBand, 'high');
   });
 
   test('calculates all six body parts from data', () {

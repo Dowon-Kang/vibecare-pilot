@@ -25,22 +25,22 @@ void main() {
     adjustments: const [],
     recommendation: status == RecommendationStatus.ready
         ? const Recommendation(
-            durationSec: 1800,
+            durationSec: 1500,
             frequencyHz: 8,
-            intensityPct: 73,
-            baseIntensityPct: 90,
+            intensityPct: 80,
+            baseIntensityPct: 80,
           )
         : null,
     algorithmVersion: 'test',
     bodyPart: BodyPart.wholeBody,
     factors: status == RecommendationStatus.ready
         ? const AlgorithmFactors(
-            genderCoefficient: .95,
-            ageCoefficient: .9,
-            bodyFatCoefficient: .95,
+            genderCoefficient: 1,
+            ageCoefficient: 1,
+            bodyFatCoefficient: 1,
             muscleMassCoefficient: 1,
-            totalCoefficient: .8123,
-            calculatedIntensityPct: 73.1,
+            totalCoefficient: 1,
+            calculatedIntensityPct: 80,
             bodyFatBand: 'low',
           )
         : null,
@@ -49,16 +49,15 @@ void main() {
   String explain(AlgorithmResult value) => calculationSummary(
     result: value,
     profile: profile,
-    selectedIntensityPct: 73,
+    selectedIntensityPct: 80,
   ).map((step) => '${step.title}\n${step.detail}').join('\n');
 
-  test('explains baseline, each coefficient and final value', () {
+  test('explains the fixed body-fat band mapping and final value', () {
     final text = explain(result());
-    expect(text, contains('30분 · 8Hz · 출력 90%'));
-    expect(text, contains('성별 ×0.95'));
-    expect(text, contains('연령 ×0.90'));
-    expect(text, contains('90% × 0.8123 = 73.10%'));
-    expect(text, contains('프로토타입 가설'));
+    expect(text, contains('25분 · 8Hz · 출력 80%'));
+    expect(text, contains('체지방률을 low 등급'));
+    expect(text, contains('추가 보정 없이 적용'));
+    expect(text, contains('강도 80%'));
   });
   test('blocked result never shows a candidate', () {
     final text = explain(result(status: RecommendationStatus.blocked));

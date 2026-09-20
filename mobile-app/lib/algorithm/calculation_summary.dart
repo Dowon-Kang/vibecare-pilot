@@ -15,29 +15,27 @@ List<({String title, String detail})> calculationSummary({
   }
   return [
     (
-      title: '1. 부위별 기준값',
+      title: '1. 교수님 확정 기준값',
       detail:
           '${setting.durationSec ~/ 60}분 · ${setting.frequencyHz}Hz · 출력 ${setting.baseIntensityPct}%에서 시작합니다.',
     ),
     (
-      title: '2. 독립 보정계수',
-      detail:
-          '성별 ×${factors.genderCoefficient.toStringAsFixed(2)}, 연령 ×${factors.ageCoefficient.toStringAsFixed(2)}, 체지방 ×${factors.bodyFatCoefficient.toStringAsFixed(2)}, 근육량 ×${factors.muscleMassCoefficient.toStringAsFixed(2)}입니다.',
+      title: '2. 체지방 등급',
+      detail: '최신 API 체지방률을 ${factors.bodyFatBand} 등급으로 분류했습니다.',
     ),
     (
-      title: '3. 곱셈 결합',
-      detail:
-          '${setting.baseIntensityPct}% × ${factors.totalCoefficient.toStringAsFixed(4)} = ${factors.calculatedIntensityPct.toStringAsFixed(2)}%입니다. 감소를 단순 합산하지 않아 중복 조건에서도 비례적으로 줄어듭니다.',
+      title: '3. 고정 매핑 적용',
+      detail: '등급과 선택 부위에 정해진 시간·Hz·강도를 추가 보정 없이 적용합니다.',
     ),
     (
-      title: '4. 제한과 반올림',
+      title: '4. 추천 설정',
       detail:
-          'Config의 허용 범위로 제한하고 반올림하여 자동 출력 ${setting.intensityPct}%를 표시합니다.',
+          '${setting.durationSec ~/ 60}분 · ${setting.frequencyHz}Hz · 강도 ${setting.intensityPct}%입니다.',
     ),
     (
       title: '5. 최종 선택',
       detail:
-          '자동 ${setting.intensityPct}% → 선택 ${selectedIntensityPct ?? setting.intensityPct}%. 모든 계수는 검증 전 프로토타입 가설이며 실제 기기 처방이 아닙니다.',
+          '기준 ${setting.intensityPct}% → 선택 ${selectedIntensityPct ?? setting.intensityPct}%. 연구용 시뮬레이션 값이며 실제 기기 처방이 아닙니다.',
     ),
   ];
 }

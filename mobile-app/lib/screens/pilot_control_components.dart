@@ -95,8 +95,16 @@ class _IntensityControlCard extends ConsumerWidget {
 }
 
 class _PrimaryActionBar extends ConsumerWidget {
-  const _PrimaryActionBar({required this.state});
+  const _PrimaryActionBar({
+    required this.state,
+    required this.step,
+    required this.onProfileContinue,
+    required this.onOpenDeviceSetup,
+  });
   final PilotState state;
+  final _PilotStep step;
+  final VoidCallback onProfileContinue;
+  final VoidCallback onOpenDeviceSetup;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(pilotControllerProvider.notifier);
@@ -110,13 +118,14 @@ class _PrimaryActionBar extends ConsumerWidget {
     final VoidCallback? action;
     final IconData icon;
     final String label;
-    final String helper;
+    final String? helper;
 
+    Key buttonKey = const ValueKey('send-button');
     if (state.feedbackSession != null) {
       action = null;
       icon = Icons.fact_check_outlined;
       label = '사용 후 상태를 입력해 주세요';
-      helper = '위의 6개 항목을 저장하면 다음 사용을 준비할 수 있습니다.';
+      helper = null;
     } else if (state.isRunning) {
       action = state.isBusy ? null : () => controller.stopSession();
       icon = Icons.stop_circle_outlined;
@@ -125,16 +134,24 @@ class _PrimaryActionBar extends ConsumerWidget {
           : state.deviceState == DeviceConnectionState.error
           ? '중지 다시 요청'
           : '$simulationLabel 중지';
-      helper = environment.usesDeviceSimulator
-          ? '시뮬레이터 중지 응답이 확인될 때까지 기록을 유지합니다.'
-          : '중지 응답이 확인될 때까지 실행 기록을 유지합니다.';
+      helper = null;
     } else if (state.isTransmitted) {
       action = state.isBusy ? null : controller.startSession;
       icon = Icons.play_arrow_rounded;
       label = environment.usesDeviceSimulator ? '$simulationLabel 시작' : '진동 시작';
-      helper = environment.usesDeviceSimulator
-          ? '설정 준비 완료 · 서버 시뮬레이터만 실행하며 실제 진동은 없습니다.'
-          : '장치가 설정을 받았습니다. 시작 전 주변을 확인해 주세요.';
+      helper = environment.usesDeviceSimulator ? '시뮬레이션 · 실제 진동 없음' : null;
+    } else if (step == _PilotStep.profile) {
+      action = onProfileContinue;
+      icon = Icons.arrow_forward_rounded;
+      label = '측정 결과 확인';
+      helper = null;
+      buttonKey = const ValueKey('profile-continue-button');
+    } else if (step == _PilotStep.measurement) {
+      action = onOpenDeviceSetup;
+      icon = Icons.accessibility_new_rounded;
+      label = '장치 보내기';
+      helper = null;
+      buttonKey = const ValueKey('device-setup-button');
     } else {
       action = canSend ? controller.sendToDevice : null;
       icon = Icons.send_to_mobile_outlined;
@@ -144,12 +161,12 @@ class _PrimaryActionBar extends ConsumerWidget {
           ? '$simulationLabel 설정 보내기'
           : '장치로 설정 보내기';
       helper = !state.safety.isComplete
-          ? '오늘 상태 3문항에 모두 답해 주세요.'
+          ? '사용 전 확인이 필요합니다.'
           : state.result?.status == RecommendationStatus.ready
           ? environment.usesDeviceSimulator
-                ? '기기 출력 설정 ${state.selectedIntensityPct ?? 0}% · 시뮬레이터 전용, 실제 출력 없음'
-                : '기기 출력 설정 ${state.selectedIntensityPct ?? 0}%를 장치로 보냅니다.'
-          : '안전 검토가 끝나야 장치로 보낼 수 있습니다.';
+                ? '시뮬레이션 · 실제 진동 없음'
+                : null
+          : '안전 확인이 필요합니다.';
     }
 
     return Material(
@@ -162,23 +179,23 @@ class _PrimaryActionBar extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Semantics(
-                liveRegion: true,
-                child: Text(
-                  helper,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall,
+              if (helper != null) ...[
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    helper,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
+                const SizedBox(height: 6),
+              ],
               FilledButton.icon(
-                key: ValueKey(
-                  state.isRunning
-                      ? 'stop-button'
-                      : state.isTransmitted
-                      ? 'start-button'
-                      : 'send-button',
-                ),
+                key: state.isRunning
+                    ? const ValueKey('stop-button')
+                    : state.isTransmitted
+                    ? const ValueKey('start-button')
+                    : buttonKey,
                 onPressed: action,
                 icon: state.isBusy && !state.isRunning
                     ? const SizedBox.square(
@@ -214,7 +231,7 @@ class _ProfileSettings extends ConsumerWidget {
     final controller = ref.read(pilotControllerProvider.notifier);
     final environment = ref.watch(appEnvironmentProvider);
     return _DetailSection(
-      title: '보정 조건',
+      title: '체지방 분류 조건',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -305,68 +322,115 @@ class _ProfileSettings extends ConsumerWidget {
   }
 }
 
-class _SafetySettings extends ConsumerWidget {
-  const _SafetySettings({required this.state});
+class _SafetySettings extends StatelessWidget {
+  const _SafetySettings({required this.state, required this.onTap});
   final PilotState state;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isComplete = state.safety.isComplete;
+    final hasSymptoms = state.safety.hasSymptoms;
+    final title = hasSymptoms
+        ? '오늘은 사용을 중지해 주세요'
+        : isComplete
+        ? '사용 전 확인 완료'
+        : '사용 전 확인 ${state.safety.answeredCount}/3';
+    final detail = hasSymptoms ? '설정을 보낼 수 없습니다.' : null;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Semantics(
+        button: true,
+        label: detail == null ? title : '$title. $detail',
+        child: InkWell(
+          key: const ValueKey('safety-check-open'),
+          onTap: state.isBusy || state.isRunning ? null : onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 76),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    hasSymptoms
+                        ? Icons.warning_amber_rounded
+                        : isComplete
+                        ? Icons.check_circle_outline
+                        : Icons.health_and_safety_outlined,
+                    color: hasSymptoms
+                        ? Theme.of(context).colorScheme.error
+                        : AppColors.primary,
+                    size: 25,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        if (detail != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            detail,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SafetyQuestionnaire extends ConsumerWidget {
+  const _SafetyQuestionnaire({required this.state});
+  final PilotState state;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(pilotControllerProvider.notifier);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.health_and_safety_outlined, size: 22),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '사용 전 상태 확인',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                Text(
-                  '${state.safety.answeredCount}/3',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                minHeight: 5,
-                value: state.safety.answeredCount / 3,
-                backgroundColor: const Color(0xFFE5EBE9),
-              ),
-            ),
-            const SizedBox(height: 2),
-            _answer(
-              context,
-              'pain',
-              '현재 통증이 있나요?',
-              state.safety.acutePain,
-              (v) => controller.updateSafety(pain: v),
-            ),
-            _answer(
-              context,
-              'dizziness',
-              '어지럼이 있나요?',
-              state.safety.dizziness,
-              (v) => controller.updateSafety(dizziness: v),
-            ),
-            _answer(
-              context,
-              'hold',
-              '사용 보류 지시가 있나요?',
-              state.safety.clinicianHold,
-              (v) => controller.updateSafety(hold: v),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _answer(
+          context,
+          'pain',
+          '현재 통증이 있나요?',
+          state.safety.acutePain,
+          (v) => controller.updateSafety(pain: v),
         ),
-      ),
+        const SizedBox(height: 10),
+        _answer(
+          context,
+          'dizziness',
+          '어지럼이 있나요?',
+          state.safety.dizziness,
+          (v) => controller.updateSafety(dizziness: v),
+        ),
+        const SizedBox(height: 10),
+        _answer(
+          context,
+          'hold',
+          '사용 보류 지시가 있나요?',
+          state.safety.clinicianHold,
+          (v) => controller.updateSafety(hold: v),
+        ),
+      ],
     );
   }
 
@@ -390,8 +454,8 @@ class _SafetySettings extends ConsumerWidget {
             Semantics(
               selected: value == answer,
               child: SizedBox(
-                width: 66,
-                height: 38,
+                width: 72,
+                height: 48,
                 child: TextButton(
                   key: ValueKey('safety-$id-${answer ? 'yes' : 'no'}'),
                   onPressed: state.isBusy || state.isRunning
@@ -407,15 +471,15 @@ class _SafetySettings extends ConsumerWidget {
                     foregroundColor: value == answer && answer
                         ? Theme.of(context).colorScheme.onErrorContainer
                         : value == answer
-                        ? const Color(0xFF087F6B)
-                        : const Color(0xFF6C6C70),
+                        ? AppColors.primary
+                        : AppColors.muted,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
                   child: Text(
                     answer ? '예' : '아니요',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -423,20 +487,33 @@ class _SafetySettings extends ConsumerWidget {
         ],
       ),
     );
-    return Padding(
-      padding: const EdgeInsets.only(top: 5),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.outline),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) =>
             MediaQuery.textScalerOf(context).scale(16) > 21
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [Text(title), choices],
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  choices,
+                ],
               )
             : Row(
                 children: [
                   Expanded(
-                    child: Text(title, style: const TextStyle(fontSize: 16)),
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   choices,
                 ],
               ),

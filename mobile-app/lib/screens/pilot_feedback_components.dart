@@ -12,21 +12,24 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
   FeedbackRating? _intensityRating;
   FeedbackRating? _durationRating;
   FeedbackRating? _frequencyRating;
-  int? _rpe;
-  int? _pain;
-  bool? _dizziness;
+  bool? _needsAdjustment;
+  bool? _hadSymptoms;
+  bool _painReported = false;
+  bool _dizzinessReported = false;
 
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
-    final canSubmit =
-        _intensityRating != null &&
-        _durationRating != null &&
-        _frequencyRating != null &&
-        _rpe != null &&
-        _pain != null &&
-        _dizziness != null &&
-        !state.isBusy;
+    final settingsComplete =
+        _needsAdjustment == false ||
+        (_needsAdjustment == true &&
+            _intensityRating != null &&
+            _durationRating != null &&
+            _frequencyRating != null);
+    final symptomsComplete =
+        _hadSymptoms == false ||
+        (_hadSymptoms == true && (_painReported || _dizzinessReported));
+    final canSubmit = settingsComplete && symptomsComplete && !state.isBusy;
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -44,109 +47,107 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 4),
-            const Text(
-              '다음 기기 출력을 조절하도록 지금 상태를 알려주세요.',
-              textAlign: TextAlign.center,
-            ),
             const SizedBox(height: 12),
-            _FeedbackChoice<FeedbackRating>(
-              id: 'intensity',
-              title: '기기 출력을 얼마나 강하게 느꼈나요?',
-              values: const {
-                FeedbackRating.weak: '약했어요',
-                FeedbackRating.suitable: '적당해요',
-                FeedbackRating.strong: '강했어요',
-              },
-              selected: _intensityRating,
-              onChanged: (value) => setState(() => _intensityRating = value),
+            _FeedbackChoice<String>(
+              id: 'overall',
+              title: '전체적으로 어땠나요?',
+              values: const {'suitable': '모두 적당했어요', 'adjust': '조정이 필요해요'},
+              selected: _needsAdjustment == null
+                  ? null
+                  : _needsAdjustment!
+                  ? 'adjust'
+                  : 'suitable',
+              onChanged: (value) => setState(() {
+                _needsAdjustment = value == 'adjust';
+                if (_needsAdjustment == false) {
+                  _intensityRating = FeedbackRating.suitable;
+                  _durationRating = FeedbackRating.suitable;
+                  _frequencyRating = FeedbackRating.suitable;
+                } else {
+                  _intensityRating = null;
+                  _durationRating = null;
+                  _frequencyRating = null;
+                }
+              }),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            if (_needsAdjustment == true) ...[
+              _FeedbackChoice<FeedbackRating>(
+                id: 'intensity',
+                title: '기기 출력을 얼마나 강하게 느꼈나요?',
+                values: const {
+                  FeedbackRating.weak: '약했어요',
+                  FeedbackRating.suitable: '적당해요',
+                  FeedbackRating.strong: '강했어요',
+                },
+                selected: _intensityRating,
+                onChanged: (value) => setState(() => _intensityRating = value),
+              ),
+              _FeedbackChoice<FeedbackRating>(
+                id: 'duration',
+                title: '시간은 어땠나요?',
+                values: const {
+                  FeedbackRating.weak: '짧았어요',
+                  FeedbackRating.suitable: '적당해요',
+                  FeedbackRating.strong: '길었어요',
+                },
+                selected: _durationRating,
+                onChanged: (value) => setState(() => _durationRating = value),
+              ),
+              _FeedbackChoice<FeedbackRating>(
+                id: 'frequency',
+                title: '주파수 느낌은 어땠나요?',
+                values: const {
+                  FeedbackRating.weak: '약했어요',
+                  FeedbackRating.suitable: '적당해요',
+                  FeedbackRating.strong: '강했어요',
+                },
+                selected: _frequencyRating,
+                onChanged: (value) => setState(() => _frequencyRating = value),
+              ),
+            ],
+            _FeedbackChoice<String>(
+              id: 'symptoms',
+              title: '사용 중 통증이나 어지럼이 있었나요?',
+              values: const {'false': '없었어요', 'true': '있었어요'},
+              selected: _hadSymptoms?.toString(),
+              onChanged: (value) => setState(() {
+                _hadSymptoms = value == 'true';
+                if (_hadSymptoms == false) {
+                  _painReported = false;
+                  _dizzinessReported = false;
+                }
+              }),
+            ),
+            if (_hadSymptoms == true) ...[
+              const SizedBox(height: 10),
+              Text(
+                '해당하는 증상을 선택해 주세요.',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  Text(
-                    _rpe == null
-                        ? '운동자각도(RPE) 0∼10·선택해 주세요'
-                        : '운동자각도(RPE) $_rpe/10',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Wrap(
-                    spacing: 16,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        _rpe == null ? '미선택' : '$_rpe / 10',
-                        key: const ValueKey('feedback-rpe-value'),
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      OutlinedButton(
-                        key: const ValueKey('feedback-rpe-zero'),
-                        onPressed: state.isBusy
-                            ? null
-                            : () => setState(() => _rpe = 0),
-                        child: const Text('0점 · 힘들지 않음'),
-                      ),
-                    ],
-                  ),
-                  Slider(
-                    key: const ValueKey('feedback-rpe-slider'),
-                    value: (_rpe ?? 0).toDouble(),
-                    min: 0,
-                    max: 10,
-                    divisions: 10,
-                    label: _rpe?.toString(),
-                    onChanged: state.isBusy
+                  FilterChip(
+                    key: const ValueKey('feedback-symptom-pain'),
+                    label: const Text('통증'),
+                    selected: _painReported,
+                    onSelected: state.isBusy
                         ? null
-                        : (value) => setState(() => _rpe = value.round()),
+                        : (value) => setState(() => _painReported = value),
                   ),
-                  Text(
-                    '0은 전혀 힘들지 않음, 10은 최대로 힘듦을 뜻합니다.',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  FilterChip(
+                    key: const ValueKey('feedback-symptom-dizziness'),
+                    label: const Text('어지럼'),
+                    selected: _dizzinessReported,
+                    onSelected: state.isBusy
+                        ? null
+                        : (value) => setState(() => _dizzinessReported = value),
                   ),
                 ],
               ),
-            ),
-            _FeedbackChoice<FeedbackRating>(
-              id: 'duration',
-              title: '시간은 어땠나요?',
-              values: const {
-                FeedbackRating.weak: '짧았어요',
-                FeedbackRating.suitable: '적당해요',
-                FeedbackRating.strong: '길었어요',
-              },
-              selected: _durationRating,
-              onChanged: (value) => setState(() => _durationRating = value),
-            ),
-            _FeedbackChoice<FeedbackRating>(
-              id: 'frequency',
-              title: '주파수 느낌은 어땠나요?',
-              values: const {
-                FeedbackRating.weak: '약했어요',
-                FeedbackRating.suitable: '적당해요',
-                FeedbackRating.strong: '강했어요',
-              },
-              selected: _frequencyRating,
-              onChanged: (value) => setState(() => _frequencyRating = value),
-            ),
-            _FeedbackChoice<int>(
-              id: 'pain',
-              title: '통증이 있었나요?',
-              values: const {0: '없었어요', 1: '있었어요'},
-              selected: _pain,
-              onChanged: (value) => setState(() => _pain = value),
-            ),
-            _FeedbackChoice<bool>(
-              id: 'dizziness',
-              title: '어지럼이 있었나요?',
-              values: const {false: '없었어요', true: '있었어요'},
-              selected: _dizziness,
-              onChanged: (value) => setState(() => _dizziness = value),
-            ),
+            ],
             const SizedBox(height: 12),
             FilledButton(
               key: const ValueKey('feedback-submit-button'),
@@ -155,9 +156,8 @@ class _FeedbackCardState extends ConsumerState<_FeedbackCard> {
                         .read(pilotControllerProvider.notifier)
                         .submitFeedback(
                           SessionFeedback(
-                            rpe: _rpe!,
-                            pain: _pain!,
-                            dizziness: _dizziness!,
+                            pain: _painReported ? 1 : 0,
+                            dizziness: _dizzinessReported,
                             intensityRating: _intensityRating!,
                             durationRating: _durationRating!,
                             frequencyRating: _frequencyRating!,
@@ -221,7 +221,7 @@ class _FeedbackChoice<T extends Object> extends StatelessWidget {
             if (selection.isNotEmpty) onChanged(selection.single);
           },
           style: ButtonStyle(
-            minimumSize: WidgetStateProperty.all(const Size(0, 46)),
+            minimumSize: WidgetStateProperty.all(const Size(0, 48)),
           ),
         ),
       ],

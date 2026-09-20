@@ -5,7 +5,7 @@ enum FeedbackRating { weak, suitable, strong }
 
 class SessionFeedback {
   const SessionFeedback({
-    required this.rpe,
+    this.rpe,
     required this.pain,
     required this.dizziness,
     required this.intensityRating,
@@ -18,7 +18,8 @@ class SessionFeedback {
     this.measuredRmsG,
   });
 
-  final int rpe, pain;
+  final int? rpe;
+  final int pain;
   final bool dizziness;
   final FeedbackRating intensityRating;
   final FeedbackRating durationRating;
@@ -44,7 +45,7 @@ class SessionFeedback {
 
   Map<String, Object?> toJson(String sessionId) => {
     'sessionId': sessionId,
-    'rpe': rpe,
+    if (rpe != null) 'rpe': rpe,
     'pain': pain,
     'dizziness': dizziness,
     'intensityRating': intensityRating.name,
@@ -83,14 +84,14 @@ class FeedbackAdjustment {
         );
 
   FeedbackAdjustment next(SessionFeedback feedback, int usedIntensity) {
-    if (feedback.rpe < 0 ||
-        feedback.rpe > 10 ||
+    if ((feedback.rpe != null && (feedback.rpe! < 0 || feedback.rpe! > 10)) ||
         feedback.pain < 0 ||
         feedback.pain > 10) {
       throw ArgumentError('설문 범위 오류');
     }
     final reduce =
-        feedback.rpe >= 7 || feedback.intensityRating == FeedbackRating.strong;
+        (feedback.rpe ?? 0) >= 7 ||
+        feedback.intensityRating == FeedbackRating.strong;
     final candidate = reduce ? (usedIntensity * .9).floor() : usedIntensity;
     final cap = intensityCap == null || candidate < intensityCap!
         ? candidate
@@ -111,10 +112,10 @@ class FeedbackAdjustment {
           ? 'FEEDBACK_INTENSITY_REDUCED'
           : 'FEEDBACK_MAINTAINED',
       reason: hold
-          ? '증상·중단 또는 시간·주파수 불편 보고가 있어 담당자 확인 전 사용을 보류합니다.'
+          ? '담당자 확인이 필요합니다.'
           : reduce
-          ? '지난 사용이 힘들었다는 응답을 반영해 강도를 10% 낮췄습니다.'
-          : '지난 사용 강도를 유지합니다. 자동으로 높이지 않습니다.',
+          ? '다음 출력 상한을 10% 낮췄습니다.'
+          : '출력 상한을 유지합니다.',
     );
   }
 

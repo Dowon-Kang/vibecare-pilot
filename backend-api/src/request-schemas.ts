@@ -59,7 +59,7 @@ export const eventSchema = z.object({
 
 export const feedbackSchema = z.object({
   sessionId: z.string().min(1),
-  rpe: z.number().int().min(0).max(10),
+  rpe: z.number().int().min(0).max(10).optional(),
   pain: z.number().int().min(0).max(10),
   dizziness: z.boolean(),
   intensityRating: z.enum(['weak', 'suitable', 'strong']).optional(),

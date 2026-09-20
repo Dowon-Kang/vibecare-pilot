@@ -37,6 +37,17 @@ class BackendDeviceGateway implements DeviceGateway {
 
   @override
   Future<void> connect(String deviceId) async {
+    if (_activeSessionId != null) {
+      throw StateError('이미 실행 중인 세션이 있습니다.');
+    }
+    if (_machine.state == DeviceConnectionState.authorized) {
+      _deviceId = null;
+      _emit(DeviceConnectionState.disconnected);
+    }
+    if (_machine.state == DeviceConnectionState.ready &&
+        _deviceId == deviceId) {
+      return;
+    }
     _emit(DeviceConnectionState.connecting);
     try {
       final response = await _dio.get<Map<String, dynamic>>('/ready');
