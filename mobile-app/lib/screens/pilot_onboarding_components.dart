@@ -422,6 +422,11 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
         ? '직전 측정과 동일해요.'
         : '직전 측정보다 ${delta > 0 ? '+' : ''}${delta.toStringAsFixed(1)}kg ${delta > 0 ? '증가' : '감소'}했어요.';
     final levelIndex = assessment.level.index;
+    const levelColors = <Color>[
+      AppColors.levelLow,
+      AppColors.levelNormal,
+      AppColors.levelHigh,
+    ];
     const levelLabels = <String>['낮음', '중간', '높음'];
 
     return Card(
@@ -460,8 +465,8 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
                       height: 10,
                       decoration: BoxDecoration(
                         color: index == levelIndex
-                            ? AppColors.brand
-                            : AppColors.hairline,
+                            ? levelColors[index]
+                            : levelColors[index].withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
@@ -484,7 +489,7 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
                           : TextAlign.center,
                       style: TextStyle(
                         color: index == levelIndex
-                            ? AppColors.brand
+                            ? levelColors[index]
                             : AppColors.muted,
                         fontWeight: index == levelIndex
                             ? FontWeight.w800

@@ -26,6 +26,10 @@ abstract final class AppColors {
 
   /// Reserved: one chromatic accent for a single emphasized signal per screen.
   static const accent = brand;
+  // One hue with ordered lightness: magnitude, not good/bad semantics.
+  static const levelLow = Color(0xFF4B9488);
+  static const levelNormal = brand;
+  static const levelHigh = Color(0xFF045247);
 
   static const warning = Color(0xFF9A5A00);
   static const danger = Color(0xFFB42318);
