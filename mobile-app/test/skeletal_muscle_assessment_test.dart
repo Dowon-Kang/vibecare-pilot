@@ -51,6 +51,25 @@ void main() {
     expect(assess(30)!.level, SkeletalMuscleLevel.medium);
     expect(assess(36)!.level, SkeletalMuscleLevel.high);
   });
+
+  test('화면 판정도 경계에서 반올림 전 근육지수를 사용한다', () {
+    final assessment = buildSkeletalMuscleAssessment(
+      profile: const ParticipantProfile(
+        id: 'P1',
+        age: 45,
+        sex: ParticipantSex.male,
+        heightCm: 170,
+      ),
+      history: [
+        _measurement('boundary', DateTime.utc(2026, 9, 18), muscleKg: 24.57),
+      ],
+      ruleSet: pilotRuleSet,
+    );
+
+    expect(assessment, isNotNull);
+    expect(assessment!.currentIndexKgM2, greaterThan(8.5));
+    expect(assessment.level, SkeletalMuscleLevel.medium);
+  });
 }
 
 BiaMeasurement _measurement(

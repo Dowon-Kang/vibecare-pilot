@@ -41,6 +41,16 @@ describe('pilot-0.9.0 skeletal-muscle fixed mapping', () => {
     expect(result.factors).toMatchObject({ muscleLevel: 'high' });
   });
 
+  it('classifies with the unrounded muscle index at a threshold boundary', () => {
+    const result = evaluate(30, 'male', 24.57);
+
+    expect(24.57 / (1.7 * 1.7)).toBeGreaterThan(8.5);
+    expect(result.factors).toMatchObject({
+      muscleIndexKgM2: 8.5,
+      muscleLevel: 'medium',
+    });
+  });
+
   it('uses distinct body-part baselines and never enables physical output', () => {
     expect(evaluate(30, 'male', 28, 'shoulder').recommendation).toMatchObject({ durationSec: 1500, frequencyHz: 15, intensityPct: 85 });
     expect(evaluate(30, 'male', 28, 'calf')).toMatchObject({ physicalExecution: 'PROHIBITED', realDeviceSendAllowed: false, recommendation: { durationSec: 600, frequencyHz: 35, intensityPct: 70 } });

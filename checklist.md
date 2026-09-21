@@ -17,11 +17,11 @@
 
 | 검사 | 마지막 결과 | 합격 기준 |
 |---|---:|---:|
-| 백엔드 전체 Vitest | 77/77 통과 (2026-09-19, PostgreSQL adapter·Supabase 비공개 schema 설정·seed 안전정책 포함) | 실패 0 |
-| Flutter 전체 테스트 | 54/54 통과 (2026-09-19 프로필/측정 탭 분리·4회 비교, Mock 인위 지연 제거, 로그인·새로고침 병렬 조회, 현재 적용 설정만 표시, stale 허가 재연결, 320px·글자 2배 포함) | 실패 0 |
+| 백엔드 전체 Vitest | 80/80 통과 (2026-09-21, 근육지수 경계의 반올림 전 판정 회귀검사 포함) | 실패 0 |
+| Flutter 전체 테스트 | 57/57 통과 (2026-09-21, 동일 경계 판정·측정 추세 그래프·320px·글자 2배 포함) | 실패 0 |
 | 백엔드 TypeScript | 통과 | 오류 0 |
-| Flutter format/analyze | V: 영문 경로에서 format·analyze 통과 (2026-09-19) | 오류 0 |
-| Flutter debug APK | V: 영문 경로 로컬 debug APK 빌드 통과 (2026-09-19) | 빌드 실패 0 |
+| Flutter format/analyze | V: 영문 경로에서 format·analyze 통과 (2026-09-21) | 오류 0 |
+| Flutter debug APK | V: 영문 경로 로컬 debug APK 빌드 통과 (2026-09-21) | 빌드 실패 0 |
 | API 계약 | OpenAPI·핵심 JSON Schema 유지 | 참조 오류 0 |
 
 수치는 실행한 자동 검사 기준이며 임상 안전성 수치가 아니다.
@@ -75,6 +75,7 @@ DSPy 후속:
 - [x] `UNKNOWN`·ASM/SMM 기준 불일치·방법/단위/프로토콜 혼합 시 층화·인가 차단
 - [x] 공급사가 확인한 ASM/SMM 정의만 앱에서 활성화하고 임의 재해석 차단
 - [x] 최신 골격근량/키²의 낮음·중간·높음과 6개 부위 고정 시간·Hz·강도 구현(`pilot-0.9.0`)
+- [x] 근육지수 등급은 반올림 전 원값으로 비교하고 표시·응답값만 소수 둘째 자리로 반올림
 - [x] Flutter·백엔드 Case A~E와 6개 부위 계산 검증
 - [~] 앱·백엔드 핵심 결과 parity; 공개 계약 전체 자동 parity는 미완료
 - [x] 모든 결과 `physicalExecution=PROHIBITED`, 모든 Mock 명령 `SIMULATOR_ONLY`

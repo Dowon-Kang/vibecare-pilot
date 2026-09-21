@@ -112,6 +112,22 @@ void main() {
     },
   );
 
+  test(
+    'classifies with the unrounded muscle index at a threshold boundary',
+    () {
+      final result = evaluate(
+        age: 30,
+        sex: ParticipantSex.male,
+        bodyFat: 20,
+        muscleKg: 24.57,
+      );
+
+      expect(24.57 / (1.7 * 1.7), greaterThan(8.5));
+      expect(result.factors?.muscleIndexKgM2, 8.5);
+      expect(result.factors?.muscleLevel, 'medium');
+    },
+  );
+
   test('calculates all six body parts from data', () {
     final all = calculateAllRecommendations(
       profile: const ParticipantProfile(

@@ -123,10 +123,11 @@ export function bodyFatCoefficient(bodyFatPct: number, sex: Sex, rules: Algorith
 
 export function skeletalMuscleLevel(skeletalMuscleMassKg: number, heightCm: number, sex: Sex, rules: AlgorithmRuleSet): { level: 'low' | 'medium' | 'high'; indexKgM2: number } {
   const heightM = heightCm / 100;
-  const indexKgM2 = round(skeletalMuscleMassKg / (heightM * heightM));
+  const rawIndexKgM2 = skeletalMuscleMassKg / (heightM * heightM);
+  const indexKgM2 = round(rawIndexKgM2);
   const thresholds = rules.correctionPolicy.muscleMass[sex];
-  if (indexKgM2 <= thresholds.lowMaximum) return { level: 'low', indexKgM2 };
-  if (indexKgM2 <= thresholds.mediumMaximum) return { level: 'medium', indexKgM2 };
+  if (rawIndexKgM2 <= thresholds.lowMaximum) return { level: 'low', indexKgM2 };
+  if (rawIndexKgM2 <= thresholds.mediumMaximum) return { level: 'medium', indexKgM2 };
   return { level: 'high', indexKgM2 };
 }
 
