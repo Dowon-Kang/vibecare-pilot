@@ -143,7 +143,12 @@ void main() {
       find.byKey(const ValueKey('trend-chart-skeletalMuscleMassKg')),
       findsOneWidget,
     );
-    expect(find.bySemanticsLabel(RegExp(r'8/23 12\.20kg')), findsOneWidget);
+    final oldestLocal = DateTime.utc(2026, 8, 22, 23, 21).toLocal();
+    final oldestLabel = '${oldestLocal.month}/${oldestLocal.day} 12.20kg';
+    expect(
+      find.bySemanticsLabel(RegExp(RegExp.escape(oldestLabel))),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const ValueKey('trend-metric-bodyFatPct')));
     await tester.pumpAndSettle();
