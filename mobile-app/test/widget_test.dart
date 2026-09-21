@@ -128,6 +128,35 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('측정 기록 그래프에서 골격근량 체지방 체중 변화를 전환한다', (tester) async {
+    _size(tester, const Size(390, 844));
+    await _rawLogin(tester);
+    await _tap(tester, 'profile-data-button');
+    await tester.tap(find.byKey(const ValueKey('measurement-history-tab')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('measurement-trend-chart')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('trend-chart-skeletalMuscleMassKg')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('trend-metric-bodyFatPct')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('trend-chart-bodyFatPct')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('trend-metric-weightKg')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('trend-chart-weightKg')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('로그인 후 프로필 주의사항, 골격근량 등급 비교, 장치 설정 순서로 이동한다', (tester) async {
     _size(tester, const Size(390, 844));
     await _rawLogin(tester);

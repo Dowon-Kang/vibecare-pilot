@@ -138,9 +138,16 @@ class _MeasurementsOverviewTab extends StatelessWidget {
       const SizedBox(height: 12),
       _DetailSection(
         title: '4회 변화',
-        subtitle: '최근 측정부터 같은 항목끼리 비교합니다.',
-        child: _CompactMeasurementHistory(
-          measurements: snapshot.selectedMeasurements,
+        subtitle: '왼쪽 과거부터 오른쪽 최신까지 비교합니다.',
+        child: Column(
+          children: [
+            _MeasurementTrendChart(measurements: snapshot.selectedMeasurements),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            _CompactMeasurementHistory(
+              measurements: snapshot.selectedMeasurements,
+            ),
+          ],
         ),
       ),
       const SizedBox(height: 12),
@@ -465,6 +472,248 @@ class _CompactMeasurementHistory extends StatelessWidget {
       ],
     );
   }
+}
+
+enum _TrendMetric { skeletalMuscleMassKg, bodyFatPct, weightKg }
+
+extension on _TrendMetric {
+  String get label => switch (this) {
+    _TrendMetric.skeletalMuscleMassKg => '골격근량',
+    _TrendMetric.bodyFatPct => '체지방',
+    _TrendMetric.weightKg => '체중',
+  };
+
+  String get shortLabel => switch (this) {
+    _TrendMetric.skeletalMuscleMassKg => '골격근',
+    _TrendMetric.bodyFatPct => '체지방',
+    _TrendMetric.weightKg => '체중',
+  };
+
+  String get unit => switch (this) {
+    _TrendMetric.skeletalMuscleMassKg || _TrendMetric.weightKg => 'kg',
+    _TrendMetric.bodyFatPct => '%',
+  };
+
+  double valueOf(BiaMeasurement measurement) => switch (this) {
+    _TrendMetric.skeletalMuscleMassKg =>
+      measurement.values.skeletalMuscleMassKg,
+    _TrendMetric.bodyFatPct => measurement.values.bodyFatPct,
+    _TrendMetric.weightKg => measurement.values.weightKg,
+  };
+}
+
+class _MeasurementTrendChart extends StatefulWidget {
+  const _MeasurementTrendChart({required this.measurements});
+
+  final List<BiaMeasurement> measurements;
+
+  @override
+  State<_MeasurementTrendChart> createState() => _MeasurementTrendChartState();
+}
+
+class _MeasurementTrendChartState extends State<_MeasurementTrendChart> {
+  _TrendMetric _metric = _TrendMetric.skeletalMuscleMassKg;
+
+  @override
+  Widget build(BuildContext context) {
+    final ordered = [...widget.measurements]
+      ..sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
+    final values = ordered.map(_metric.valueOf).toList(growable: false);
+    final dates = ordered
+        .map(
+          (measurement) =>
+              '${measurement.measuredAt.month}/${measurement.measuredAt.day}',
+        )
+        .toList(growable: false);
+    final spokenValues = [
+      for (var index = 0; index < ordered.length; index++)
+        '${dates[index]} ${_number(values[index])}${_metric.unit}',
+    ].join(', ');
+
+    return Column(
+      key: const ValueKey('measurement-trend-chart'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SegmentedButton<_TrendMetric>(
+          showSelectedIcon: false,
+          segments: [
+            for (final metric in _TrendMetric.values)
+              ButtonSegment<_TrendMetric>(
+                value: metric,
+                label: Text(
+                  metric.shortLabel,
+                  key: ValueKey('trend-metric-${metric.name}'),
+                ),
+              ),
+          ],
+          selected: {_metric},
+          onSelectionChanged: (selection) {
+            setState(() => _metric = selection.single);
+          },
+        ),
+        const SizedBox(height: 14),
+        Semantics(
+          label: '${_metric.label} 변화 그래프. $spokenValues. 왼쪽은 과거, 오른쪽은 최신입니다.',
+          child: ExcludeSemantics(
+            child: SizedBox(
+              key: ValueKey('trend-chart-${_metric.name}'),
+              height: 184,
+              child: CustomPaint(
+                painter: _MeasurementTrendPainter(
+                  values: values,
+                  dates: dates,
+                  unit: _metric.unit,
+                  lineColor: AppColors.brand,
+                  gridColor: AppColors.hairlineSoft,
+                  labelColor: AppColors.muted,
+                  valueColor: AppColors.ink,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MeasurementTrendPainter extends CustomPainter {
+  const _MeasurementTrendPainter({
+    required this.values,
+    required this.dates,
+    required this.unit,
+    required this.lineColor,
+    required this.gridColor,
+    required this.labelColor,
+    required this.valueColor,
+  });
+
+  final List<double> values;
+  final List<String> dates;
+  final String unit;
+  final Color lineColor;
+  final Color gridColor;
+  final Color labelColor;
+  final Color valueColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+
+    const top = 26.0;
+    const bottom = 28.0;
+    const horizontalInset = 22.0;
+    final chartHeight = size.height - top - bottom;
+    final chartWidth = size.width - horizontalInset * 2;
+    final minimum = values.reduce((a, b) => a < b ? a : b);
+    final maximum = values.reduce((a, b) => a > b ? a : b);
+    final spread = maximum - minimum;
+    final paddedMinimum = spread == 0 ? minimum - 1 : minimum - spread * .16;
+    final paddedMaximum = spread == 0 ? maximum + 1 : maximum + spread * .16;
+
+    final gridPaint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 1;
+    for (var index = 0; index < 3; index++) {
+      final y = top + chartHeight * index / 2;
+      canvas.drawLine(
+        Offset(horizontalInset, y),
+        Offset(size.width - horizontalInset, y),
+        gridPaint,
+      );
+    }
+
+    final points = <Offset>[
+      for (var index = 0; index < values.length; index++)
+        Offset(
+          values.length == 1
+              ? size.width / 2
+              : horizontalInset + chartWidth * index / (values.length - 1),
+          top +
+              chartHeight *
+                  (1 -
+                      (values[index] - paddedMinimum) /
+                          (paddedMaximum - paddedMinimum)),
+        ),
+    ];
+
+    final fillPath = Path()
+      ..moveTo(points.first.dx, top + chartHeight)
+      ..lineTo(points.first.dx, points.first.dy);
+    for (final point in points.skip(1)) {
+      fillPath.lineTo(point.dx, point.dy);
+    }
+    fillPath
+      ..lineTo(points.last.dx, top + chartHeight)
+      ..close();
+    canvas.drawPath(
+      fillPath,
+      Paint()..color = lineColor.withValues(alpha: .09),
+    );
+
+    final linePaint = Paint()
+      ..color = lineColor
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final point in points.skip(1)) {
+      linePath.lineTo(point.dx, point.dy);
+    }
+    canvas.drawPath(linePath, linePaint);
+
+    for (var index = 0; index < points.length; index++) {
+      final point = points[index];
+      canvas.drawCircle(point, 5, Paint()..color = AppColors.canvas);
+      canvas.drawCircle(point, 3.5, Paint()..color = lineColor);
+      _paintCenteredText(
+        canvas,
+        text: '${_number(values[index])}$unit',
+        centerX: point.dx,
+        top: point.dy - 24,
+        maxWidth: size.width,
+        style: TextStyle(
+          color: valueColor,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      );
+      _paintCenteredText(
+        canvas,
+        text: dates[index],
+        centerX: point.dx,
+        top: size.height - 19,
+        maxWidth: size.width,
+        style: TextStyle(color: labelColor, fontSize: 11),
+      );
+    }
+  }
+
+  void _paintCenteredText(
+    Canvas canvas, {
+    required String text,
+    required double centerX,
+    required double top,
+    required double maxWidth,
+    required TextStyle style,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final unclampedLeft = centerX - painter.width / 2;
+    final left = unclampedLeft.clamp(0.0, maxWidth - painter.width);
+    painter.paint(canvas, Offset(left, top));
+  }
+
+  @override
+  bool shouldRepaint(covariant _MeasurementTrendPainter oldDelegate) =>
+      !listEquals(oldDelegate.values, values) ||
+      !listEquals(oldDelegate.dates, dates) ||
+      oldDelegate.unit != unit ||
+      oldDelegate.lineColor != lineColor;
 }
 
 class _MeasurementComparisonRow extends StatelessWidget {
