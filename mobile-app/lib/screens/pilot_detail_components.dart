@@ -520,10 +520,10 @@ class _MeasurementTrendChartState extends State<_MeasurementTrendChart> {
       ..sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
     final values = ordered.map(_metric.valueOf).toList(growable: false);
     final dates = ordered
-        .map(
-          (measurement) =>
-              '${measurement.measuredAt.month}/${measurement.measuredAt.day}',
-        )
+        .map((measurement) {
+          final local = measurement.measuredAt.toLocal();
+          return '${local.month}/${local.day}';
+        })
         .toList(growable: false);
     final spokenValues = [
       for (var index = 0; index < ordered.length; index++)

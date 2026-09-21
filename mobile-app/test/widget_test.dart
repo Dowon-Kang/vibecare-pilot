@@ -143,6 +143,7 @@ void main() {
       find.byKey(const ValueKey('trend-chart-skeletalMuscleMassKg')),
       findsOneWidget,
     );
+    expect(find.bySemanticsLabel(RegExp(r'8/23 12\.20kg')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('trend-metric-bodyFatPct')));
     await tester.pumpAndSettle();
