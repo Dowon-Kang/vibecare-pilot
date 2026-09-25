@@ -1,4 +1,4 @@
-# VibeCare Pilot
+# VibeCare Pilot.
 
 FITRUS 체성분 측정 이력을 저장·검증하고, 최신 API 골격근량의 근육지수를 낮음·중간·높음으로 분류해 확정된 부위별 시간·Hz·강도를 보여주는 Flutter 연구 프로토타입입니다.
 
