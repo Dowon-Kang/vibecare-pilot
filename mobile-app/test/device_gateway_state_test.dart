@@ -77,7 +77,7 @@ Future<DeviceAuthorization> _authorizeConnected(
         id: 'M$index',
         participantId: 'TEST',
         deviceId: 'BIA',
-        measuredAt: DateTime.utc(2026, 9, 1),
+        measuredAt: DateTime.now().toUtc().subtract(const Duration(hours: 1)),
         qualityPassed: true,
         muscleDefinition: MuscleMassBasis.smm,
         muscleMeasurementMethod: 'BIA_TEST',

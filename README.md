@@ -8,6 +8,8 @@ FITRUS 체성분 측정 이력을 저장·검증하고, 최신 API 골격근량�
 
 [VibeCare Web 시연판 열기](https://dowon-kang.github.io/vibecare-pilot/)
 
+웹 시연판의 예약·출석 기록은 현재 브라우저에 저장되며 예약 시각 알림은 페이지가 열려 있을 때 표시된다.
+
 시연 계정은 `USER-001 / 123456`이다. 공개판은 합성 샘플 데이터와 Mock 시뮬레이터만 사용하며 Supabase 실사용 데이터, FITRUS API 키 또는 실제 진동기에 연결되지 않는다.
 
 ## 핵심 흐름

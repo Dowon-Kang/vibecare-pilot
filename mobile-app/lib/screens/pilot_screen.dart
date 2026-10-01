@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -10,14 +11,17 @@ import '../algorithm/calculation_summary.dart';
 import '../algorithm/skeletal_muscle_assessment.dart';
 import '../models/models.dart';
 import '../services/device_gateway.dart';
+import '../services/participation_repository.dart';
 import '../theme/app_theme.dart';
 import 'overview_card.dart';
+import 'participation_screen.dart';
 
 part 'pilot_control_components.dart';
 part 'pilot_dashboard_components.dart';
 part 'pilot_detail_components.dart';
 part 'pilot_feedback_wizard.dart';
 part 'pilot_onboarding_components.dart';
+part 'measurement_increases.dart';
 
 enum _PilotStep { profile, measurement, device }
 
@@ -34,6 +38,12 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   late final TextEditingController _pin;
   _PilotStep _step = _PilotStep.profile;
   DemoPersona _persona = DemoPersona.low;
+  final _participationRepository = const ParticipationRepository();
+  List<VisitBooking> _bookings = [];
+  String? _bookingsOwnerId;
+  final Set<String> _shownReminders = {};
+  Timer? _reminderTimer;
+  bool _appActive = true;
 
   @override
   void initState() {
@@ -46,11 +56,16 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
       text: environment.usesSampleData ? '123456' : '',
     );
     WidgetsBinding.instance.addObserver(this);
+    _reminderTimer = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => _checkReminders(),
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _reminderTimer?.cancel();
     _participantCode.dispose();
     _pin.dispose();
     super.dispose();
@@ -58,6 +73,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appActive = state == AppLifecycleState.resumed;
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       ref.read(pilotControllerProvider.notifier).onAppBackgrounded();
@@ -188,7 +204,59 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
         );
     if (mounted && ref.read(pilotControllerProvider).isLoggedIn) {
       setState(() => _step = _PilotStep.profile);
+      _shownReminders.clear();
+      await _loadBookings();
     }
+  }
+
+  Future<void> _loadBookings() async {
+    final id = ref.read(pilotControllerProvider).profile?.id;
+    if (id == null) return;
+    try {
+      final bookings = await _participationRepository.load(id);
+      if (mounted && ref.read(pilotControllerProvider).profile?.id == id) {
+        setState(() {
+          _bookings = bookings;
+          _bookingsOwnerId = id;
+        });
+      }
+    } catch (_) {
+      // The participation page displays a recoverable storage error.
+    }
+  }
+
+  void _checkReminders() {
+    final profile = ref.read(pilotControllerProvider).profile;
+    if (!kIsWeb ||
+        !_appActive ||
+        !mounted ||
+        profile == null ||
+        _bookingsOwnerId != profile.id)
+      return;
+    final now = DateTime.now();
+    for (final booking in _bookings) {
+      final elapsed = now.difference(booking.startsAt);
+      if (!booking.attended &&
+          elapsed >= Duration.zero &&
+          elapsed < const Duration(minutes: 1) &&
+          _shownReminders.add(booking.id)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('예약한 참여 시간입니다. 출석 체크를 해 주세요.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openParticipation() async {
+    final id = ref.read(pilotControllerProvider).profile?.id;
+    if (id == null) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) =>
+            ParticipationScreen(participantId: id, onChanged: _loadBookings),
+      ),
+    );
+    await _loadBookings();
   }
 
   Widget _dashboard(PilotState state) {
@@ -241,6 +309,13 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _SystemStatusStrip(state: state, environment: environment),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                key: const ValueKey('participation-button'),
+                onPressed: _openParticipation,
+                icon: const Icon(Icons.event_available_outlined),
+                label: const Text('예약과 출석 보기'),
+              ),
               const SizedBox(height: 8),
               if (state.session == null && state.feedbackSession == null) ...[
                 _JourneyProgress(current: _step),

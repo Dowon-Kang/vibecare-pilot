@@ -143,8 +143,13 @@ void main() {
       find.byKey(const ValueKey('trend-chart-skeletalMuscleMassKg')),
       findsOneWidget,
     );
-    final oldestLocal = DateTime.utc(2026, 8, 22, 23, 21).toLocal();
-    final oldestLabel = '${oldestLocal.month}/${oldestLocal.day} 12.20kg';
+    final snapshot = ProviderScope.containerOf(
+      tester.element(find.byType(VibeCareApp)),
+    ).read(pilotControllerProvider).snapshot!;
+    final oldest = snapshot.selectedMeasurements.last;
+    final oldestLocal = oldest.measuredAt.toLocal();
+    final oldestLabel =
+        '${oldestLocal.month}/${oldestLocal.day} ${oldest.values.skeletalMuscleMassKg.toStringAsFixed(2)}kg';
     expect(
       find.bySemanticsLabel(RegExp(RegExp.escape(oldestLabel))),
       findsOneWidget,

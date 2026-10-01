@@ -16,7 +16,8 @@ class MockFitrusRepository implements FitrusRepository {
     required ParticipantProfile participant,
     required String deviceId,
   }) async {
-    final base = DateTime.utc(2026, 8, 22, 23, 20);
+    // Synthetic readings stay recent; real measurements keep the age gate.
+    final base = DateTime.now().toUtc().subtract(const Duration(hours: 2));
     final history = <BiaMeasurement>[
       _body(
         'M-005',

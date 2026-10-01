@@ -523,6 +523,8 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+            _IncreasedMeasurements(snapshot: snapshot),
             const SizedBox(height: 10),
             Text(
               'DB에 저장된 최신 API 골격근량과 직전 기록 비교',
