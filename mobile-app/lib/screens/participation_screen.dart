@@ -8,17 +8,18 @@ class ParticipationScreen extends StatefulWidget {
     super.key,
     required this.participantId,
     required this.onChanged,
+    this.repository = const ParticipationRepository(),
   });
 
   final String participantId;
   final VoidCallback onChanged;
+  final VisitBookingRepository repository;
 
   @override
   State<ParticipationScreen> createState() => _ParticipationScreenState();
 }
 
 class _ParticipationScreenState extends State<ParticipationScreen> {
-  final _repository = const ParticipationRepository();
   List<VisitBooking> _bookings = [];
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   String? _error;
@@ -32,7 +33,7 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
 
   Future<void> _reload() async {
     try {
-      final bookings = await _repository.load(widget.participantId);
+      final bookings = await widget.repository.load(widget.participantId);
       if (mounted) setState(() => _bookings = bookings);
     } catch (_) {
       if (mounted) setState(() => _error = '참여 기록을 불러오지 못했습니다.');
@@ -41,7 +42,7 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
 
   Future<bool> _save(List<VisitBooking> bookings) async {
     try {
-      await _repository.save(widget.participantId, bookings);
+      await widget.repository.save(widget.participantId, bookings);
       if (!mounted) return true;
       setState(() {
         _bookings = bookings..sort((a, b) => a.startsAt.compareTo(b.startsAt));

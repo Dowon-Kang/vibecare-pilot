@@ -31,7 +31,10 @@ jobs:
         run: flutter pub get
       - name: Build for project Pages path
         working-directory: mobile-app
-        run: flutter build web --release --base-href /vibecare-pilot/ --pwa-strategy=none
+        run: >-
+          flutter build web --release --base-href /vibecare-pilot/ --pwa-strategy=none
+          --dart-define=VIBECARE_SUPABASE_URL=https://jaekmjiupbsufxaevosf.supabase.co
+          --dart-define=VIBECARE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YvezVqzuHVi8Nuxio01k9Q_v25aPNdK
       - name: Add Pages fallback files
         shell: bash
         run: |

@@ -14,7 +14,7 @@
 | 백엔드 코드 | 준비됨 | Node/Hono 진입점과 PostgreSQL adapter 구현 |
 | 백엔드 호스팅 | 미완료 | 공개 HTTPS 주소, 운영 컨테이너와 배포 자동화 없음 |
 | Flutter 내부 시연 APK | 빌드 가능 | API 주소를 `--dart-define`으로 주입 가능 |
-| Flutter Web 공개 시연판 | 완료 | `https://dowon-kang.github.io/vibecare-pilot/`, 샘플·Mock 전용 |
+| Flutter Web 공개 시연판 | 변경 준비 | `https://dowon-kang.github.io/vibecare-pilot/`, Supabase Auth·예약 및 분리된 샘플 시연 |
 | Play Store 릴리스 | 미완료 | 현재 release build가 debug signing을 사용함 |
 | 실제 진동기 | 배포 금지 | `DEVICE_MODE=mock`, `REAL_DEVICE_ENABLED=false` 유지 |
 
@@ -30,7 +30,7 @@ VibeCare Hono 백엔드 API
 Supabase PostgreSQL / vibecare schema
 ```
 
-Flutter가 Supabase에 직접 연결하지 않는다. DB 연결 문자열, DB 비밀번호, FITRUS API 키와 인증 토큰 비밀값은 백엔드 호스팅 환경에만 저장한다.
+Flutter 웹은 공개용 Supabase URL·publishable key로 Auth와 RLS가 적용된 예약·측정 보기만 사용한다. 기존 시뮬레이터 백엔드의 DB 연결 문자열, DB 비밀번호, FITRUS API 키와 인증 토큰 비밀값은 백엔드 호스팅 환경에만 저장한다.
 
 ## 2. 준비물
 
@@ -189,13 +189,15 @@ adb install -r V:\mobile-app\build\app\outputs\flutter-apk\app-release.apk
 
 ### 7.1 공개 Web 시연판
 
-다른 사람이 설치 없이 UI를 확인할 수 있도록 GitHub Pages에 샘플·Mock 전용 Web 빌드를 게시한다.
+다른 사람이 설치 없이 UI를 확인할 수 있도록 GitHub Pages에 Supabase Auth 화면과 별도의 샘플 시연 화면을 게시한다.
 
 ```text
 https://dowon-kang.github.io/vibecare-pilot/
 ```
 
-공개판은 `VIBECARE_API_BASE_URL`을 주입하지 않는다. 따라서 Supabase 실사용 데이터, FITRUS API와 실제 장치에 접근하지 않는다. Web 산출물은 `/vibecare-pilot/` base href로 빌드해 별도 `gh-pages` 브랜치에 게시한다.
+공개판은 `VIBECARE_SUPABASE_URL`과 공개용 `VIBECARE_SUPABASE_PUBLISHABLE_KEY`를 주입한다. `VIBECARE_API_BASE_URL`은 주입하지 않으므로 FITRUS API와 실제 장치에는 접근하지 않는다. `deployment/supabase/002_auth_participation.sql`을 적용하고 Supabase Auth의 허용 리디렉션 URL에 `https://dowon-kang.github.io/vibecare-pilot/`를 추가해야 이메일 가입 확인 후 Pages로 돌아온다. Web 산출물은 `/vibecare-pilot/` base href로 빌드해 GitHub Pages에 게시한다.
+
+Auth 계정만 만들면 예약·출석은 바로 사용할 수 있다. 실제 측정 데이터는 관리자가 Supabase SQL Editor에서 확인된 `auth.users.id`와 기존 `vibecare.participants.id`를 `public.account_participants`에 연결한 뒤에만 보인다. 두 테이블에 실제 대상 기록이 없는 상태에서는 측정 화면이 빈 상태를 보여 준다. 샘플 시연 화면의 측정값은 이 연결과 무관하다.
 
 ## 8. Play Store 배포 전 추가 작업
 
@@ -217,7 +219,7 @@ flutter build appbundle --release --no-pub `
 
 ## 9. 보안·데이터 완료 조건
 
-현재 `vibecare` schema에 대해 `anon`과 `authenticated`의 schema 사용권한과 참여자 조회권한이 없음을 확인했다. 하지만 Supabase Advisor는 14개 테이블의 RLS 비활성화를 경고했다. 운영 전에는 정책 설계 후 RLS를 방어 심층화로 활성화하고 [Supabase RLS 문서](https://supabase.com/docs/guides/database/postgres/row-level-security)에 따라 다시 검사한다.
+`anon`은 예약과 측정 보기를 읽지 못한다. `authenticated`는 본인의 예약과 관리자가 연결한 참가자의 측정 기록만 RLS를 통해 읽는다. 나머지 비공개 `vibecare` 테이블의 방어 심층화는 별도 작업이다. 운영 전 [Supabase RLS 문서](https://supabase.com/docs/guides/database/postgres/row-level-security)에 따라 다시 검사한다.
 
 추가 완료 조건:
 

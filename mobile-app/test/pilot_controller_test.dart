@@ -11,6 +11,16 @@ import 'package:vibecare_pilot/services/feedback_repository.dart';
 import 'package:vibecare_pilot/services/fitrus_repository.dart';
 
 void main() {
+  test('Supabase configuration selects authenticated data mode', () {
+    const connected = AppEnvironment(
+      apiBaseUrl: '',
+      supabaseUrl: 'https://example.supabase.co',
+      supabasePublishableKey: 'sb_publishable_test',
+    );
+    expect(connected.usesSupabase, isTrue);
+    expect(connected.usesSampleData, isFalse);
+  });
+
   test('데이터 연결과 장치 실행 모드를 독립적으로 구분한다', () {
     const local = AppEnvironment(apiBaseUrl: '');
     const backend = AppEnvironment(apiBaseUrl: 'https://example.test');

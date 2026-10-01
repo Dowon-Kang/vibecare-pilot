@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'app/app_environment.dart';
 import 'screens/pilot_screen.dart';
+import 'screens/supabase_home.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (buildEnvironment.usesSupabase) {
+    await Supabase.initialize(
+      url: buildEnvironment.supabaseUrl,
+      publishableKey: buildEnvironment.supabasePublishableKey,
+    );
+  }
   runApp(const ProviderScope(child: VibeCareApp()));
 }
 
@@ -26,7 +35,9 @@ class VibeCareApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: AppTheme.light,
-      home: const PilotScreen(),
+      home: buildEnvironment.usesSupabase
+          ? const SupabaseHome()
+          : const PilotScreen(),
     );
   }
 }

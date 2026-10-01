@@ -80,7 +80,7 @@ Flutter mobile-app
 | 계약 항목 | 내용 |
 |---|---|
 | 목표 | 기존 `SqlDatabase` 포트에 공급자 중립 PostgreSQL 어댑터를 유지하고 Supabase PostgreSQL에 연결한다. |
-| 비목표 | Flutter의 DB 직접 접근, Supabase Auth/Data API 도입, 물리 장치 연동, 알고리즘 변경 |
+| 비목표 | 브라우저에 DB 연결 문자열 제공, 물리 장치 연동, 알고리즘 변경. 별도 웹 Auth·RLS 예약 흐름은 아래 시연 범위에서 도입한다. |
 | 선정 | Supabase managed PostgreSQL. 현재 Hono API와 자체 PIN 인증은 유지하고 Session pooler를 서버에서만 사용한다. |
 | 허용 파일 | `backend-api/src/storage/`, Node 진입점, PostgreSQL 스키마·환경 예제, 백엔드 테스트·문서·계획 |
 | 보존 동작 | 확인 전 실행 금지, 중복 시작 차단, `PROHIBITED`/`SIMULATOR_ONLY`, 실패를 성공으로 표시하지 않기 |
@@ -184,4 +184,4 @@ REQ-SIMPLE-01: 기존 계산을 바꾸지 않고 Flutter 계산 근거를 네 �
 
 - 고정된 합성 측정 시각을 현재 기준으로 바꾸고 측정 전 증가 항목을 표시한다.
 - 기기 내 예약·출석·달력·참여율과 Android/웹 환경에 맞는 로컬 알림을 구현한다.
-- Supabase 예약 데이터 동기화와 웹 앱 종료 후 푸시 알림은 별도 인증·개인정보 전송 계약 후 진행한다.
+- 웹 Supabase Auth 예약·출석 저장과 소유권 RLS를 구현했다. 웹 앱 종료 후 푸시 알림과 측정 계정 연결은 별도 운영 준비가 필요하다.

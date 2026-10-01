@@ -10,7 +10,7 @@ FITRUS 체성분 측정 이력을 저장·검증하고, 최신 API 골격근량�
 
 웹 시연판의 예약·출석 기록은 현재 브라우저에 저장되며 예약 시각 알림은 페이지가 열려 있을 때 표시된다.
 
-시연 계정은 `USER-001 / 123456`이다. 공개판은 합성 샘플 데이터와 Mock 시뮬레이터만 사용하며 Supabase 실사용 데이터, FITRUS API 키 또는 실제 진동기에 연결되지 않는다.
+공개 웹 화면은 Supabase Auth 이메일 계정으로 로그인해 본인 예약·출석과 연결된 측정 기록을 읽는다. 별도의 샘플 시연 화면에서는 `USER-001 / 123456`과 합성 데이터로 추천 매핑을 체험할 수 있다. 실제 진동기에는 연결되지 않는다.
 
 ## 핵심 흐름
 
@@ -51,6 +51,8 @@ Pop-Location
 백엔드 연결 앱은 `--dart-define=VIBECARE_API_BASE_URL=https://...`를 사용합니다. FITRUS 키는 앱이나 Git에 넣지 않고 백엔드 환경변수 `FITRUS_API_KEY`로만 주입합니다.
 
 Supabase DB, 백엔드 API와 Android APK의 배포 순서는 [배포 Runbook](docs/deployment.md)을 따릅니다.
+
+웹 Auth·예약 연결은 `VIBECARE_SUPABASE_URL`과 공개용 `VIBECARE_SUPABASE_PUBLISHABLE_KEY`를 빌드에 주입한다. DB 비밀번호와 service role 키는 웹 빌드에 넣지 않는다. 예약은 Auth 사용자별 RLS로 제한하고, 실제 측정 기록은 관리자가 `public.account_participants`에 계정을 연결한 경우에만 보인다.
 
 ## 구현 경계
 

@@ -31,7 +31,7 @@ flowchart TD
 
 ## 현재 구현된 앱·백엔드 Mock 흐름
 
-`VIBECARE_API_BASE_URL`이 없으면 앱 내부 Mock 저장소와 `MockDeviceGateway`를 사용한다. URL이 있으면 백엔드에 저장된 표준 측정값을 읽고 `BackendDeviceGateway`가 서버 시뮬레이터를 호출한다. 두 경로 모두 실제 진동 장치에는 연결되지 않는다.
+`VIBECARE_SUPABASE_URL`과 공개용 키가 있으면 웹 기본 화면은 Supabase Auth와 사용자별 예약·측정 보기로 열린다. 샘플 시연 화면은 앱 내부 Mock 저장소와 `MockDeviceGateway`를 사용한다. 두 Supabase 설정이 없고 `VIBECARE_API_BASE_URL`이 있으면 기존 백엔드에 저장된 표준 측정값을 읽고 `BackendDeviceGateway`가 서버 시뮬레이터를 호출한다. 모든 경로에서 실제 진동 장치에는 연결되지 않는다.
 
 ```mermaid
 sequenceDiagram
@@ -129,4 +129,4 @@ Flutter 화면은 로그인 후 `프로필·주의사항 → 골격근량 결과
 문헌의 `HOLD` 개념은 앱 추천 상태의 `BLOCKED`에 대응하지만 공개 API 상태값으로 혼용하지 않는다.
 ## 예약·출석 데이터 경계 (2026-10-01)
 
-공개 웹 시연과 Android 시제품의 예약·출석은 Flutter `ParticipationRepository`가 참여자별 기기 보안 저장소에 기록한다. 달력과 참여율은 이 기기 기록으로 계산한다. Android는 로컬 `AlarmManager` 알림을 예약하고 웹은 실행 중 타이머로 알린다. 이 시연 기록은 Supabase로 전송하지 않는다. 기존 측정 API의 서버 전용 Supabase PostgreSQL 연결 경계는 유지한다.
+GitHub Pages는 Supabase Auth 이메일 로그인 후 `public.visit_bookings`에 사용자별 예약·출석을 저장한다. `SupabaseParticipationRepository`와 RLS 정책은 `auth.uid()`로 소유권을 확인한다. 연결된 측정 기록은 `public.account_participants`의 관리자 연결과 RLS가 적용된 `public.vibecare_measurements` 보기를 통해 읽는다. 샘플 시연 화면은 기존 Mock 저장소와 시뮬레이터를 사용한다. Android는 로컬 `AlarmManager` 알림을 예약하고 웹은 열려 있는 화면에서 타이머로 알린다. DB 연결 문자열과 서비스 키는 브라우저에 제공하지 않는다.
