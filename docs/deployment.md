@@ -251,3 +251,6 @@ flutter build appbundle --release --no-pub `
 - [ ] 실제 진동기 동작이 없음을 확인
 
 위 항목이 모두 끝나기 전에는 “운영 배포 완료”라고 표시하지 않는다.
+### 참여 홈 공지 게시
+
+Supabase Dashboard의 Table Editor에서 `public.announcements`에 제목과 본문을 입력하고 `is_published=true`로 저장한다. `published_at` 이전이나 `expires_at` 이후의 공지는 참가자 화면에 보이지 않는다. 웹앱은 로그인 사용자에게 최근 게시 공지 5건을 보여주며, 참가자 계정에는 게시·수정 권한이 없다. 데이터베이스 변경 내역은 `deployment/supabase/003_announcements.sql`에 기록한다.

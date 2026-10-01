@@ -81,20 +81,42 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
       setState(() => _error = '현재보다 늦은 시간을 선택해 주세요.');
       return;
     }
-    final booking = VisitBooking(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      startsAt: startsAt,
+    final weeks = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('예약 반복'),
+        children: [
+          for (final option in [1, 4, 12, 52])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, option),
+              child: Text(option == 1 ? '이번 한 번' : '매주 $option주'),
+            ),
+        ],
+      ),
     );
-    if (!await _save([..._bookings, booking])) return;
+    if (weeks == null || !mounted) return;
+    final newBookings = createWeeklyBookings(startsAt, weeks, _bookings);
+    if (newBookings.isEmpty) {
+      setState(() => _notice = '선택한 시간은 이미 예약되어 있습니다.');
+      return;
+    }
+    if (!await _save([..._bookings, ...newBookings])) return;
     try {
-      final permissionGranted = await const BookingReminder().schedule(
-        booking.id,
-        startsAt,
-      );
+      var permissionGranted = true;
+      for (final booking in newBookings) {
+        permissionGranted =
+            await const BookingReminder().schedule(
+              booking.id,
+              booking.startsAt,
+            ) &&
+            permissionGranted;
+      }
       if (mounted &&
           !permissionGranted &&
           Theme.of(context).platform == TargetPlatform.android) {
         setState(() => _notice = '예약 알림을 받으려면 알림 권한을 허용해 주세요.');
+      } else if (mounted) {
+        setState(() => _notice = '${newBookings.length}회 예약했습니다.');
       }
     } catch (_) {
       if (mounted) setState(() => _notice = '예약은 저장됐지만 기기 알림을 설정하지 못했습니다.');
@@ -105,8 +127,9 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
     final now = DateTime.now();
     if (booking.startsAt.year != now.year ||
         booking.startsAt.month != now.month ||
-        booking.startsAt.day != now.day)
+        booking.startsAt.day != now.day) {
       return;
+    }
     final saved = await _save([
       for (final item in _bookings)
         item.id == booking.id ? item.checkIn(now) : item,
@@ -123,9 +146,10 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final attended = _bookings.where((b) => b.attended).length;
-    final missed = _bookings.where((b) => b.isMissedAt(now)).length;
-    final completed = attended + missed;
+    final summary = AttendanceSummary.fromBookings(_bookings, now);
+    final attended = summary.attended;
+    final missed = summary.missed;
+    final completed = summary.completed;
     final firstWeekday = DateTime(_month.year, _month.month).weekday;
     final days = DateTime(_month.year, _month.month + 1, 0).day;
     return Scaffold(
@@ -137,7 +161,7 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
             key: const ValueKey('book-visit-button'),
             onPressed: _book,
             icon: const Icon(Icons.event_available),
-            label: const Text('시간 예약하기'),
+            label: const Text('시간 예약하기 · 매주 반복 가능'),
           ),
           const SizedBox(height: 8),
           const Text('Android에서는 기기 알림을 예약합니다. 웹에서는 앱이 열려 있을 때 알림을 표시합니다.'),
@@ -160,13 +184,27 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
                     '참여 $attended회 · 빠진 날 $missed회 · 예정 ${_bookings.length - completed}회',
                   ),
                   const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: completed == 0 ? 0 : attended / completed,
+                  Row(
+                    children: [
+                      Icon(
+                        summary.hasStar ? Icons.star : Icons.star_border,
+                        color: summary.hasStar ? const Color(0xFFE5A700) : null,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          summary.hasStar
+                              ? '참석률 80% 달성 · 별 획득'
+                              : '완료된 예약 참석률 80%가 되면 별을 받습니다.',
+                        ),
+                      ),
+                    ],
                   ),
+                  LinearProgressIndicator(value: summary.rate ?? 0),
                   Text(
                     completed == 0
                         ? '완료된 예약이 없습니다.'
-                        : '완료된 예약 중 참여율 ${(attended / completed * 100).round()}%',
+                        : '완료된 예약 중 참여율 ${(summary.rate! * 100).round()}%',
                   ),
                 ],
               ),
@@ -244,7 +282,19 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
                           color: color,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text('$day'),
+                        child: bookings.any((booking) => booking.attended)
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.star,
+                                    size: 16,
+                                    color: Color(0xFFE5A700),
+                                  ),
+                                  Text('$day'),
+                                ],
+                              )
+                            : Text('$day'),
                       );
                     },
                   ),
@@ -268,7 +318,7 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
                       : '예약됨',
                 ),
                 trailing: booking.attended
-                    ? const Icon(Icons.check_circle, color: Color(0xFF087F6B))
+                    ? const Icon(Icons.star, color: Color(0xFFE5A700))
                     : now.year == booking.startsAt.year &&
                           now.month == booking.startsAt.month &&
                           now.day == booking.startsAt.day

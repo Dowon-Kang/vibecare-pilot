@@ -130,3 +130,4 @@ Flutter 화면은 로그인 후 `프로필·주의사항 → 골격근량 결과
 ## 예약·출석 데이터 경계 (2026-10-01)
 
 GitHub Pages는 Supabase Auth 이메일 로그인 후 `public.visit_bookings`에 사용자별 예약·출석을 저장한다. `SupabaseParticipationRepository`와 RLS 정책은 `auth.uid()`로 소유권을 확인한다. 연결된 측정 기록은 `public.account_participants`의 관리자 연결과 RLS가 적용된 `public.vibecare_measurements` 보기를 통해 읽는다. 샘플 시연 화면은 기존 Mock 저장소와 시뮬레이터를 사용한다. Android는 로컬 `AlarmManager` 알림을 예약하고 웹은 열려 있는 화면에서 타이머로 알린다. DB 연결 문자열과 서비스 키는 브라우저에 제공하지 않는다.
+주간 예약은 기존 `visit_bookings`의 독립된 회차 행으로 저장한다. 클라이언트가 선택한 4·12·52주 범위의 날짜를 생성하고 중복 날짜·시간은 건너뛴다. 출석률과 별은 저장된 `checked_in_at` 및 지난 예약의 날짜를 매번 계산하므로 화면 재진입 후에도 동기화된다. 운영 공지는 `public.announcements`의 게시 상태와 기간을 RLS로 제한해 인증 사용자에게 읽기만 허용한다. 게시와 수정은 운영자가 Supabase 관리 경로에서 수행한다.

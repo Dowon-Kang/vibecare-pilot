@@ -35,6 +35,9 @@ void main() {
     );
     await tester.tap(find.text('Open sample'));
     await tester.pumpAndSettle();
+    expect(find.text('VibeCare 샘플 홈'), findsOneWidget);
+    await tester.tap(find.text('샘플 실행하기'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('로그인'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('participation-button')), findsOneWidget);

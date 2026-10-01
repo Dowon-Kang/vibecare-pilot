@@ -2,6 +2,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibecare_pilot/services/participation_repository.dart';
 
 void main() {
+  test('weekly bookings repeat on the chosen weekday without duplicates', () {
+    final existing = VisitBooking(
+      id: 'existing',
+      startsAt: DateTime(2026, 10, 8, 10),
+    );
+    final bookings = createWeeklyBookings(DateTime(2026, 10, 1, 10), 4, [
+      existing,
+    ]);
+    expect(bookings.map((booking) => booking.startsAt).toList(), [
+      DateTime(2026, 10, 1, 10),
+      DateTime(2026, 10, 15, 10),
+      DateTime(2026, 10, 22, 10),
+    ]);
+    expect(bookings.map((booking) => booking.id).toSet().length, 3);
+  });
+
+  test('attendance star tracks completed visits only', () {
+    final now = DateTime(2026, 10, 23);
+    final attended = VisitBooking(
+      id: 'attended',
+      startsAt: DateTime(2026, 10, 1, 10),
+      checkedInAt: DateTime(2026, 10, 1, 10),
+    );
+    final missed = VisitBooking(
+      id: 'missed',
+      startsAt: DateTime(2026, 10, 8, 10),
+    );
+    final future = VisitBooking(
+      id: 'future',
+      startsAt: DateTime(2026, 10, 29, 10),
+    );
+    expect(
+      AttendanceSummary.fromBookings([attended, future], now).hasStar,
+      isTrue,
+    );
+    expect(
+      AttendanceSummary.fromBookings([attended, missed, future], now).hasStar,
+      isFalse,
+    );
+    expect(AttendanceSummary.fromBookings([future], now).rate, isNull);
+  });
+
   test('a booking becomes missed when its calendar day ends', () {
     final booking = VisitBooking(
       id: 'one',

@@ -24,6 +24,16 @@ class _MeasurementPoint {
       );
 }
 
+class _Announcement {
+  const _Announcement(this.title, this.body);
+
+  final String title;
+  final String body;
+
+  factory _Announcement.fromJson(Map<String, dynamic> row) =>
+      _Announcement(row['title'] as String, row['body'] as String);
+}
+
 class SupabaseHome extends StatefulWidget {
   const SupabaseHome({super.key});
 
@@ -41,6 +51,7 @@ class _SupabaseHomeState extends State<SupabaseHome> {
   User? _user;
   List<_MeasurementPoint> _measurements = [];
   List<VisitBooking> _bookings = [];
+  List<_Announcement> _announcements = [];
   bool _busy = false;
   String? _message;
 
@@ -60,6 +71,7 @@ class _SupabaseHomeState extends State<SupabaseHome> {
         if (_user == null) {
           _measurements = [];
           _bookings = [];
+          _announcements = [];
         }
       });
       if (_user != null) unawaited(_reload());
@@ -125,6 +137,11 @@ class _SupabaseHomeState extends State<SupabaseHome> {
             )
             .order('measured_at', ascending: false),
         SupabaseParticipationRepository(_client).load(id),
+        _client
+            .from('announcements')
+            .select('title, body')
+            .order('published_at', ascending: false)
+            .limit(5),
       ]);
       if (!mounted || _client.auth.currentUser?.id != id) return;
       setState(() {
@@ -133,6 +150,10 @@ class _SupabaseHomeState extends State<SupabaseHome> {
             _MeasurementPoint.fromJson(row as Map<String, dynamic>),
         ];
         _bookings = results[1] as List<VisitBooking>;
+        _announcements = [
+          for (final row in results[2] as List<dynamic>)
+            _Announcement.fromJson(row as Map<String, dynamic>),
+        ];
         _message = null;
       });
     } catch (_) {
@@ -241,11 +262,13 @@ class _SupabaseHomeState extends State<SupabaseHome> {
 
   Widget _dashboard() {
     final now = DateTime.now();
-    final attended = _bookings.where((b) => b.attended).length;
-    final missed = _bookings.where((b) => b.isMissedAt(now)).length;
+    final summary = AttendanceSummary.fromBookings(_bookings, now);
+    final upcoming =
+        _bookings.where((booking) => booking.startsAt.isAfter(now)).toList()
+          ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
     return Scaffold(
       appBar: AppBar(
-        title: const Text('VibeCare 참여 현황'),
+        title: const Text('VibeCare 홈'),
         actions: [
           IconButton(
             tooltip: '새로고침',
@@ -262,6 +285,10 @@ class _SupabaseHomeState extends State<SupabaseHome> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Text('오늘의 홈', style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 4),
+          const Text('실행, 출석, 공지를 한곳에서 확인하세요.'),
+          const SizedBox(height: 16),
           if (_message != null) ...[
             Text(
               _message!,
@@ -275,16 +302,33 @@ class _SupabaseHomeState extends State<SupabaseHome> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('예약과 출석', style: Theme.of(context).textTheme.titleLarge),
+                  Text('출석 체크', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
                   Text(
-                    '참여 $attended회 · 빠진 날 $missed회 · 예정 ${_bookings.length - attended - missed}회',
+                    '참여 ${summary.attended}회 · 빠진 날 ${summary.missed}회 · 예정 ${_bookings.length - summary.completed}회',
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        summary.hasStar ? Icons.star : Icons.star_border,
+                        color: summary.hasStar ? const Color(0xFFE5A700) : null,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          summary.rate == null
+                              ? '첫 출석을 기다리고 있습니다.'
+                              : '참석률 ${(summary.rate! * 100).round()}% · ${summary.hasStar ? '별 획득' : '80% 달성 시 별 획득'}',
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: _openParticipation,
                     icon: const Icon(Icons.event_available),
-                    label: const Text('예약·출석 달력 보기'),
+                    label: const Text('예약 · 출석체크 · 달력 열기'),
                   ),
                 ],
               ),
@@ -297,15 +341,51 @@ class _SupabaseHomeState extends State<SupabaseHome> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('샘플 시연', style: Theme.of(context).textTheme.titleLarge),
+                  Text('실행', style: Theme.of(context).textTheme.titleLarge),
                   const Text(
                     '측정값과 추천 매핑을 샘플 데이터로 체험할 수 있습니다. 이 값은 Supabase 기록이 아닙니다.',
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton(
                     onPressed: _openDemo,
-                    child: const Text('샘플 시연 화면 보기'),
+                    child: const Text('샘플 시연 실행하기'),
                   ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '공지 · 안내',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    upcoming.isEmpty
+                        ? '예정된 예약이 없습니다. 출석 체크 화면에서 매주 참여 시간을 예약해 주세요.'
+                        : '다음 참여: ${upcoming.first.startsAt.month}월 ${upcoming.first.startsAt.day}일 ${TimeOfDay.fromDateTime(upcoming.first.startsAt).format(context)}',
+                  ),
+                  if (summary.missed > 0)
+                    Text('빠진 날 ${summary.missed}회가 있습니다. 출석 달력에서 확인해 주세요.'),
+                  const Text('웹 알림은 페이지가 열려 있을 때 표시됩니다.'),
+                  if (_announcements.isEmpty) ...[
+                    const SizedBox(height: 8),
+                    const Text('현재 운영 공지는 없습니다.'),
+                  ],
+                  for (final announcement in _announcements) ...[
+                    const Divider(),
+                    Text(
+                      announcement.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(announcement.body),
+                  ],
                 ],
               ),
             ),
