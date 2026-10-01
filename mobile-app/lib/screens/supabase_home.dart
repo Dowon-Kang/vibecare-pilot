@@ -1,13 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../app/app_environment.dart';
 import '../services/participation_repository.dart';
 import 'participation_screen.dart';
-import 'pilot_screen.dart';
+import 'sample_pilot_scope.dart';
 
 class _MeasurementPoint {
   const _MeasurementPoint(this.date, this.weight, this.muscle, this.bodyFat);
@@ -176,18 +174,9 @@ class _SupabaseHomeState extends State<SupabaseHome> {
   }
 
   void _openDemo() {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => ProviderScope(
-          overrides: [
-            appEnvironmentProvider.overrideWithValue(
-              const AppEnvironment(apiBaseUrl: ''),
-            ),
-          ],
-          child: const PilotScreen(),
-        ),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute(builder: (_) => const SamplePilotScope()));
   }
 
   @override
