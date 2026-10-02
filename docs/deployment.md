@@ -254,3 +254,6 @@ flutter build appbundle --release --no-pub `
 ### 참여 홈 공지 게시
 
 Supabase Dashboard의 Table Editor에서 `public.announcements`에 제목과 본문을 입력하고 `is_published=true`로 저장한다. `published_at` 이전이나 `expires_at` 이후의 공지는 참가자 화면에 보이지 않는다. 웹앱은 로그인 사용자에게 최근 게시 공지 5건을 보여주며, 참가자 계정에는 게시·수정 권한이 없다. 데이터베이스 변경 내역은 `deployment/supabase/003_announcements.sql`에 기록한다.
+### Supabase Auth 회원가입 이메일
+
+`Authentication → Sign In / Providers`에서 신규 가입과 이메일 인증 설정을 확인한다. 현재 프로젝트에서는 둘 다 켜져 있다. 확인 메일을 조직 멤버가 아닌 참가자에게 보내려면 Supabase 기본 발신 제한을 해제하는 **사용자 소유 SMTP 제공자의 호스트·포트·계정·비밀키와 발신 주소**를 `Authentication → Emails → SMTP Settings`에 설정해야 한다. 비밀키를 Git이나 Flutter 웹 빌드에 넣지 않는다. [Supabase SMTP 안내](https://supabase.com/docs/guides/auth/auth-smtp)를 따른다.

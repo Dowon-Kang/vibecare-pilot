@@ -317,13 +317,14 @@ class _SnapshotRepository implements FitrusRepository {
     required ParticipantProfile participant,
     required String deviceId,
   }) async {
+    final base = DateTime.now().toUtc().subtract(const Duration(hours: 2));
     final measurements = [
       for (var index = 0; index < 4; index++)
         BiaMeasurement(
           id: 'M-$index',
           participantId: participant.id,
           deviceId: deviceId,
-          measuredAt: DateTime.utc(2026, 9, 1, 12, index),
+          measuredAt: base.add(Duration(minutes: index)),
           qualityPassed: true,
           muscleDefinition: MuscleMassBasis.smm,
           muscleMeasurementMethod: 'BIA_TEST',
@@ -343,7 +344,7 @@ class _SnapshotRepository implements FitrusRepository {
       bodyCompositionHistory: measurements,
       selectedMeasurements: measurements,
       vitals: const [],
-      syncedAt: DateTime.utc(2026, 9, 1, 12, 4),
+      syncedAt: base.add(const Duration(minutes: 4)),
       ruleSet: pilotRuleSet,
     );
   }

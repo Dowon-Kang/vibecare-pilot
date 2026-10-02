@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/auth_input_validation.dart';
 import '../services/participation_repository.dart';
 import 'participation_screen.dart';
 import 'sample_pilot_scope.dart';
@@ -35,16 +36,20 @@ class _Announcement {
 }
 
 class SupabaseHome extends StatefulWidget {
-  const SupabaseHome({super.key});
+  const SupabaseHome({super.key, this.client});
+
+  final SupabaseClient? client;
 
   @override
   State<SupabaseHome> createState() => _SupabaseHomeState();
 }
 
 class _SupabaseHomeState extends State<SupabaseHome> {
-  final _client = Supabase.instance.client;
+  late final SupabaseClient _client = widget.client ?? Supabase.instance.client;
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
+  GlobalKey<FormState> _authFormKey = GlobalKey<FormState>();
   StreamSubscription<AuthState>? _authSubscription;
   Timer? _reminderTimer;
   final Set<String> _shownReminders = {};
@@ -53,6 +58,8 @@ class _SupabaseHomeState extends State<SupabaseHome> {
   List<VisitBooking> _bookings = [];
   List<_Announcement> _announcements = [];
   bool _busy = false;
+  bool _signUpMode = false;
+  bool _messageIsError = false;
   String? _message;
 
   @override
@@ -66,8 +73,9 @@ class _SupabaseHomeState extends State<SupabaseHome> {
     _authSubscription = _client.auth.onAuthStateChange.listen((event) {
       if (!mounted) return;
       setState(() {
-        _user = event.session?.user;
-        _message = null;
+        final nextUser = event.session?.user;
+        if (nextUser?.id != _user?.id) _message = null;
+        _user = nextUser;
         if (_user == null) {
           _measurements = [];
           _bookings = [];
@@ -85,11 +93,13 @@ class _SupabaseHomeState extends State<SupabaseHome> {
     _reminderTimer?.cancel();
     _email.dispose();
     _password.dispose();
+    _confirmPassword.dispose();
     super.dispose();
   }
 
-  Future<void> _authenticate({required bool signUp}) async {
-    if (_busy) return;
+  Future<void> _authenticate() async {
+    if (_busy || !(_authFormKey.currentState?.validate() ?? false)) return;
+    final signUp = _signUpMode;
     setState(() {
       _busy = true;
       _message = null;
@@ -97,32 +107,65 @@ class _SupabaseHomeState extends State<SupabaseHome> {
     try {
       final email = _email.text.trim();
       final password = _password.text;
-      if (email.isEmpty || password.length < 6) {
-        throw const FormatException('이메일과 6자 이상 비밀번호를 입력해 주세요.');
-      }
       if (signUp) {
         final result = await _client.auth.signUp(
           email: email,
           password: password,
           emailRedirectTo: Uri.base.toString(),
         );
+        if (result.user == null) {
+          throw StateError('계정 생성 응답이 비어 있습니다. 다시 시도해 주세요.');
+        }
         if (mounted && result.session == null) {
-          setState(() => _message = '확인 메일을 보냈습니다. 이메일 인증 후 로그인해 주세요.');
+          setState(() {
+            _signUpMode = false;
+            _messageIsError = false;
+            _message = '가입 요청이 접수됐습니다. 받은편지함이나 스팸함의 확인 링크를 누른 뒤 로그인해 주세요.';
+          });
         }
       } else {
         await _client.auth.signInWithPassword(email: email, password: password);
       }
     } catch (error) {
-      if (mounted) setState(() => _message = _authError(error));
+      if (mounted) {
+        setState(() {
+          _messageIsError = true;
+          _message = _authError(error);
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   String _authError(Object error) {
-    if (error is FormatException) return error.message;
-    if (error is AuthException) return error.message;
+    if (error is AuthException) {
+      final message = error.message.toLowerCase();
+      if (message.contains('rate limit')) {
+        return '이메일 전송 횟수 제한에 걸렸습니다. 잠시 후 다시 시도해 주세요.';
+      }
+      if (message.contains('email address not authorized')) {
+        return '이 주소로 확인 메일을 보낼 수 없습니다. 관리자에게 이메일 발신 설정을 요청해 주세요.';
+      }
+      if (message.contains('already registered')) {
+        return '이미 가입된 이메일입니다. 로그인해 주세요.';
+      }
+      if (message.contains('signup') && message.contains('disabled')) {
+        return '현재 계정 생성이 비활성화되어 있습니다. 관리자에게 문의해 주세요.';
+      }
+      return error.message;
+    }
+    if (error is StateError) return error.message;
     return '연결을 확인한 뒤 다시 시도해 주세요.';
+  }
+
+  void _toggleAuthMode() {
+    setState(() {
+      _signUpMode = !_signUpMode;
+      _message = null;
+      _confirmPassword.clear();
+      _authFormKey = GlobalKey<FormState>();
+    });
   }
 
   Future<void> _reload() async {
@@ -214,38 +257,79 @@ class _SupabaseHomeState extends State<SupabaseHome> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                '참여 기록에 로그인',
+                _signUpMode ? '새 계정 만들기' : '참여 기록에 로그인',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
-              const Text('Supabase 계정으로 예약, 출석, 연결된 측정 기록을 확인합니다.'),
-              const SizedBox(height: 24),
-              TextField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                decoration: const InputDecoration(labelText: '이메일'),
+              Text(
+                _signUpMode
+                    ? '이메일과 비밀번호를 입력해 가입하세요. 확인 메일 인증 후 로그인할 수 있습니다.'
+                    : 'Supabase 계정으로 예약, 출석, 연결된 측정 기록을 확인합니다.',
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _password,
-                obscureText: true,
-                autofillHints: const [AutofillHints.password],
-                onSubmitted: (_) => _authenticate(signUp: false),
-                decoration: const InputDecoration(labelText: '비밀번호'),
+              const SizedBox(height: 24),
+              Form(
+                key: _authFormKey,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.email],
+                      validator: validateAuthEmail,
+                      decoration: const InputDecoration(labelText: '이메일'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _password,
+                      obscureText: true,
+                      autofillHints: const [AutofillHints.password],
+                      validator: validateAuthPassword,
+                      onFieldSubmitted: (_) {
+                        if (!_signUpMode) _authenticate();
+                      },
+                      decoration: const InputDecoration(
+                        labelText: '비밀번호 · 6자 이상',
+                      ),
+                    ),
+                    if (_signUpMode) ...[
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _confirmPassword,
+                        obscureText: true,
+                        validator: (value) =>
+                            validatePasswordConfirmation(_password.text, value),
+                        onFieldSubmitted: (_) => _authenticate(),
+                        decoration: const InputDecoration(labelText: '비밀번호 확인'),
+                      ),
+                    ],
+                  ],
+                ),
               ),
               if (_message != null) ...[
                 const SizedBox(height: 12),
-                Text(_message!),
+                Text(
+                  _message!,
+                  style: TextStyle(
+                    color: _messageIsError
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.primary,
+                  ),
+                ),
               ],
               const SizedBox(height: 18),
               FilledButton(
-                onPressed: _busy ? null : () => _authenticate(signUp: false),
-                child: const Text('로그인'),
+                onPressed: _busy ? null : _authenticate,
+                child: Text(
+                  _busy
+                      ? '처리 중...'
+                      : _signUpMode
+                      ? '가입 요청 보내기'
+                      : '로그인',
+                ),
               ),
               TextButton(
-                onPressed: _busy ? null : () => _authenticate(signUp: true),
-                child: const Text('새 계정 만들기'),
+                onPressed: _busy ? null : _toggleAuthMode,
+                child: Text(_signUpMode ? '로그인으로 돌아가기' : '새 계정 만들기'),
               ),
               const SizedBox(height: 16),
               const Text('로그인 전에도 합성 데이터로 추천 매핑 화면을 볼 수 있습니다.'),
