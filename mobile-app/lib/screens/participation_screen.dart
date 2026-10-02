@@ -3,17 +3,35 @@ import 'package:flutter/material.dart';
 import '../services/booking_reminder.dart';
 import '../services/participation_repository.dart';
 
+DateTime suggestedBookingStart(DateTime now) {
+  final nextQuarter = DateTime(
+    now.year,
+    now.month,
+    now.day,
+    now.hour,
+    (now.minute ~/ 15 + 1) * 15,
+  );
+  if (nextQuarter.day == now.day &&
+      nextQuarter.month == now.month &&
+      nextQuarter.year == now.year) {
+    return nextQuarter;
+  }
+  return DateTime(now.year, now.month, now.day + 1, 10);
+}
+
 class ParticipationScreen extends StatefulWidget {
   const ParticipationScreen({
     super.key,
     required this.participantId,
     required this.onChanged,
     this.repository = const ParticipationRepository(),
+    this.clock,
   });
 
   final String participantId;
   final VoidCallback onChanged;
   final VisitBookingRepository repository;
+  final DateTime Function()? clock;
 
   @override
   State<ParticipationScreen> createState() => _ParticipationScreenState();
@@ -57,17 +75,24 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
   }
 
   Future<void> _book() async {
-    final today = DateTime.now();
+    setState(() => _error = null);
+    final today = widget.clock?.call() ?? DateTime.now();
+    final suggested = suggestedBookingStart(today);
     final date = await showDatePicker(
       context: context,
-      initialDate: today,
-      firstDate: DateTime(today.year, today.month, today.day),
+      initialDate: suggested,
+      firstDate: DateTime(suggested.year, suggested.month, suggested.day),
       lastDate: today.add(const Duration(days: 365)),
     );
     if (date == null || !mounted) return;
     final time = await showTimePicker(
       context: context,
-      initialTime: const TimeOfDay(hour: 10, minute: 0),
+      initialTime:
+          date.year == suggested.year &&
+              date.month == suggested.month &&
+              date.day == suggested.day
+          ? TimeOfDay.fromDateTime(suggested)
+          : const TimeOfDay(hour: 10, minute: 0),
     );
     if (time == null || !mounted) return;
     final startsAt = DateTime(
@@ -78,7 +103,7 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
       time.minute,
     );
     if (!startsAt.isAfter(DateTime.now())) {
-      setState(() => _error = '현재보다 늦은 시간을 선택해 주세요.');
+      setState(() => _error = '선택한 시간이 지났습니다. 예약 버튼을 눌러 다시 선택해 주세요.');
       return;
     }
     final weeks = await showDialog<int>(

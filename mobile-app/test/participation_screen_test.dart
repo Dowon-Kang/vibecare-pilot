@@ -18,6 +18,49 @@ class _MemoryBookings implements VisitBookingRepository {
 }
 
 void main() {
+  test('booking suggestion starts after the current time', () {
+    expect(
+      suggestedBookingStart(DateTime(2026, 10, 2, 15, 5)),
+      DateTime(2026, 10, 2, 15, 15),
+    );
+    expect(
+      suggestedBookingStart(DateTime(2026, 10, 2, 23, 58)),
+      DateTime(2026, 10, 3, 10),
+    );
+  });
+
+  testWidgets('booking pickers open on the next available date and time', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ParticipationScreen(
+          participantId: 'demo',
+          repository: _MemoryBookings([]),
+          onChanged: () {},
+          clock: () => DateTime(2026, 10, 2, 15, 5),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('book-visit-button')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<DatePickerDialog>(find.byType(DatePickerDialog))
+          .initialDate,
+      DateTime(2026, 10, 2),
+    );
+    await tester.tap(find.text('OK').last);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TimePickerDialog>(find.byType(TimePickerDialog))
+          .initialTime,
+      const TimeOfDay(hour: 15, minute: 15),
+    );
+  });
+
   testWidgets('checking in updates the attendance star immediately', (
     tester,
   ) async {
