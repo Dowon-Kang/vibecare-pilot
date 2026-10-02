@@ -2,6 +2,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibecare_pilot/services/participation_repository.dart';
 
 void main() {
+  test('future booking reminds once when due even after the first minute', () {
+    final booking = VisitBooking(
+      id: 'future',
+      startsAt: DateTime(2026, 10, 2, 15),
+    );
+    final shown = <String>{};
+    expect(
+      dueBookingReminders([booking], DateTime(2026, 10, 2, 14, 59), shown),
+      isEmpty,
+    );
+    expect(
+      dueBookingReminders([booking], DateTime(2026, 10, 2, 15, 5), shown),
+      [booking],
+    );
+    expect(
+      dueBookingReminders([booking], DateTime(2026, 10, 2, 15, 6), shown),
+      isEmpty,
+    );
+    expect(
+      dueBookingReminders([booking], DateTime(2026, 10, 3), <String>{}),
+      isEmpty,
+    );
+    final attended = booking.checkIn(DateTime(2026, 10, 2, 15));
+    expect(
+      dueBookingReminders([attended], DateTime(2026, 10, 2, 15, 5), <String>{}),
+      isEmpty,
+    );
+  });
+
   test('weekly bookings repeat on the chosen weekday without duplicates', () {
     final existing = VisitBooking(
       id: 'existing',

@@ -37,6 +37,21 @@ class VisitBooking {
   );
 }
 
+List<VisitBooking> dueBookingReminders(
+  List<VisitBooking> bookings,
+  DateTime now,
+  Set<String> shownIds,
+) => [
+  for (final booking in bookings)
+    if (!booking.attended &&
+        booking.startsAt.year == now.year &&
+        booking.startsAt.month == now.month &&
+        booking.startsAt.day == now.day &&
+        !now.isBefore(booking.startsAt) &&
+        shownIds.add(booking.id))
+      booking,
+];
+
 List<VisitBooking> createWeeklyBookings(
   DateTime startsAt,
   int weeks,

@@ -231,19 +231,17 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
         !_appActive ||
         !mounted ||
         profile == null ||
-        _bookingsOwnerId != profile.id)
+        _bookingsOwnerId != profile.id) {
       return;
-    final now = DateTime.now();
-    for (final booking in _bookings) {
-      final elapsed = now.difference(booking.startsAt);
-      if (!booking.attended &&
-          elapsed >= Duration.zero &&
-          elapsed < const Duration(minutes: 1) &&
-          _shownReminders.add(booking.id)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('예약한 참여 시간입니다. 출석 체크를 해 주세요.')),
-        );
-      }
+    }
+    for (final _ in dueBookingReminders(
+      _bookings,
+      DateTime.now(),
+      _shownReminders,
+    )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('예약한 참여 시간입니다. 출석 체크를 해 주세요.')),
+      );
     }
   }
 
