@@ -21,6 +21,24 @@ void main() {
     expect(connected.usesSampleData, isFalse);
   });
 
+  test('past pain reduces the next simulation intensity without a hold', () {
+    final adjustment = const FeedbackAdjustment().next(
+      const SessionFeedback(
+        rpe: 2,
+        pain: 1,
+        dizziness: false,
+        intensityRating: FeedbackRating.suitable,
+        durationRating: FeedbackRating.suitable,
+        frequencyRating: FeedbackRating.suitable,
+      ),
+      80,
+    );
+
+    expect(adjustment.requiresReview, isFalse);
+    expect(adjustment.intensityCap, 72);
+    expect(adjustment.reasonCode, 'FEEDBACK_PAIN_REDUCED');
+  });
+
   test('데이터 연결과 장치 실행 모드를 독립적으로 구분한다', () {
     const local = AppEnvironment(apiBaseUrl: '');
     const backend = AppEnvironment(apiBaseUrl: 'https://example.test');
@@ -215,7 +233,7 @@ void main() {
 
     expect(adjustment.requiresReview, isFalse);
     expect(adjustment.intensityCap, 80);
-    expect(adjustment.policyVersion, 'feedback-0.3.0');
+    expect(adjustment.policyVersion, 'feedback-0.4.0');
     expect(adjustment.reason, contains('다음 사용을 보류하지 않습니다'));
   });
 

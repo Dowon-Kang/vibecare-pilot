@@ -115,6 +115,36 @@ class _PrimaryActionBar extends ConsumerWidget {
         state.safety.isComplete &&
         state.selectedIntensityPct != null &&
         !state.isBusy;
+
+    Future<void> sendWithPastPainConfirmation() async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          key: const ValueKey('past-pain-confirmation'),
+          title: const Text('지난 통증 응답을 확인해 주세요'),
+          content: Text(
+            '지난 사용에서 통증을 보고했습니다. 이번 연구용 시연은 강도 상한을 낮춰 ${state.selectedIntensityPct}%로 준비합니다. '
+            '지금도 통증이나 어지럼이 있다면 취소하고 사용 전 안전 확인에서 알려 주세요.',
+          ),
+          actions: [
+            TextButton(
+              key: const ValueKey('past-pain-cancel'),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              key: const ValueKey('past-pain-continue'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('확인하고 시연 준비'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true && context.mounted) {
+        await controller.sendToDevice();
+      }
+    }
+
     final VoidCallback? action;
     final IconData icon;
     final String label;
@@ -152,7 +182,11 @@ class _PrimaryActionBar extends ConsumerWidget {
       helper = '골격근량 등급에 맞는 부위별 설정을 확인합니다.';
       buttonKey = const ValueKey('device-setup-button');
     } else {
-      action = canSend ? controller.sendToDevice : null;
+      action = canSend
+          ? state.feedbackAdjustment.reasonCode == 'FEEDBACK_PAIN_REDUCED'
+                ? () => unawaited(sendWithPastPainConfirmation())
+                : controller.sendToDevice
+          : null;
       icon = Icons.send_to_mobile_outlined;
       label = !state.safety.isComplete
           ? '안전 문진을 완료해 주세요'

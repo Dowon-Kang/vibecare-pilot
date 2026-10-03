@@ -174,3 +174,11 @@ DSPy 후속:
 - PASS: `flutter build web --release --base-href /vibecare-pilot/ --pwa-strategy=none --no-pub` — 웹 릴리스 빌드 완료.
 - NOT RUN: 실제 스크린리더·키보드 전 경로, 실계정 두 개의 데이터 격리, 느린 네트워크, Android 실기기 알림. 브라우저 종료 후 Web Push는 구현되지 않았다. 상세 범위는 docs/web-ux-nfr.md 참조.
 
+
+## 사용 후 통증 응답 정책 (2026-10-03)
+
+- PASS: 이전 시연에서 통증을 보고한 경우 다음 시연 강도 상한을 90%로 낮추고 사용 전 확인창에서 취소·진행을 선택할 수 있다. Flutter `flutter test --no-pub --reporter compact` 80/80, `dart analyze .` 문제 없음.
+- PASS: 서버는 이전 통증만으로 다음 연구용 시뮬레이션을 차단하지 않고, 지난 승인 재사용은 거부한다. 0013 마이그레이션은 통증만의 기존 보류를 제한적으로 전환한다. `npm run typecheck` 및 `npm test -- --reporter=dot` 81/81 통과.
+- PASS: 사용 전 현재 통증 응답의 차단과 이전 어지럼·시간·주파수 심한 불편의 검토 보류를 유지한다.
+- NOT RUN: 실제 의료·물리 장치 안전성, Android 실기기, 운영 백엔드 마이그레이션. 물리 출력은 계속 PROHIBITED / SIMULATOR_ONLY다.
+

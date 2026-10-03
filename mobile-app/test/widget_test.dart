@@ -3,7 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibecare_pilot/main.dart';
 import 'package:vibecare_pilot/controllers/pilot_controller.dart';
+import 'package:vibecare_pilot/models/models.dart';
+import 'package:vibecare_pilot/services/feedback_repository.dart';
 import 'package:vibecare_pilot/services/mock_device_gateway.dart';
+
+class _PriorPainFeedbackRepository extends FeedbackRepository {
+  @override
+  Future<FeedbackAdjustment> load(String participantId) async =>
+      const FeedbackAdjustment(
+        intensityCap: 72,
+        reasonCode: 'FEEDBACK_PAIN_REDUCED',
+        reason: '지난 사용의 통증 응답을 반영해 강도를 낮췄습니다.',
+      );
+}
 
 class FailFirstStop extends MockDeviceGateway {
   int attempts = 0;
@@ -15,6 +27,50 @@ class FailFirstStop extends MockDeviceGateway {
 }
 
 void main() {
+  testWidgets('past pain shows a confirmation before the next simulation', (
+    tester,
+  ) async {
+    _size(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedbackRepositoryProvider.overrideWithValue(
+            _PriorPainFeedbackRepository(),
+          ),
+        ],
+        child: const VibeCareApp(),
+      ),
+    );
+    await tester.tap(find.text('로그인'));
+    await tester.pumpAndSettle();
+    await _tap(tester, 'profile-continue-button');
+    await _tap(tester, 'device-setup-button');
+    await _clear(tester);
+    await _tap(tester, 'send-button');
+
+    expect(
+      find.byKey(const ValueKey('past-pain-confirmation')),
+      findsOneWidget,
+    );
+    final container = ProviderScope.containerOf(
+      tester.element(find.byKey(const ValueKey('past-pain-confirmation'))),
+    );
+    expect(
+      container.read(pilotControllerProvider).pendingAuthorization,
+      isNull,
+    );
+    await _tap(tester, 'past-pain-cancel');
+    expect(
+      container.read(pilotControllerProvider).pendingAuthorization,
+      isNull,
+    );
+    await _tap(tester, 'send-button');
+    await _tap(tester, 'past-pain-continue');
+    expect(
+      container.read(pilotControllerProvider).pendingAuthorization,
+      isNotNull,
+    );
+  });
   testWidgets('프로필과 측정 기록을 탭으로 분리하고 4회 변화를 비교한다', (tester) async {
     _size(tester, const Size(390, 844));
     await _rawLogin(tester);

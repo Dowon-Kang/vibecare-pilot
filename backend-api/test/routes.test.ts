@@ -43,7 +43,7 @@ async function authorize() {
 
 beforeEach(async () => {
   db = new DatabaseSync(':memory:');
-  for (const name of ['0001_initial.sql','0002_measurements_and_rules.sql','0003_session_safety.sql','0004_feedback_adjustments.sql','0005_parameter_feedback.sql','0006_muscle_driven_rules.sql','0007_research_safety.sql','0008_algorithm_pilot_0_7.sql','0009_algorithm_pilot_0_8.sql','0010_algorithm_pilot_0_9.sql','0011_feedback_manual_stop_policy.sql','0012_fitrus_body_composition_fields.sql']) {
+  for (const name of ['0001_initial.sql','0002_measurements_and_rules.sql','0003_session_safety.sql','0004_feedback_adjustments.sql','0005_parameter_feedback.sql','0006_muscle_driven_rules.sql','0007_research_safety.sql','0008_algorithm_pilot_0_7.sql','0009_algorithm_pilot_0_8.sql','0010_algorithm_pilot_0_9.sql','0011_feedback_manual_stop_policy.sql','0012_fitrus_body_composition_fields.sql','0013_past_pain_feedback_adjustment.sql']) {
     db.exec(readFileSync(new URL('../migrations/' + name, import.meta.url), 'utf8'));
   }
   db.prepare('UPDATE algorithm_rule_sets SET rules_json=? WHERE version=?').run(JSON.stringify(defaultRuleSet),'pilot-0.9.0');
@@ -214,7 +214,7 @@ it('a normal manual stop is recorded without blocking the next use',async()=>{
   await request(`/v1/device-sessions/${id}/stop`,{reason:'user_stop'});
   const feedback={sessionId:id,rpe:2,pain:0,dizziness:false,intensityRating:'suitable',durationRating:'suitable',frequencyRating:'suitable'};
   expect(await (await request('/v1/session-feedback',feedback)).json()).toMatchObject({
-    adjustment:{requiresReview:false,reasonCode:'FEEDBACK_MAINTAINED',policyVersion:'feedback-0.3.0'},
+    adjustment:{requiresReview:false,reasonCode:'FEEDBACK_MAINTAINED',policyVersion:'feedback-0.4.0'},
   });
   db.prepare("UPDATE feedback_adjustments SET requires_review=1, reason='legacy hold', reason_code='FEEDBACK_HOLD', policy_version='feedback-0.2.0' WHERE participant_id='A'").run();
   expect((await request('/v1/recommendations/authorize',payload)).status).toBe(409);
@@ -299,12 +299,34 @@ it('persists post-session feedback, reduces the next cap and does not compound a
   expect(await (await request('/v1/recommendations/authorize',payload)).json()).toMatchObject({result:{recommendation:{intensityPct:89}}});
   expect((await request('/v1/session-feedback',feedback,'B')).status).toBe(404);
 });
-it('pain feedback blocks another authorization and invalidates an earlier permit', async () => {
+it('past pain lowers the next authorized simulation while an earlier permit is invalidated', async () => {
   const earlier = await authorize();
   const start = await request('/v1/device-sessions',await authorize(),'A','feedback-session-002');
   const id = (await start.json() as {sessionId:string}).sessionId;
   await request(`/v1/device-sessions/${id}/stop`,{reason:'user_stop'});
-  await request('/v1/session-feedback',{sessionId:id,rpe:2,pain:1,dizziness:false});
-  expect(await (await request('/v1/recommendations/authorize',payload)).json()).toMatchObject({authorized:false,result:{status:'BLOCKED'}});
+  expect(await (await request('/v1/session-feedback',{sessionId:id,rpe:2,pain:1,dizziness:false})).json())
+    .toMatchObject({adjustment:{requiresReview:false,reasonCode:'FEEDBACK_PAIN_REDUCED'}});
+  const next = await request('/v1/recommendations/authorize',payload);
+  expect(next.status).toBe(201);
+  const nextResult = await next.json() as {result:{recommendation:{intensityPct:number}}};
+  expect(nextResult.result.recommendation.intensityPct).toBeLessThan(90);
   expect((await request('/v1/device-sessions',earlier,'A','feedback-session-003')).status).toBe(409);
+});
+it('migrates a legacy pain-only hold but retains a dizziness hold', async () => {
+  const start = await request('/v1/device-sessions',await authorize(),'A','legacy-pain-session');
+  const id = (await start.json() as {sessionId:string}).sessionId;
+  await request(`/v1/device-sessions/${id}/stop`,{reason:'completed'});
+  await request('/v1/session-feedback',{sessionId:id,rpe:2,pain:1,dizziness:false});
+  const command = db.prepare('SELECT command_json FROM device_sessions WHERE id=?').get(id) as {command_json:string};
+  const usedIntensity = (JSON.parse(command.command_json) as {intensityPct:number}).intensityPct;
+  db.prepare("UPDATE feedback_adjustments SET intensity_cap=?, requires_review=1, reason_code='FEEDBACK_HOLD', policy_version='feedback-0.3.0' WHERE participant_id='A'").run(usedIntensity);
+  db.exec(readFileSync(new URL('../migrations/0013_past_pain_feedback_adjustment.sql', import.meta.url), 'utf8'));
+  expect(db.prepare("SELECT intensity_cap, requires_review, reason_code, policy_version FROM feedback_adjustments WHERE participant_id='A'").get())
+    .toMatchObject({intensity_cap:Math.floor(usedIntensity * .9),requires_review:0,reason_code:'FEEDBACK_PAIN_REDUCED',policy_version:'feedback-0.4.0'});
+
+  db.prepare("UPDATE session_feedback SET dizziness=1 WHERE session_id=?").run(id);
+  db.prepare("UPDATE feedback_adjustments SET requires_review=1, reason_code='FEEDBACK_HOLD', policy_version='feedback-0.3.0' WHERE participant_id='A'").run();
+  db.exec(readFileSync(new URL('../migrations/0013_past_pain_feedback_adjustment.sql', import.meta.url), 'utf8'));
+  expect(db.prepare("SELECT requires_review FROM feedback_adjustments WHERE participant_id='A'").get())
+    .toMatchObject({requires_review:1});
 });
