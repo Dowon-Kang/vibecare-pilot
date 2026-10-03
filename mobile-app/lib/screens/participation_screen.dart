@@ -4,6 +4,7 @@ import '../services/booking_reminder.dart';
 import '../services/participation_repository.dart';
 import '../widgets/app_menu_button.dart';
 import '../widgets/page_content.dart';
+import 'booking_editor_screen.dart';
 
 DateTime suggestedBookingStart(DateTime now) {
   final nextQuarter = DateTime(
@@ -42,6 +43,7 @@ class ParticipationScreen extends StatefulWidget {
 class _ParticipationScreenState extends State<ParticipationScreen> {
   List<VisitBooking> _bookings = [];
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
+  int? _selectedDay;
   String? _error;
   String? _notice;
 
@@ -80,54 +82,36 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
     setState(() => _error = null);
     final today = widget.clock?.call() ?? DateTime.now();
     final suggested = suggestedBookingStart(today);
-    final date = await showDatePicker(
-      context: context,
-      initialDate: suggested,
-      firstDate: DateTime(suggested.year, suggested.month, suggested.day),
-      lastDate: today.add(const Duration(days: 365)),
+    final draft = await Navigator.of(context).push<BookingDraft>(
+      MaterialPageRoute(
+        builder: (_) => BookingEditorScreen(
+          initialStart: suggested,
+          existing: _bookings,
+          clock: widget.clock,
+        ),
+      ),
     );
-    if (date == null || !mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime:
-          date.year == suggested.year &&
-              date.month == suggested.month &&
-              date.day == suggested.day
-          ? TimeOfDay.fromDateTime(suggested)
-          : const TimeOfDay(hour: 10, minute: 0),
-    );
-    if (time == null || !mounted) return;
-    final startsAt = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    );
-    if (!startsAt.isAfter(DateTime.now())) {
+    if (draft == null || !mounted) return;
+    if (!draft.startsAt.isAfter(widget.clock?.call() ?? DateTime.now())) {
       setState(() => _error = '선택한 시간이 지났습니다. 예약 버튼을 눌러 다시 선택해 주세요.');
       return;
     }
-    final weeks = await showDialog<int>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('예약 반복'),
-        children: [
-          for (final option in [1, 4, 12, 52])
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, option),
-              child: Text(option == 1 ? '이번 한 번' : '매주 $option주'),
-            ),
-        ],
-      ),
+    final newBookings = createWeeklyBookings(
+      draft.startsAt,
+      draft.weeks,
+      _bookings,
     );
-    if (weeks == null || !mounted) return;
-    final newBookings = createWeeklyBookings(startsAt, weeks, _bookings);
     if (newBookings.isEmpty) {
       setState(() => _notice = '선택한 시간은 이미 예약되어 있습니다.');
       return;
     }
     if (!await _save([..._bookings, ...newBookings])) return;
+    if (mounted) {
+      setState(() {
+        _month = DateTime(draft.startsAt.year, draft.startsAt.month);
+        _selectedDay = draft.startsAt.day;
+      });
+    }
     try {
       var permissionGranted = true;
       for (final booking in newBookings) {
@@ -170,6 +154,10 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
     }
   }
 
+  void _selectDay(int day) {
+    setState(() => _selectedDay = _selectedDay == day ? null : day);
+  }
+
   void _showReminderInfo() {
     showDialog<void>(
       context: context,
@@ -198,6 +186,12 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
     final completed = summary.completed;
     final firstWeekday = DateTime(_month.year, _month.month).weekday;
     final days = DateTime(_month.year, _month.month + 1, 0).day;
+    final visibleBookings = _bookings.where((booking) {
+      final date = booking.startsAt;
+      return date.year == _month.year &&
+          date.month == _month.month &&
+          (_selectedDay == null || date.day == _selectedDay);
+    }).toList()..sort((a, b) => a.startsAt.compareTo(b.startsAt));
     return Scaffold(
       appBar: AppBar(
         leading: Navigator.of(context).canPop() ? const BackButton() : null,
@@ -305,10 +299,10 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
                     children: [
                       IconButton(
                         tooltip: '이전 달',
-                        onPressed: () => setState(
-                          () =>
-                              _month = DateTime(_month.year, _month.month - 1),
-                        ),
+                        onPressed: () => setState(() {
+                          _month = DateTime(_month.year, _month.month - 1);
+                          _selectedDay = null;
+                        }),
                         icon: const Icon(Icons.chevron_left),
                       ),
                       Expanded(
@@ -320,10 +314,10 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
                       ),
                       IconButton(
                         tooltip: '다음 달',
-                        onPressed: () => setState(
-                          () =>
-                              _month = DateTime(_month.year, _month.month + 1),
-                        ),
+                        onPressed: () => setState(() {
+                          _month = DateTime(_month.year, _month.month + 1);
+                          _selectedDay = null;
+                        }),
                         icon: const Icon(Icons.chevron_right),
                       ),
                     ],
@@ -374,26 +368,43 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
                       return Semantics(
                         label:
                             '${_month.year}년 ${_month.month}월 $day일, $status',
+                        button: true,
+                        selected: _selectedDay == day,
+                        onTap: () => _selectDay(day),
                         child: ExcludeSemantics(
-                          child: Container(
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: color,
-                              borderRadius: BorderRadius.circular(8),
+                          child: InkWell(
+                            key: ValueKey('calendar-day-$day'),
+                            onTap: () => _selectDay(day),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(8),
+                                border: _selectedDay == day
+                                    ? Border.all(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                        width: 2,
+                                      )
+                                    : null,
+                              ),
+                              child: bookings.any((booking) => booking.attended)
+                                  ? Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.star,
+                                          size: 16,
+                                          color: Color(0xFFE5A700),
+                                        ),
+                                        Text('$day'),
+                                      ],
+                                    )
+                                  : Text('$day'),
                             ),
-                            child: bookings.any((booking) => booking.attended)
-                                ? Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.star,
-                                        size: 16,
-                                        color: Color(0xFFE5A700),
-                                      ),
-                                      Text('$day'),
-                                    ],
-                                  )
-                                : Text('$day'),
                           ),
                         ),
                       );
@@ -406,7 +417,19 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          for (final booking in _bookings.reversed)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+            child: Text(
+              '${_month.year}년 ${_month.month}월${_selectedDay == null ? '' : ' $_selectedDay일'} 일정 · ${visibleBookings.length}건',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          if (visibleBookings.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('이 날짜에 예약된 일정이 없습니다.'),
+            ),
+          for (final booking in visibleBookings)
             Card(
               child: ListTile(
                 title: Text(

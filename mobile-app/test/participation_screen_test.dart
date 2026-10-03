@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibecare_pilot/screens/participation_screen.dart';
 import 'package:vibecare_pilot/services/participation_repository.dart';
@@ -47,6 +48,37 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('booking editor fits a 320px screen with large text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: ParticipationScreen(
+          participantId: 'demo',
+          repository: _MemoryBookings([]),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('book-visit-button')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -600));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('calendar exposes the reservation state to screen readers', (
     tester,
   ) async {
@@ -72,6 +104,17 @@ void main() {
         '${today.year}년 ${today.month}월 ${today.day}일, 예약됨',
       ),
       findsOneWidget,
+    );
+    expect(
+      tester
+          .getSemantics(
+            find.bySemanticsLabel(
+              '${today.year}년 ${today.month}월 ${today.day}일, 예약됨',
+            ),
+          )
+          .getSemanticsData()
+          .hasAction(SemanticsAction.tap),
+      isTrue,
     );
     semantics.dispose();
   });
@@ -169,6 +212,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('book-visit-button')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('booking-editor-screen')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('booking-date-button')));
+    await tester.pumpAndSettle();
     expect(
       tester
           .widget<DatePickerDialog>(find.byType(DatePickerDialog))
@@ -177,6 +223,8 @@ void main() {
     );
     await tester.tap(find.text('OK').last);
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('booking-time-button')));
+    await tester.pumpAndSettle();
     expect(
       tester
           .widget<TimePickerDialog>(find.byType(TimePickerDialog))
@@ -184,6 +232,120 @@ void main() {
       const TimeOfDay(hour: 15, minute: 15),
     );
   });
+
+  testWidgets(
+    'repeat selection previews its end and requires an explicit save',
+    (tester) async {
+      final repository = _MemoryBookings([]);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ParticipationScreen(
+            participantId: 'demo',
+            repository: repository,
+            onChanged: () {},
+            clock: () => DateTime(2030, 1, 1, 9, 5),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('book-visit-button')));
+      await tester.pumpAndSettle();
+      expect(repository.bookings, isEmpty);
+      await tester.tap(find.byKey(const ValueKey('repeat-option-4')));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.textContaining('2030.01.22'),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.textContaining('2030.01.22'), findsOneWidget);
+      expect(find.textContaining('새 예약 4회'), findsWidgets);
+      expect(repository.bookings, isEmpty);
+      await tester.tap(find.byKey(const ValueKey('save-bookings-button')));
+      await tester.pumpAndSettle();
+      expect(repository.bookings, hasLength(4));
+      await tester.scrollUntilVisible(
+        find.text('2030년 1월'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('2030년 1월'), findsOneWidget);
+    },
+  );
+
+  testWidgets('repeat preview excludes an already booked week', (tester) async {
+    final repository = _MemoryBookings([
+      VisitBooking(id: 'existing', startsAt: DateTime(2030, 1, 8, 9, 15)),
+    ]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ParticipationScreen(
+          participantId: 'demo',
+          repository: repository,
+          onChanged: () {},
+          clock: () => DateTime(2030, 1, 1, 9, 5),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('book-visit-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('repeat-option-4')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('이미 예약된 1회는 제외합니다.'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('새 예약 3회'), findsOneWidget);
+    expect(repository.bookings, hasLength(1));
+  });
+
+  testWidgets(
+    'calendar date selection shows only that day and month change resets it',
+    (tester) async {
+      final today = DateTime.now();
+      final repository = _MemoryBookings([
+        VisitBooking(
+          id: 'selected-day',
+          startsAt: DateTime(today.year, today.month, 8, 10),
+        ),
+        VisitBooking(
+          id: 'other-day',
+          startsAt: DateTime(today.year, today.month, 18, 10),
+        ),
+      ]);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ParticipationScreen(
+            participantId: 'demo',
+            repository: repository,
+            onChanged: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const ValueKey('calendar-day-8')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('calendar-day-8')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.textContaining('${today.year}년 ${today.month}월 8일 일정'),
+      );
+      expect(
+        find.textContaining('${today.year}년 ${today.month}월 8일 일정'),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(find.byTooltip('다음 달'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('다음 달'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('${today.year}년 ${today.month}월 8일 일정'),
+        findsNothing,
+      );
+    },
+  );
 
   testWidgets('checking in updates the attendance star immediately', (
     tester,

@@ -181,3 +181,12 @@ DSPy 후속:
 - PASS: 서버는 이전 통증만으로 다음 연구용 시뮬레이션을 차단하지 않고, 지난 승인 재사용은 거부한다. 0013 마이그레이션은 통증만의 기존 보류를 제한적으로 전환한다. `npm run typecheck` 및 `npm test -- --reporter=dot` 81/81 통과.
 - PASS: 사용 전 현재 통증 응답의 차단과 이전 어지럼·시간·주파수 심한 불편의 검토 보류를 유지한다.
 - NOT RUN: 실제 의료·물리 장치 안전성, Android 실기기, 운영 백엔드 마이그레이션. 물리 출력은 계속 PROHIBITED / SIMULATOR_ONLY다.
+
+## 2026-10-03 주요 기능 UX 비교와 예약·출석 개선
+
+- PASS: `docs/ux-flow-comparison-2026-10-03.md`에서 로그인, 홈, 예약, 반복, 출석, 알림, 측정, 추천, 시연, 평가 흐름을 참고 앱과 비교했다.
+- PASS: 예약 반복을 고르는 즉시 저장하던 창을 날짜·시간·반복·종료일·중복 수의 저장 전 검토 화면으로 교체했다. 저장 후 첫 예약 날짜의 달력을 보여준다.
+- PASS: 달력 날짜 선택으로 해당 날짜의 예약만 보고, 월 이동 시 날짜 선택을 초기화한다. 월별 목록으로 긴 반복 예약을 탐색할 수 있다. 날짜의 스크린리더 활성화 동작도 연결했다.
+- PASS: `flutter test test/participation_screen_test.dart` 예약·달력 회귀 테스트, `flutter test --no-pub --reporter compact` 85/85, `dart analyze .` 문제 없음. 웹 릴리스 빌드 완료.
+- FAIL: `flutter analyze --no-pub` 분석 서버가 LSP JSON 수신 오류로 종료했다. 같은 전체 Dart 프로젝트를 `dart analyze .`로 확인했다.
+- NOT RUN: 실제 사용자 관찰, 전체 키보드·스크린리더 동선, Android 실기기 알림, 실제 Supabase 계정의 종단간 동작. 웹 푸시는 구현되지 않았다.
