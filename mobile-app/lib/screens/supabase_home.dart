@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/auth_input_validation.dart';
 import '../services/participation_repository.dart';
+import '../widgets/app_menu_button.dart';
 import 'participation_screen.dart';
 import 'sample_pilot_scope.dart';
 
@@ -53,6 +54,7 @@ class _SupabaseHomeState extends State<SupabaseHome> {
   StreamSubscription<AuthState>? _authSubscription;
   Timer? _reminderTimer;
   final Set<String> _shownReminders = {};
+  final _announcementsKey = GlobalKey();
   User? _user;
   List<_MeasurementPoint> _measurements = [];
   List<VisitBooking> _bookings = [];
@@ -240,11 +242,40 @@ class _SupabaseHomeState extends State<SupabaseHome> {
     ).push<void>(MaterialPageRoute(builder: (_) => const SamplePilotScope()));
   }
 
+  void _showAnnouncements() {
+    final target = _announcementsKey.currentContext;
+    if (target != null) {
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 300),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) => _user == null ? _login() : _dashboard();
 
   Widget _login() => Scaffold(
-    appBar: AppBar(title: const Text('VibeCare')),
+    appBar: AppBar(
+      title: const Text('VibeCare'),
+      actions: [
+        AppMenuButton(
+          actions: [
+            AppMenuAction(
+              label: _signUpMode ? '로그인' : '새 계정 만들기',
+              icon: _signUpMode ? Icons.login : Icons.person_add_outlined,
+              onSelected: _toggleAuthMode,
+              enabled: !_busy,
+            ),
+            AppMenuAction(
+              label: '샘플 시연',
+              icon: Icons.play_arrow,
+              onSelected: _openDemo,
+            ),
+          ],
+        ),
+      ],
+    ),
     body: Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -351,15 +382,34 @@ class _SupabaseHomeState extends State<SupabaseHome> {
       appBar: AppBar(
         title: const Text('VibeCare 홈'),
         actions: [
-          IconButton(
-            tooltip: '새로고침',
-            onPressed: _reload,
-            icon: const Icon(Icons.refresh),
-          ),
-          IconButton(
-            tooltip: '로그아웃',
-            onPressed: () => _client.auth.signOut(),
-            icon: const Icon(Icons.logout),
+          AppMenuButton(
+            actions: [
+              AppMenuAction(
+                label: '예약·출석',
+                icon: Icons.event_available_outlined,
+                onSelected: _openParticipation,
+              ),
+              AppMenuAction(
+                label: '시연 실행',
+                icon: Icons.play_arrow,
+                onSelected: _openDemo,
+              ),
+              AppMenuAction(
+                label: '공지·안내',
+                icon: Icons.campaign_outlined,
+                onSelected: _showAnnouncements,
+              ),
+              AppMenuAction(
+                label: '새로고침',
+                icon: Icons.refresh,
+                onSelected: _reload,
+              ),
+              AppMenuAction(
+                label: '로그아웃',
+                icon: Icons.logout,
+                onSelected: () => _client.auth.signOut(),
+              ),
+            ],
           ),
         ],
       ),
@@ -437,6 +487,7 @@ class _SupabaseHomeState extends State<SupabaseHome> {
           ),
           const SizedBox(height: 12),
           Card(
+            key: _announcementsKey,
             child: Padding(
               padding: const EdgeInsets.all(18),
               child: Column(

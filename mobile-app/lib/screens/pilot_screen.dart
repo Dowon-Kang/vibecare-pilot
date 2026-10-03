@@ -12,6 +12,7 @@ import '../algorithm/skeletal_muscle_assessment.dart';
 import '../models/models.dart';
 import '../services/device_gateway.dart';
 import '../services/participation_repository.dart';
+import '../widgets/app_menu_button.dart';
 import '../theme/app_theme.dart';
 import 'overview_card.dart';
 import 'participation_screen.dart';
@@ -262,6 +263,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
     final environment = ref.watch(appEnvironmentProvider);
     return Scaffold(
       appBar: AppBar(
+        leading: Navigator.of(context).canPop() ? const BackButton() : null,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -281,21 +283,40 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
             onPressed: () => _showMeasurementDetails(snapshot),
             icon: const Icon(Icons.person_outline),
           ),
-          IconButton(
-            tooltip: '측정값 새로고침',
-            onPressed: state.isBusy || state.isRunning
-                ? null
-                : ref
-                      .read(pilotControllerProvider.notifier)
-                      .refreshMeasurements,
-            icon: const Icon(Icons.sync),
-          ),
-          IconButton(
-            tooltip: '로그아웃',
-            onPressed: state.isRunning
-                ? null
-                : ref.read(pilotControllerProvider.notifier).logout,
-            icon: const Icon(Icons.logout),
+          AppMenuButton(
+            actions: [
+              if (Navigator.of(context).canPop())
+                AppMenuAction(
+                  label: '홈으로',
+                  icon: Icons.home_outlined,
+                  onSelected: () => Navigator.of(context).pop(),
+                  enabled: !state.isRunning,
+                ),
+              AppMenuAction(
+                label: '예약·출석',
+                icon: Icons.event_available_outlined,
+                onSelected: _openParticipation,
+              ),
+              AppMenuAction(
+                label: '프로필·측정',
+                icon: Icons.person_outline,
+                onSelected: () => _showMeasurementDetails(snapshot),
+              ),
+              AppMenuAction(
+                label: '측정 새로고침',
+                icon: Icons.sync,
+                onSelected: ref
+                    .read(pilotControllerProvider.notifier)
+                    .refreshMeasurements,
+                enabled: !state.isBusy && !state.isRunning,
+              ),
+              AppMenuAction(
+                label: '로그아웃',
+                icon: Icons.logout,
+                onSelected: ref.read(pilotControllerProvider.notifier).logout,
+                enabled: !state.isRunning,
+              ),
+            ],
           ),
         ],
       ),

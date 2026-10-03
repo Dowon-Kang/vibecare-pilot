@@ -4,6 +4,25 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:vibecare_pilot/screens/supabase_home.dart';
 
 void main() {
+  testWidgets('top menu opens account creation from the login page', (
+    tester,
+  ) async {
+    final client = SupabaseClient(
+      'https://example.supabase.co',
+      'sb_publishable_test',
+      authOptions: const AuthClientOptions(autoRefreshToken: false),
+    );
+    await tester.pumpWidget(MaterialApp(home: SupabaseHome(client: client)));
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+    expect(find.text('샘플 시연'), findsOneWidget);
+    await tester.tap(find.text('새 계정 만들기').last);
+    await tester.pumpAndSettle();
+    expect(find.text('비밀번호 확인'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    client.dispose();
+  });
+
   testWidgets('create account opens a form and validates before sending', (
     tester,
   ) async {

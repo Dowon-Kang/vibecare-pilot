@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/participation_repository.dart';
+import '../widgets/app_menu_button.dart';
 import 'participation_screen.dart';
 import 'pilot_screen.dart';
 
@@ -15,6 +16,7 @@ class SampleHome extends StatefulWidget {
 class _SampleHomeState extends State<SampleHome> {
   static const _participantId = 'USER-001';
   final _repository = const ParticipationRepository();
+  final _announcementsKey = GlobalKey();
   List<VisitBooking> _bookings = [];
 
   @override
@@ -45,15 +47,60 @@ class _SampleHomeState extends State<SampleHome> {
     await _reload();
   }
 
+  void _openPilot() {
+    final sampleContainer = ProviderScope.containerOf(context);
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => UncontrolledProviderScope(
+          container: sampleContainer,
+          child: const PilotScreen(),
+        ),
+      ),
+    );
+  }
+
+  void _showAnnouncements() {
+    final target = _announcementsKey.currentContext;
+    if (target != null) {
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 300),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final summary = AttendanceSummary.fromBookings(_bookings, now);
     final upcoming = _bookings.where((b) => b.startsAt.isAfter(now)).toList()
       ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
-    final sampleContainer = ProviderScope.containerOf(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('VibeCare 샘플 홈')),
+      appBar: AppBar(
+        leading: Navigator.of(context).canPop() ? const BackButton() : null,
+        title: const Text('VibeCare 샘플 홈'),
+        actions: [
+          AppMenuButton(
+            actions: [
+              AppMenuAction(
+                label: '시연 실행',
+                icon: Icons.play_arrow,
+                onSelected: _openPilot,
+              ),
+              AppMenuAction(
+                label: '예약·출석',
+                icon: Icons.event_available_outlined,
+                onSelected: _openParticipation,
+              ),
+              AppMenuAction(
+                label: '공지·안내',
+                icon: Icons.campaign_outlined,
+                onSelected: _showAnnouncements,
+              ),
+            ],
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -70,14 +117,7 @@ class _SampleHomeState extends State<SampleHome> {
                   const Text('측정 결과와 추천 매핑을 샘플 데이터로 살펴봅니다.'),
                   const SizedBox(height: 10),
                   FilledButton.icon(
-                    onPressed: () => Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) => UncontrolledProviderScope(
-                          container: sampleContainer,
-                          child: const PilotScreen(),
-                        ),
-                      ),
-                    ),
+                    onPressed: _openPilot,
                     icon: const Icon(Icons.play_arrow),
                     label: const Text('샘플 실행하기'),
                   ),
@@ -120,6 +160,7 @@ class _SampleHomeState extends State<SampleHome> {
             ),
           ),
           Card(
+            key: _announcementsKey,
             child: Padding(
               padding: const EdgeInsets.all(18),
               child: Column(

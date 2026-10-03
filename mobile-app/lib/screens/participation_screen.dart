@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/booking_reminder.dart';
 import '../services/participation_repository.dart';
+import '../widgets/app_menu_button.dart';
 
 DateTime suggestedBookingStart(DateTime now) {
   final nextQuarter = DateTime(
@@ -168,6 +169,25 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
     }
   }
 
+  void _showReminderInfo() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('알림 안내'),
+        content: const Text(
+          '웹에서는 이 페이지가 열려 있을 때 예약 시간 알림을 표시합니다. '
+          'Android 앱에서는 기기 알림 권한을 허용하면 예약 알림을 받을 수 있습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
@@ -178,7 +198,32 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
     final firstWeekday = DateTime(_month.year, _month.month).weekday;
     final days = DateTime(_month.year, _month.month + 1, 0).day;
     return Scaffold(
-      appBar: AppBar(title: const Text('예약과 참여 기록')),
+      appBar: AppBar(
+        leading: Navigator.of(context).canPop() ? const BackButton() : null,
+        title: const Text('예약과 참여 기록'),
+        actions: [
+          AppMenuButton(
+            actions: [
+              if (Navigator.of(context).canPop())
+                AppMenuAction(
+                  label: '이전 화면',
+                  icon: Icons.arrow_back,
+                  onSelected: () => Navigator.of(context).pop(),
+                ),
+              AppMenuAction(
+                label: '새 예약',
+                icon: Icons.event_available_outlined,
+                onSelected: _book,
+              ),
+              AppMenuAction(
+                label: '알림 안내',
+                icon: Icons.notifications_outlined,
+                onSelected: _showReminderInfo,
+              ),
+            ],
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

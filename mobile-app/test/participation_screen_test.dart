@@ -18,6 +18,47 @@ class _MemoryBookings implements VisitBookingRepository {
 }
 
 void main() {
+  testWidgets('reservation app bar has a back arrow and a menu', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ParticipationScreen(
+                    participantId: 'demo',
+                    repository: _MemoryBookings([]),
+                    onChanged: () {},
+                  ),
+                ),
+              ),
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    expect(find.byIcon(Icons.menu), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+    expect(find.text('새 예약'), findsOneWidget);
+    expect(find.text('알림 안내'), findsOneWidget);
+    await tester.tap(find.text('알림 안내'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('웹에서는 이 페이지가 열려 있을 때'), findsOneWidget);
+    await tester.tap(find.text('확인'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    expect(find.text('Open'), findsOneWidget);
+  });
+
   test('booking suggestion starts after the current time', () {
     expect(
       suggestedBookingStart(DateTime(2026, 10, 2, 15, 5)),
