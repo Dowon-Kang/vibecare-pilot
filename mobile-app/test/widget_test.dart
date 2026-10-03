@@ -71,6 +71,39 @@ void main() {
       isNotNull,
     );
   });
+
+  testWidgets(
+    'answering past pain keeps the next sample simulation available',
+    (tester) async {
+      _size(tester, const Size(390, 844));
+      await _login(tester);
+      await _clear(tester);
+      await _tap(tester, 'send-button');
+      await _tap(tester, 'start-button');
+      await _tap(tester, 'stop-button');
+      await _tap(tester, 'feedback-start-button');
+      await _tap(tester, 'feedback-intensity-FeedbackRating.suitable');
+      await _tap(tester, 'feedback-next-button');
+      await _tap(tester, 'feedback-rpe-zero');
+      await _tap(tester, 'feedback-next-button');
+      await _tap(tester, 'feedback-duration-FeedbackRating.suitable');
+      await _tap(tester, 'feedback-next-button');
+      await _tap(tester, 'feedback-frequency-FeedbackRating.suitable');
+      await _tap(tester, 'feedback-next-button');
+      await _tap(tester, 'feedback-pain-1');
+      await _tap(tester, 'feedback-next-button');
+      await _tap(tester, 'feedback-dizziness-false');
+      await _tap(tester, 'feedback-submit-button');
+
+      expect(find.text('오늘은 사용을 보류해 주세요'), findsNothing);
+      await _clear(tester);
+      await _tap(tester, 'send-button');
+      expect(
+        find.byKey(const ValueKey('past-pain-confirmation')),
+        findsOneWidget,
+      );
+    },
+  );
   testWidgets('프로필과 측정 기록을 탭으로 분리하고 4회 변화를 비교한다', (tester) async {
     _size(tester, const Size(390, 844));
     await _rawLogin(tester);
