@@ -218,14 +218,25 @@ class _BookingEditorScreenState extends State<BookingEditorScreen> {
             constraints: const BoxConstraints(maxWidth: 800),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 10, 24, 16),
-              child: FilledButton(
-                key: const ValueKey('save-bookings-button'),
-                onPressed: canSave
-                    ? () => Navigator.of(
-                        context,
-                      ).pop(BookingDraft(_startsAt, _weeks))
-                    : null,
-                child: Text('새 예약 $newCount회 저장'),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${_dateLabel(planned.last)}까지 · 새 예약 $newCount회',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    key: const ValueKey('save-bookings-button'),
+                    onPressed: canSave
+                        ? () => Navigator.of(
+                            context,
+                          ).pop(BookingDraft(_startsAt, _weeks))
+                        : null,
+                    child: Text('새 예약 $newCount회 저장'),
+                  ),
+                ],
               ),
             ),
           ),

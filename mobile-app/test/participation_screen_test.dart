@@ -251,14 +251,17 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('book-visit-button')));
       await tester.pumpAndSettle();
       expect(repository.bookings, isEmpty);
+      await tester.ensureVisible(find.byKey(const ValueKey('repeat-option-4')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('repeat-option-4')));
       await tester.pumpAndSettle();
+      expect(find.text('2030.01.22까지 · 새 예약 4회'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.textContaining('2030.01.22'),
+        find.text('마지막 참여 2030.01.22'),
         250,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.textContaining('2030.01.22'), findsOneWidget);
+      expect(find.text('마지막 참여 2030.01.22'), findsOneWidget);
       expect(find.textContaining('새 예약 4회'), findsWidgets);
       expect(repository.bookings, isEmpty);
       await tester.tap(find.byKey(const ValueKey('save-bookings-button')));
@@ -289,6 +292,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('book-visit-button')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('repeat-option-4')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('repeat-option-4')));
     await tester.pumpAndSettle();
