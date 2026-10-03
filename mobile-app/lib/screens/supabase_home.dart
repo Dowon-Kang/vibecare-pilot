@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_input_validation.dart';
 import '../services/participation_repository.dart';
 import '../widgets/app_menu_button.dart';
+import '../widgets/page_content.dart';
 import 'participation_screen.dart';
 import 'sample_pilot_scope.dart';
 
@@ -413,32 +414,34 @@ class _SupabaseHomeState extends State<SupabaseHome> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: PageContent(
         children: [
           Text('오늘의 홈', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           const Text('실행, 출석, 공지를 한곳에서 확인하세요.'),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           if (_message != null) ...[
-            Text(
-              _message!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                _message!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
           ],
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text('출석 체크', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Text(
                     '참여 ${summary.attended}회 · 빠진 날 ${summary.missed}회 · 예정 ${_bookings.length - summary.completed}회',
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Icon(
@@ -455,7 +458,7 @@ class _SupabaseHomeState extends State<SupabaseHome> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 18),
                   FilledButton.icon(
                     onPressed: _openParticipation,
                     icon: const Icon(Icons.event_available),
@@ -465,18 +468,19 @@ class _SupabaseHomeState extends State<SupabaseHome> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text('실행', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 8),
                   const Text(
                     '측정값과 추천 매핑을 샘플 데이터로 체험할 수 있습니다. 이 값은 Supabase 기록이 아닙니다.',
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 18),
                   OutlinedButton(
                     onPressed: _openDemo,
                     child: const Text('샘플 시연 실행하기'),
@@ -485,11 +489,11 @@ class _SupabaseHomeState extends State<SupabaseHome> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Card(
             key: _announcementsKey,
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -522,10 +526,10 @@ class _SupabaseHomeState extends State<SupabaseHome> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

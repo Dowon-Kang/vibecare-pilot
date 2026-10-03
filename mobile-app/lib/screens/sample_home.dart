@@ -1,37 +1,96 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/participation_repository.dart';
 import '../widgets/app_menu_button.dart';
+import '../widgets/page_content.dart';
 import 'participation_screen.dart';
 import 'pilot_screen.dart';
 
 class SampleHome extends StatefulWidget {
-  const SampleHome({super.key});
+  const SampleHome({
+    super.key,
+    this.repository = const ParticipationRepository(),
+    this.clock,
+    this.webReminders,
+  });
+
+  final VisitBookingRepository repository;
+  final DateTime Function()? clock;
+  final bool? webReminders;
 
   @override
   State<SampleHome> createState() => _SampleHomeState();
 }
 
-class _SampleHomeState extends State<SampleHome> {
+class _SampleHomeState extends State<SampleHome> with WidgetsBindingObserver {
   static const _participantId = 'USER-001';
-  final _repository = const ParticipationRepository();
   final _announcementsKey = GlobalKey();
   List<VisitBooking> _bookings = [];
+  String? _loadError;
+  final Set<String> _shownReminders = {};
+  Timer? _reminderTimer;
+  bool _appActive = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    if (widget.webReminders ?? kIsWeb) {
+      _reminderTimer = Timer.periodic(
+        const Duration(seconds: 20),
+        (_) => _checkReminders(),
+      );
+    }
     _reload();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _reminderTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appActive = state == AppLifecycleState.resumed;
+    if (_appActive) unawaited(_reload());
   }
 
   Future<void> _reload() async {
     try {
-      final bookings = await _repository.load(_participantId);
-      if (mounted) setState(() => _bookings = bookings);
+      final bookings = await widget.repository.load(_participantId);
+      if (mounted) {
+        setState(() {
+          _bookings = bookings;
+          _loadError = null;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _checkReminders();
+        });
+      }
     } catch (_) {
-      // The participation screen shows a recoverable storage error.
+      if (mounted) {
+        setState(() => _loadError = '예약 기록을 불러오지 못했습니다.');
+      }
     }
+  }
+
+  void _checkReminders() {
+    if (!(widget.webReminders ?? kIsWeb) || !mounted || !_appActive) return;
+    final due = dueBookingReminders(
+      _bookings,
+      widget.clock?.call() ?? DateTime.now(),
+      _shownReminders,
+    );
+    if (due.isEmpty) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('예약한 참여 시간입니다. 출석 체크를 해 주세요.')),
+    );
   }
 
   Future<void> _openParticipation() async {
@@ -39,7 +98,7 @@ class _SampleHomeState extends State<SampleHome> {
       MaterialPageRoute(
         builder: (_) => ParticipationScreen(
           participantId: _participantId,
-          repository: _repository,
+          repository: widget.repository,
           onChanged: _reload,
         ),
       ),
@@ -71,7 +130,7 @@ class _SampleHomeState extends State<SampleHome> {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
+    final now = widget.clock?.call() ?? DateTime.now();
     final summary = AttendanceSummary.fromBookings(_bookings, now);
     final upcoming = _bookings.where((b) => b.startsAt.isAfter(now)).toList()
       ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
@@ -101,21 +160,38 @@ class _SampleHomeState extends State<SampleHome> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: PageContent(
         children: [
           Text('오늘의 홈', style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 8),
           const Text('샘플 참가자 USER-001 · 실제 측정 기록과 분리된 시연입니다.'),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+          if (_loadError != null) ...[
+            Card(
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Semantics(liveRegion: true, child: Text(_loadError!)),
+                    TextButton(onPressed: _reload, child: const Text('다시 시도')),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text('실행', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 8),
                   const Text('측정 결과와 추천 매핑을 샘플 데이터로 살펴봅니다.'),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 18),
                   FilledButton.icon(
                     onPressed: _openPilot,
                     icon: const Icon(Icons.play_arrow),
@@ -125,14 +201,17 @@ class _SampleHomeState extends State<SampleHome> {
               ),
             ),
           ),
+          const SizedBox(height: 16),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text('출석 체크', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 8),
                   Text('참여 ${summary.attended}회 · 빠진 날 ${summary.missed}회'),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Icon(
@@ -149,7 +228,7 @@ class _SampleHomeState extends State<SampleHome> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 18),
                   FilledButton.icon(
                     onPressed: _openParticipation,
                     icon: const Icon(Icons.event_available),
@@ -159,10 +238,11 @@ class _SampleHomeState extends State<SampleHome> {
               ),
             ),
           ),
+          const SizedBox(height: 16),
           Card(
             key: _announcementsKey,
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/booking_reminder.dart';
 import '../services/participation_repository.dart';
 import '../widgets/app_menu_button.dart';
+import '../widgets/page_content.dart';
 
 DateTime suggestedBookingStart(DateTime now) {
   final nextQuarter = DateTime(
@@ -224,8 +225,7 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: PageContent(
         children: [
           FilledButton.icon(
             key: const ValueKey('book-visit-button'),
@@ -233,27 +233,36 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
             icon: const Icon(Icons.event_available),
             label: const Text('시간 예약하기 · 매주 반복 가능'),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           const Text('Android에서는 기기 알림을 예약합니다. 웹에서는 앱이 열려 있을 때 알림을 표시합니다.'),
-          if (_notice != null) Text(_notice!),
+          if (_notice != null) ...[
+            const SizedBox(height: 8),
+            Semantics(liveRegion: true, child: Text(_notice!)),
+          ],
           if (_error != null)
-            Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
             ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('참여 현황', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Text(
                     '참여 $attended회 · 빠진 날 $missed회 · 예정 ${_bookings.length - completed}회',
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Icon(
@@ -270,7 +279,13 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
                       ),
                     ],
                   ),
-                  LinearProgressIndicator(value: summary.rate ?? 0),
+                  const SizedBox(height: 16),
+                  LinearProgressIndicator(
+                    value: summary.rate ?? 0,
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     completed == 0
                         ? '완료된 예약이 없습니다.'
@@ -280,15 +295,16 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
                   Row(
                     children: [
                       IconButton(
+                        tooltip: '이전 달',
                         onPressed: () => setState(
                           () =>
                               _month = DateTime(_month.year, _month.month - 1),
@@ -303,6 +319,7 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
                         ),
                       ),
                       IconButton(
+                        tooltip: '다음 달',
                         onPressed: () => setState(
                           () =>
                               _month = DateTime(_month.year, _month.month + 1),
@@ -311,6 +328,7 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       for (final label in ['월', '화', '수', '목', '금', '토', '일'])
@@ -346,28 +364,42 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
                           : bookings.isNotEmpty
                           ? const Color(0xFFDCE8FF)
                           : null;
-                      return Container(
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(8),
+                      final status = bookings.any((b) => b.attended)
+                          ? '출석 완료'
+                          : bookings.any((b) => b.isMissedAt(now))
+                          ? '미참여'
+                          : bookings.isNotEmpty
+                          ? '예약됨'
+                          : '예약 없음';
+                      return Semantics(
+                        label:
+                            '${_month.year}년 ${_month.month}월 $day일, $status',
+                        child: ExcludeSemantics(
+                          child: Container(
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: bookings.any((booking) => booking.attended)
+                                ? Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.star,
+                                        size: 16,
+                                        color: Color(0xFFE5A700),
+                                      ),
+                                      Text('$day'),
+                                    ],
+                                  )
+                                : Text('$day'),
+                          ),
                         ),
-                        child: bookings.any((booking) => booking.attended)
-                            ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.star,
-                                    size: 16,
-                                    color: Color(0xFFE5A700),
-                                  ),
-                                  Text('$day'),
-                                ],
-                              )
-                            : Text('$day'),
                       );
                     },
                   ),
+                  const SizedBox(height: 12),
                   const Text('초록 참여 · 빨강 미참여 · 파랑 예약'),
                 ],
               ),

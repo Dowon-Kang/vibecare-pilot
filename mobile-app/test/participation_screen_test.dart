@@ -18,6 +18,89 @@ class _MemoryBookings implements VisitBookingRepository {
 }
 
 void main() {
+  testWidgets('reservation page fits a 320px screen with large text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: ParticipationScreen(
+          participantId: 'demo',
+          repository: _MemoryBookings([]),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -650));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('calendar exposes the reservation state to screen readers', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final today = DateTime.now();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ParticipationScreen(
+          participantId: 'demo',
+          repository: _MemoryBookings([
+            VisitBooking(
+              id: 'today',
+              startsAt: DateTime(today.year, today.month, today.day, 10),
+            ),
+          ]),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.bySemanticsLabel(
+        '${today.year}년 ${today.month}월 ${today.day}일, 예약됨',
+      ),
+      findsOneWidget,
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('reservation content stays readable on a wide web viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ParticipationScreen(
+          participantId: 'demo',
+          repository: _MemoryBookings([]),
+          onChanged: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(ListView).first).width, lessThan(850));
+    final cards = find.byType(Card);
+    final gap =
+        tester.getTopLeft(cards.at(1)).dy -
+        tester.getBottomLeft(cards.first).dy;
+    expect(gap, greaterThanOrEqualTo(16));
+  });
+
   testWidgets('reservation app bar has a back arrow and a menu', (
     tester,
   ) async {
