@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["version", "activeFrom", "enabled", "research", "measurementPolicy", "baselines", "correctionPolicy", "output"],
   "properties": {
-    "version": { "const": "pilot-0.9.0" },
+    "version": { "const": "pilot-0.9.1" },
     "activeFrom": { "type": "string", "format": "date-time" },
     "enabled": { "const": true },
     "research": { "type": "object", "additionalProperties": false, "required": ["mode", "protocolEvidence", "physicalExecution"], "properties": { "mode": { "const": "simulation_only" }, "protocolEvidence": { "const": "HYPOTHESIS_UNVALIDATED" }, "physicalExecution": { "const": "PROHIBITED" } } },

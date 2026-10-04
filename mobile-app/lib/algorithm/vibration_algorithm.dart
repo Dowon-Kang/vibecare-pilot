@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import '../models/models.dart';
 
-const algorithmVersion = 'pilot-0.9.0';
+const algorithmVersion = 'pilot-0.9.1';
 const requiredMeasurementCount = 4;
 
 const pilotRuleSet = AlgorithmRuleSet(
@@ -40,12 +40,12 @@ const pilotRuleSet = AlgorithmRuleSet(
       intensityPct: 70,
     ),
   },
-  femaleCoefficient: 1,
+  femaleCoefficient: 0.95,
   maleCoefficient: 1,
   ageUnder60Coefficient: 1,
   ageSixtiesCoefficient: 1,
-  ageSeventiesCoefficient: 1,
-  ageEightyPlusCoefficient: 1,
+  ageSeventiesCoefficient: 0.95,
+  ageEightyPlusCoefficient: 0.95,
   femaleBodyFat: BodyFatThresholds(lowPct: 20, highPct: 35),
   maleBodyFat: BodyFatThresholds(lowPct: 10, highPct: 28),
   femaleMuscleIndex: MuscleIndexThresholds(
@@ -53,9 +53,9 @@ const pilotRuleSet = AlgorithmRuleSet(
     mediumMaximum: 6.75,
   ),
   maleMuscleIndex: MuscleIndexThresholds(lowMaximum: 8.5, mediumMaximum: 10.75),
-  lowBodyFatCoefficient: 1,
+  lowBodyFatCoefficient: 0.95,
   normalBodyFatCoefficient: 1,
-  highBodyFatCoefficient: 1,
+  highBodyFatCoefficient: 0.95,
   muscleMassCoefficient: 1,
   minimumPct: 20,
   maximumPct: 99,
@@ -204,6 +204,19 @@ double calculateAgeCoefficient(int age, AlgorithmRuleSet rules) {
   if (age < 70) return rules.ageSixtiesCoefficient;
   if (age < 80) return rules.ageSeventiesCoefficient;
   return rules.ageEightyPlusCoefficient;
+}
+
+double calculateBodyFatCoefficient(
+  double bodyFatPct,
+  ParticipantSex sex,
+  AlgorithmRuleSet rules,
+) {
+  final thresholds = sex == ParticipantSex.female
+      ? rules.femaleBodyFat
+      : rules.maleBodyFat;
+  if (bodyFatPct < thresholds.lowPct) return rules.lowBodyFatCoefficient;
+  if (bodyFatPct > thresholds.highPct) return rules.highBodyFatCoefficient;
+  return rules.normalBodyFatCoefficient;
 }
 
 ({String level, double indexKgM2}) calculateMuscleLevel(
@@ -371,7 +384,25 @@ AlgorithmResult calculateRecommendation({
     ruleSet,
   );
   final base = settingForMuscleLevel(muscle.level, bodyPart, ruleSet);
-  final finalIntensity = base.intensityPct.round();
+  final genderFactor = calculateGenderCoefficient(profile.sex, ruleSet);
+  final ageFactor = calculateAgeCoefficient(profile.age, ruleSet);
+  final bodyFatFactor = calculateBodyFatCoefficient(
+    average.bodyFatPct,
+    profile.sex,
+    ruleSet,
+  );
+  final muscleFactor = ruleSet.muscleMassCoefficient;
+  final factors = [genderFactor, ageFactor, bodyFatFactor, muscleFactor];
+  if (factors.any((value) => !value.isFinite || value <= 0 || value > 1)) {
+    return rejected(RecommendationStatus.review, ['보정계수는 0보다 크고 1 이하여야 합니다.']);
+  }
+  final totalCoefficient = factors.reduce((a, b) => a * b);
+  final calculatedIntensityPct = base.intensityPct * totalCoefficient;
+  final upperBound = math.min(base.intensityPct, ruleSet.maximumPct);
+  final lowerBound = math.min(upperBound, ruleSet.minimumPct);
+  final finalIntensity = calculatedIntensityPct
+      .clamp(lowerBound, upperBound)
+      .round();
   return AlgorithmResult(
     status: RecommendationStatus.ready,
     average: average,
@@ -380,10 +411,31 @@ AlgorithmResult calculateRecommendation({
       Adjustment(
         id: 'muscle-mass',
         label: '골격근량 등급',
-        factor: 1,
+        factor: muscleFactor,
         reason:
             '${muscle.indexKgM2.toStringAsFixed(2)}kg/m² · ${muscle.level} 등급',
       ),
+      if (genderFactor < 1)
+        Adjustment(
+          id: 'gender',
+          label: '성별 계수',
+          factor: genderFactor,
+          reason: '규칙에 설정된 성별별 출력 감소 계수',
+        ),
+      if (ageFactor < 1)
+        Adjustment(
+          id: 'age',
+          label: '연령 계수',
+          factor: ageFactor,
+          reason: '규칙에 설정된 연령대별 출력 감소 계수',
+        ),
+      if (bodyFatFactor < 1)
+        Adjustment(
+          id: 'body-fat',
+          label: '체지방률 계수',
+          factor: bodyFatFactor,
+          reason: '유효 측정 4건의 평균 체지방률을 적용',
+        ),
     ],
     recommendation: Recommendation(
       durationSec: (base.durationMin * 60).round(),
@@ -394,12 +446,12 @@ AlgorithmResult calculateRecommendation({
     algorithmVersion: ruleSet.version,
     bodyPart: bodyPart,
     factors: AlgorithmFactors(
-      genderCoefficient: 1,
-      ageCoefficient: 1,
-      bodyFatCoefficient: 1,
-      muscleMassCoefficient: 1,
-      totalCoefficient: 1,
-      calculatedIntensityPct: base.intensityPct,
+      genderCoefficient: genderFactor,
+      ageCoefficient: ageFactor,
+      bodyFatCoefficient: bodyFatFactor,
+      muscleMassCoefficient: muscleFactor,
+      totalCoefficient: totalCoefficient,
+      calculatedIntensityPct: calculatedIntensityPct,
       muscleLevel: muscle.level,
       muscleIndexKgM2: muscle.indexKgM2,
     ),

@@ -32,10 +32,10 @@ const app = createApp();
 const port = Number(process.env.PORT ?? 8787);
 const schemaReady = await database.prepare(
   'SELECT version FROM schema_migrations WHERE version = ?',
-).bind('001_schema').first<string>('version');
-if (schemaReady !== '001_schema') {
+).bind('002_coefficient_rule').first<string>('version');
+if (schemaReady !== '002_coefficient_rule') {
   await database.close();
-  throw new Error('PostgreSQL schema is not migrated to 001_schema');
+  throw new Error('PostgreSQL schema is not migrated to 002_coefficient_rule');
 }
 const server = serve({ port, fetch: (request) => app.fetch(request, bindings) }, (info) => {
   console.log(JSON.stringify({ event: 'server_started', port: info.port }));

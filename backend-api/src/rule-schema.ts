@@ -12,7 +12,7 @@ const muscleIndexRange = z.object({ lowMaximum: z.number().positive(), mediumMax
   .refine(value => value.lowMaximum < value.mediumMaximum);
 
 export const ruleSchema = z.object({
-  version: z.literal('pilot-0.9.0'), activeFrom: z.iso.datetime(), enabled: z.literal(true),
+  version: z.literal('pilot-0.9.1'), activeFrom: z.iso.datetime(), enabled: z.literal(true),
   research: z.object({ mode: z.literal('simulation_only'), protocolEvidence: z.literal('HYPOTHESIS_UNVALIDATED'), physicalExecution: z.literal('PROHIBITED') }),
   measurementPolicy: z.object({
     maximumAgeDays: z.number().int().positive(), maximumFutureSkewMinutes: z.number().int().nonnegative(), requiredUnit: z.literal('kg'),

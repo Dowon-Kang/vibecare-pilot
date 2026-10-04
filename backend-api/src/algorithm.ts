@@ -10,7 +10,7 @@ export type CanonicalMeasurement = {
 };
 type BaseSetting = { durationMin: number; frequencyHz: number; intensityPct: number };
 export type AlgorithmRuleSet = {
-  version: 'pilot-0.9.0'; activeFrom: string; enabled: true;
+  version: 'pilot-0.9.1'; activeFrom: string; enabled: true;
   research: { mode: 'simulation_only'; protocolEvidence: 'HYPOTHESIS_UNVALIDATED'; physicalExecution: 'PROHIBITED' };
   measurementPolicy: { maximumAgeDays: number; maximumFutureSkewMinutes: number; requiredUnit: 'kg'; requireSameMethod: true; requireSameAcquisitionProtocol: true; policyBasis: 'ENGINEERING_POLICY' };
   baselines: Record<BodyPart, BaseSetting>;
@@ -40,7 +40,7 @@ export type AlgorithmInput = {
 };
 
 export const defaultRuleSet: AlgorithmRuleSet = {
-  version: 'pilot-0.9.0', activeFrom: '2026-09-18T00:00:00Z', enabled: true,
+  version: 'pilot-0.9.1', activeFrom: '2026-10-04T00:00:00Z', enabled: true,
   research: { mode: 'simulation_only', protocolEvidence: 'HYPOTHESIS_UNVALIDATED', physicalExecution: 'PROHIBITED' },
   measurementPolicy: { maximumAgeDays: 30, maximumFutureSkewMinutes: 5, requiredUnit: 'kg', requireSameMethod: true, requireSameAcquisitionProtocol: true, policyBasis: 'ENGINEERING_POLICY' },
   baselines: {
@@ -52,12 +52,12 @@ export const defaultRuleSet: AlgorithmRuleSet = {
     calf: { durationMin: 10, frequencyHz: 35, intensityPct: 70 },
   },
   correctionPolicy: {
-    gender: { female: 1, male: 1 },
-    age: { under60: 1, sixties: 1, seventies: 1, eightyPlus: 1 },
+    gender: { female: 0.95, male: 1 },
+    age: { under60: 1, sixties: 1, seventies: 0.95, eightyPlus: 0.95 },
     bodyFat: {
       female: { lowThresholdPct: 20, highThresholdPct: 35 },
       male: { lowThresholdPct: 10, highThresholdPct: 28 },
-      lowCoefficient: 1, normalCoefficient: 1, highCoefficient: 1,
+      lowCoefficient: 0.95, normalCoefficient: 1, highCoefficient: 0.95,
     },
     muscleMass: {
       female: { lowMaximum: 5.75, mediumMaximum: 6.75 },
@@ -175,12 +175,20 @@ export function calculateRecommendation(input: AlgorithmInput): RecommendationRe
   const latest = [...measurements].sort((a, b) => Date.parse(b.measuredAt) - Date.parse(a.measuredAt))[0];
   const muscle = skeletalMuscleLevel(latest.skeletalMuscleMassKg, profile.heightCm, profile.sex, ruleSet);
   const base = muscle.level === 'low' ? lowMuscleSettings[bodyPart] : muscle.level === 'high' ? highMuscleSettings[bodyPart] : ruleSet.baselines[bodyPart];
-  const intensity = base.intensityPct;
+  const genderFactor = genderCoefficient(profile.sex, ruleSet);
+  const ageFactor = ageCoefficient(profile.age, ruleSet);
+  const bodyFatFactor = bodyFatCoefficient(average.bodyFatPct, profile.sex, ruleSet).coefficient;
+  const muscleFactor = ruleSet.correctionPolicy.muscleMass.neutralCoefficient;
+  const totalCoefficient = genderFactor * ageFactor * bodyFatFactor * muscleFactor;
+  const calculatedIntensityPct = base.intensityPct * totalCoefficient;
+  const upperBound = Math.min(base.intensityPct, ruleSet.output.maximumPct);
+  const lowerBound = Math.min(upperBound, ruleSet.output.minimumPct);
+  const intensity = Math.round(clamp(calculatedIntensityPct, lowerBound, upperBound));
   return {
     status: 'READY', dataDecision: 'ACCEPTED', executionStatus: 'SIMULATION_READY', simulationEligibility: 'ELIGIBLE', physicalExecution: 'PROHIBITED', realDeviceSendAllowed: false,
     reasonCodes: ['SIMULATION_ONLY', 'HYPOTHESIS_UNVALIDATED', 'PHYSICAL_EXECUTION_PROHIBITED'], warnings: [], algorithmVersion: ruleSet.version, bodyPart, muscleMassBasis: 'SMM', average,
     recommendation: { durationSec: base.durationMin * 60, frequencyHz: base.frequencyHz, intensityPct: intensity, baseIntensityPct: base.intensityPct, purpose: 'SIMULATION_CANDIDATE', evidence: 'HYPOTHESIS_UNVALIDATED' },
-    factors: { genderCoefficient: 1, ageCoefficient: 1, bodyFatCoefficient: 1, muscleMassCoefficient: 1, totalCoefficient: 1, calculatedIntensityPct: intensity, muscleLevel: muscle.level, muscleIndexKgM2: muscle.indexKgM2 },
+    factors: { genderCoefficient: genderFactor, ageCoefficient: ageFactor, bodyFatCoefficient: bodyFatFactor, muscleMassCoefficient: muscleFactor, totalCoefficient, calculatedIntensityPct, muscleLevel: muscle.level, muscleIndexKgM2: muscle.indexKgM2 },
   };
 }
 

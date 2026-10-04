@@ -30,7 +30,11 @@ List<({String title, String detail})> calculationSummary({
       detail:
           '최신 API 골격근량을 키로 보정한 근육지수 ${factors.muscleIndexKgM2.toStringAsFixed(2)}kg/m²로 계산해 ${muscleLevelLabel(factors.muscleLevel)} 등급으로 분류했습니다.',
     ),
-    (title: '3. 고정 매핑 적용', detail: '등급과 선택 부위에 정해진 시간·Hz·강도를 추가 보정 없이 적용합니다.'),
+    (
+      title: '3. 규칙 계수 적용',
+      detail:
+          '근육 등급·부위의 기본 출력 ${setting.baseIntensityPct}%에 설정된 계수 ${factors.totalCoefficient.toStringAsFixed(6)}배를 적용했습니다. 시간과 Hz는 그대로입니다.',
+    ),
     (
       title: '4. 추천 설정',
       detail:

@@ -58,7 +58,7 @@ void main() {
     expect(text, contains('25분 · 8Hz · 출력 80%'));
     expect(text, contains('근육지수 5.70kg/m²'));
     expect(text, contains('낮음 등급'));
-    expect(text, contains('추가 보정 없이 적용'));
+    expect(text, contains('계수 1.000000배를 적용'));
     expect(text, contains('강도 80%'));
   });
   test('blocked result never shows a candidate', () {

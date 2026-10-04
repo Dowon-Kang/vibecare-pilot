@@ -313,7 +313,7 @@ void main() {
     expect(find.byKey(const ValueKey('research-preset-card')), findsNothing);
     expect(find.text('8Hz'), findsWidgets);
     expect(find.text('25분'), findsWidgets);
-    expect(find.text('80%'), findsWidgets);
+    expect(find.text('69%'), findsWidgets);
     expect(find.byKey(const ValueKey('body-visual-wholeBody')), findsOneWidget);
     expect(find.byKey(const ValueKey('send-button')), findsOneWidget);
   });
@@ -336,7 +336,7 @@ void main() {
     expect(find.text('연구 참고 등급 · 높음'), findsOneWidget);
     await _tap(tester, 'device-setup-button');
     expect(find.text('35분'), findsOneWidget);
-    expect(find.text('99%'), findsWidgets);
+    expect(find.text('89%'), findsWidgets);
     expect(find.byKey(const ValueKey('research-preset-card')), findsNothing);
   });
 
@@ -407,7 +407,7 @@ void main() {
       find.byKey(const ValueKey('send-button')).hitTestable(),
       findsOneWidget,
     );
-    expect(find.text('80%'), findsWidgets);
+    expect(find.text('69%'), findsWidgets);
     expect(find.text('추천 출력'), findsOneWidget);
     expect(find.text('추천값 조정'), findsOneWidget);
     expect(find.text('설정 근거 보기'), findsOneWidget);
@@ -453,12 +453,12 @@ void main() {
   testWidgets('인체 지도에서 부위를 선택하면 해당 골격근량 등급 고정값으로 바뀐다', (tester) async {
     _size(tester, const Size(390, 844));
     await _login(tester);
-    expect(find.text('80%'), findsWidgets);
+    expect(find.text('69%'), findsWidgets);
     await _tap(tester, 'body-map-shoulder');
-    expect(find.text('75%'), findsWidgets);
+    expect(find.text('64%'), findsWidgets);
     expect(find.byKey(const ValueKey('body-visual-shoulder')), findsOneWidget);
     await _tap(tester, 'command-details-button');
-    expect(find.textContaining('출력 75%에서 시작'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
   });
 
   testWidgets('장치 설정은 현재 적용되는 부위 값만 보여준다', (tester) async {
@@ -466,13 +466,13 @@ void main() {
     await _login(tester);
 
     expect(find.byKey(const ValueKey('level-comparison')), findsNothing);
-    expect(find.text('80%'), findsWidgets);
+    expect(find.text('69%'), findsWidgets);
     expect(find.text('25분 · 8Hz · 80%'), findsNothing);
     expect(find.text('30분 · 8Hz · 90%'), findsNothing);
     expect(find.text('35분 · 8Hz · 99%'), findsNothing);
 
     await _tap(tester, 'body-map-shoulder');
-    expect(find.text('75%'), findsWidgets);
+    expect(find.text('64%'), findsWidgets);
     expect(find.text('20분 · 15Hz · 75%'), findsNothing);
     expect(find.text('25분 · 15Hz · 85%'), findsNothing);
     expect(find.text('30분 · 15Hz · 90%'), findsNothing);

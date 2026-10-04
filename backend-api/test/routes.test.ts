@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '../src/index';
 import { hashPin, issueToken } from '../src/auth';
-import { defaultRuleSet } from '../src/algorithm';
 
 // Actual Hono routes + real SQLite constraints/transactions. No production DB.
 let db: DatabaseSync;
@@ -33,7 +32,7 @@ async function request(path: string, body?: unknown, user = 'A', key?: string) {
   }, env);
 }
 const payload = { measurementIds: ['M1','M2','M3','M4'], sourceDeviceId: 'BIA', deviceId: 'SIM',
-  algorithmVersion: 'pilot-0.9.0', bodyPart: 'wholeBody', safety: { acutePain: false, dizziness: false, clinicianHold: false } };
+  algorithmVersion: 'pilot-0.9.1', bodyPart: 'wholeBody', safety: { acutePain: false, dizziness: false, clinicianHold: false } };
 async function authorize() {
   const r = await request('/v1/recommendations/authorize', payload);
   expect(r.status).toBe(201);
@@ -43,10 +42,9 @@ async function authorize() {
 
 beforeEach(async () => {
   db = new DatabaseSync(':memory:');
-  for (const name of ['0001_initial.sql','0002_measurements_and_rules.sql','0003_session_safety.sql','0004_feedback_adjustments.sql','0005_parameter_feedback.sql','0006_muscle_driven_rules.sql','0007_research_safety.sql','0008_algorithm_pilot_0_7.sql','0009_algorithm_pilot_0_8.sql','0010_algorithm_pilot_0_9.sql','0011_feedback_manual_stop_policy.sql','0012_fitrus_body_composition_fields.sql','0013_past_pain_feedback_adjustment.sql']) {
+  for (const name of ['0001_initial.sql','0002_measurements_and_rules.sql','0003_session_safety.sql','0004_feedback_adjustments.sql','0005_parameter_feedback.sql','0006_muscle_driven_rules.sql','0007_research_safety.sql','0008_algorithm_pilot_0_7.sql','0009_algorithm_pilot_0_8.sql','0010_algorithm_pilot_0_9.sql','0011_feedback_manual_stop_policy.sql','0012_fitrus_body_composition_fields.sql','0013_past_pain_feedback_adjustment.sql','0014_algorithm_pilot_0_9_1.sql']) {
     db.exec(readFileSync(new URL('../migrations/' + name, import.meta.url), 'utf8'));
   }
-  db.prepare('UPDATE algorithm_rule_sets SET rules_json=? WHERE version=?').run(JSON.stringify(defaultRuleSet),'pilot-0.9.0');
   const pinHash = await hashPin('987654', 'c3ludGhldGljLXNhbHQ');
   for (const id of ['A','B']) {
     db.prepare('INSERT INTO participants(id,participant_code,age,sex,height_cm) VALUES(?,?,72,?,150)').run(id,id,'female');
@@ -57,6 +55,18 @@ beforeEach(async () => {
 afterEach(() => {
   vi.unstubAllGlobals();
   db.close();
+});
+
+it('stores the new simulator coefficients under a new rule version', () => {
+  const previous = db.prepare("SELECT enabled FROM algorithm_rule_sets WHERE version='pilot-0.9.0'").get() as { enabled: number };
+  const current = db.prepare("SELECT enabled, rules_json FROM algorithm_rule_sets WHERE version='pilot-0.9.1'").get() as { enabled: number; rules_json: string };
+  expect(previous.enabled).toBe(0);
+  expect(current.enabled).toBe(1);
+  expect(JSON.parse(current.rules_json).correctionPolicy).toMatchObject({
+    gender: { female: 0.95, male: 1 },
+    age: { sixties: 1, seventies: 0.95, eightyPlus: 0.95 },
+    bodyFat: { lowCoefficient: 0.95, normalCoefficient: 1, highCoefficient: 0.95 },
+  });
 });
 
 it('automatically inserts a valid FITRUS bodyFat response into canonical history', async () => {
@@ -292,11 +302,11 @@ it('persists post-session feedback, reduces the next cap and does not compound a
   expect((await request('/v1/session-feedback',feedback)).status).toBe(409);
   await request(`/v1/device-sessions/${id}/stop`,{reason:'completed'});
   const saved = await request('/v1/session-feedback',feedback);
-  expect(await saved.json()).toMatchObject({saved:true,adjustment:{intensityCap:89,requiresReview:false}});
+  expect(await saved.json()).toMatchObject({saved:true,adjustment:{intensityCap:80,requiresReview:false}});
   expect(db.prepare('SELECT intensity_rating,duration_rating,frequency_rating FROM session_feedback WHERE session_id=?').get(id))
     .toMatchObject({intensity_rating:'strong',duration_rating:'suitable',frequency_rating:'weak'});
-  expect(await (await request('/v1/session-feedback',feedback)).json()).toMatchObject({adjustment:{intensityCap:89}});
-  expect(await (await request('/v1/recommendations/authorize',payload)).json()).toMatchObject({result:{recommendation:{intensityPct:89}}});
+  expect(await (await request('/v1/session-feedback',feedback)).json()).toMatchObject({adjustment:{intensityCap:80}});
+  expect(await (await request('/v1/recommendations/authorize',payload)).json()).toMatchObject({result:{recommendation:{intensityPct:80}}});
   expect((await request('/v1/session-feedback',feedback,'B')).status).toBe(404);
 });
 it('past pain lowers the next authorized simulation while an earlier permit is invalidated', async () => {
