@@ -393,7 +393,9 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('출석 체크'));
+    await tester.ensureVisible(find.text('출석 체크'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('출석 체크').hitTestable());
     await tester.pumpAndSettle();
     expect(repository.bookings.last.attended, isTrue);
     await tester.drag(find.byType(ListView), const Offset(0, 1200));

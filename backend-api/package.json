@@ -8,6 +8,7 @@
     "db:migrate:postgres": "tsx src/storage/migrate-postgres.ts",
     "db:seed:postgres": "tsx src/storage/seed-development.ts",
     "test": "vitest run",
+    "test:postgres": "node --import tsx --test test/postgres.integration.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

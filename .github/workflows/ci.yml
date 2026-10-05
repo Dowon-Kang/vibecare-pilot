@@ -4,13 +4,14 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
   group: quality-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   backend:
@@ -32,6 +33,45 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - run: npm run typecheck
       - run: npm test -- --reporter=dot
+
+  postgres:
+    name: PostgreSQL HTTP integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: vibecare_test
+          POSTGRES_USER: vibecare
+          POSTGRES_PASSWORD: vibecare_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vibecare -d vibecare_test"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+    defaults:
+      run:
+        working-directory: backend-api
+    env:
+      POSTGRES_TEST_URL: postgresql://vibecare:vibecare_test_only@127.0.0.1:5432/vibecare_test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.19.0
+          cache: npm
+          cache-dependency-path: backend-api/package-lock.json
+      - run: npm ci
+      - name: Test real PostgreSQL and Node HTTP routes
+        shell: bash
+        run: npm run test:postgres 2>&1 | tee postgres-integration.tap
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: postgres-http-evidence-${{ github.sha }}
+          path: backend-api/postgres-integration.tap
+          retention-days: 14
 
   flutter:
     name: Flutter format, analyze, tests and debug APK
@@ -58,3 +98,100 @@ jobs:
         run: flutter test --no-pub --reporter compact
       - working-directory: mobile-app
         run: flutter build apk --debug --no-pub
+      - name: Hash the internal demo APK
+        working-directory: mobile-app/build/app/outputs/flutter-apk
+        run: sha256sum app-debug.apk > app-debug.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vibecare-debug-apk-${{ github.sha }}
+          path: |
+            mobile-app/build/app/outputs/flutter-apk/app-debug.apk
+            mobile-app/build/app/outputs/flutter-apk/app-debug.apk.sha256
+          retention-days: 14
+
+  web:
+    name: Flutter web build
+    needs: [backend, postgres, flutter]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.2
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        working-directory: mobile-app
+        run: flutter pub get
+      - name: Build for project Pages path
+        working-directory: mobile-app
+        run: >-
+          flutter build web --release --base-href /vibecare-pilot/ --pwa-strategy=none
+          --dart-define=VIBECARE_SUPABASE_URL=https://jaekmjiupbsufxaevosf.supabase.co
+          --dart-define=VIBECARE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YvezVqzuHVi8Nuxio01k9Q_v25aPNdK
+      - name: Add Pages fallback files
+        shell: bash
+        run: |
+          cp mobile-app/build/web/index.html mobile-app/build/web/404.html
+          touch mobile-app/build/web/.nojekyll
+      - name: Hash the web artifact files
+        working-directory: mobile-app/build/web
+        shell: bash
+        run: find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: mobile-app/build/web
+
+  evidence:
+    name: Handoff verification evidence
+    if: always()
+    needs: [backend, postgres, flutter, web]
+    runs-on: ubuntu-latest
+    env:
+      BACKEND_RESULT: ${{ needs.backend.result }}
+      POSTGRES_RESULT: ${{ needs.postgres.result }}
+      FLUTTER_RESULT: ${{ needs.flutter.result }}
+      WEB_RESULT: ${{ needs.web.result }}
+    steps:
+      - name: Record the verified commit and check results
+        shell: bash
+        run: |
+          {
+            echo "# VibeCare Mock handoff verification"
+            echo "Commit: $GITHUB_SHA"
+            echo "Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "Backend: $BACKEND_RESULT"
+            echo "PostgreSQL HTTP: $POSTGRES_RESULT"
+            echo "Flutter tests and debug APK: $FLUTTER_RESULT"
+            echo "Flutter web build: $WEB_RESULT"
+            echo "NOT RUN: live Supabase Auth/RLS accounts, FITRUS, Android hardware/accessibility, production backup/restore, clinical or physical device validation."
+          } | tee verification.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: handoff-verification-${{ github.sha }}
+          path: verification.md
+          retention-days: 14
+
+  deploy:
+    name: Deploy GitHub Pages
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [backend, postgres, flutter, web]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

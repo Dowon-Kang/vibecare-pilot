@@ -365,7 +365,8 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                 _SkeletalMuscleMeasurementCard(
                   profile: state.profile!,
                   snapshot: snapshot,
-                  onDetails: () => _showMeasurementDetails(snapshot),
+                  onDetails: () =>
+                      _showMeasurementDetails(snapshot, showHistory: true),
                 )
               else ...[
                 OverviewCard(
@@ -400,10 +401,20 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
     );
   }
 
-  void _showMeasurementDetails(MeasurementSnapshot snapshot) {
+  void _showMeasurementDetails(
+    MeasurementSnapshot snapshot, {
+    bool showHistory = false,
+  }) {
+    final container = ProviderScope.containerOf(context);
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => _ProfileMeasurementsScreen(initialSnapshot: snapshot),
+        builder: (_) => UncontrolledProviderScope(
+          container: container,
+          child: _ProfileMeasurementsScreen(
+            initialSnapshot: snapshot,
+            showHistory: showHistory,
+          ),
+        ),
       ),
     );
   }

@@ -44,7 +44,28 @@ Flutter → VibeCare Hono API → Supabase PostgreSQL
 
 Supabase Dashboard의 **Connect → Session pooler** 연결 문자열을 서버의 `DATABASE_URL`로만 주입한다. `.env.supabase.example`을 참고하되 비밀번호를 Git·APK·로그에 넣지 않는다. 장기 실행 Node 서버는 session pooler를 사용하고 TLS 인증서 검증을 유지한다. 애플리케이션 테이블은 Data API에 노출되는 `public`이 아니라 전용 `vibecare` 스키마에 생성하며, 서버 연결에만 `search_path=vibecare,public`을 적용한다. 스키마를 적용한 뒤 `npm run dev:postgres`로 같은 Node 진입점을 실행한다.
 
-현재 앱은 자체 PIN 인증과 소유권 검사를 사용하므로 Supabase Auth·Data API를 Flutter에 추가하지 않는다. 공개 `anon` 키나 `service_role` 키도 Flutter에 넣지 않는다.
+이 백엔드 경로는 자체 PIN 인증과 소유권 검사를 사용한다. 공개 웹의 Supabase Auth·RLS 예약/측정 보기 경로는 별도이며 서버 PIN 토큰과 혼용하지 않는다. 웹에는 공개용 publishable key만 사용하고 DB 비밀번호와 `service_role` 키는 넣지 않는다.
+
+### 실제 PostgreSQL HTTP 통합 검사
+
+개발용 영속 DB와 분리된 시험용 컨테이너를 사용한다. Docker가 실행 중인 상태에서 이 폴더에서 실행한다.
+
+```powershell
+npm ci
+docker run --detach --rm --name vibecare-handoff-test --publish 127.0.0.1:5434:5432 --env POSTGRES_DB=vibecare_test --env POSTGRES_USER=vibecare --env POSTGRES_PASSWORD=vibecare_test_only postgres:16-alpine
+docker exec vibecare-handoff-test pg_isready -U vibecare -d vibecare_test
+# pg_isready가 정상이라고 응답한 뒤 실행한다.
+$env:POSTGRES_TEST_URL='postgresql://vibecare:vibecare_test_only@127.0.0.1:5434/vibecare_test'
+npm run test:postgres
+docker stop vibecare-handoff-test
+Remove-Item Env:POSTGRES_TEST_URL
+```
+
+컨테이너가 아직 초기화 중이면 `pg_isready`를 다시 확인한다. 실패했어도 시험 후에는 이 이름의 컨테이너를 중지한다. `--rm`으로 시험 컨테이너만 정리하며 기존 개발 DB volume은 건드리지 않는다.
+
+검사는 loopback의 `vibecare_test` DB만 허용하고 URL이 없거나 외부 DB이면 실패한다. 실제 migration·합성 seed·Node 서버를 실행해 `/ready`, 로그인, 측정, Mock 허가·중복 시작·중지·피드백, 두 PIN 계정의 소유권, 만료 토큰/허가, 동시 PIN 잠금, batch rollback을 확인한다. Supabase Auth 계정·RLS의 실환경 검증과 Flutter UI의 종단간 검증은 이 시험의 범위에 포함되지 않는다.
+
+`npm test`는 기존 단위/SQLite 라우트 검사를 실행하고, `npm run test:postgres`는 실제 PostgreSQL HTTP 검사를 따로 실행한다. CI에서는 두 검사 모두 필수다.
 
 ### Vercel Hono 배포
 

@@ -57,6 +57,24 @@ describe('FitrusClient', () => {
     );
   });
 
+  it('times out while reading a stalled provider response body', async () => {
+    const fetcher: typeof fetch = async (_input, init) => new Response(
+      new ReadableStream({
+        start(stream) {
+          init?.signal?.addEventListener('abort', () => {
+            stream.error(new DOMException('aborted', 'AbortError'));
+          }, { once: true });
+        },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+    const client = new FitrusClient('server-secret', undefined, fetcher);
+
+    await expect(client.measure('stress', {}, { timeoutMs: 5 })).rejects.toBeInstanceOf(
+      FitrusTimeoutError,
+    );
+  }, 1_000);
+
   it('distinguishes a network failure from an HTTP rejection', async () => {
     const fetcher: typeof fetch = async () => {
       throw new TypeError('connection refused');

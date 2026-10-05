@@ -1,10 +1,10 @@
 # VibeCare 배포 Runbook
 
-기준일: 2026-09-20
+문서 점검 기준일: 2026-10-06. 아래 원격 DB 상태 표는 2026-09-20의 확인 이력이며 현재 원격 상태를 재검증한 결과가 아니다.
 
 이 문서는 현재 저장소를 기준으로 Supabase 데이터베이스, VibeCare 백엔드 API, Flutter Android 앱을 배포하는 순서를 설명한다. 현재 제품은 연구용 Mock 시뮬레이터이며 실제 진동기 명령은 배포 대상이 아니다.
 
-## 1. 현재 배포 상태
+## 1. 배포 상태 확인 이력
 
 | 구성요소 | 상태 | 근거 |
 |---|---|---|
@@ -88,6 +88,8 @@ PORT=8787
 `FITRUS_API_KEY`가 아직 없으면 FITRUS 실호출은 검증할 수 없다. 키가 없다는 이유로 임의 키나 사용자 데이터를 넣지 않는다.
 
 ## 5. 백엔드 배포
+
+Mock 인계 검증은 운영 배포와 별도로 실행한다. 실제 PostgreSQL HTTP 재현 명령은 [백엔드 안내](../backend-api/README.md#실제-postgresql-http-통합-검사)를 따른다. 시험 DB는 loopback의 `vibecare_test`로 제한하고 관리형 DB의 운영 URI를 시험 변수에 넣지 않는다.
 
 ### 5.1 배포 전 품질 검사
 
@@ -198,6 +200,43 @@ https://dowon-kang.github.io/vibecare-pilot/
 공개판은 `VIBECARE_SUPABASE_URL`과 공개용 `VIBECARE_SUPABASE_PUBLISHABLE_KEY`를 주입한다. `VIBECARE_API_BASE_URL`은 주입하지 않으므로 FITRUS API와 실제 장치에는 접근하지 않는다. `deployment/supabase/002_auth_participation.sql`을 적용하고 Supabase Auth의 허용 리디렉션 URL에 `https://dowon-kang.github.io/vibecare-pilot/`를 추가해야 이메일 가입 확인 후 Pages로 돌아온다. Web 산출물은 `/vibecare-pilot/` base href로 빌드해 GitHub Pages에 게시한다.
 
 Auth 계정만 만들면 예약·출석은 바로 사용할 수 있다. 실제 측정 데이터는 관리자가 Supabase SQL Editor에서 확인된 `auth.users.id`와 기존 `vibecare.participants.id`를 `public.account_participants`에 연결한 뒤에만 보인다. 두 테이블에 실제 대상 기록이 없는 상태에서는 측정 화면이 빈 상태를 보여 준다. 샘플 시연 화면의 측정값은 이 연결과 무관하다.
+
+### 7.2 CI 검사와 인계 산출물
+
+`.github/workflows/ci.yml` 하나가 백엔드·PostgreSQL HTTP·Flutter·웹 빌드를 검사한다. 같은 실행에서 네 검사가 모두 성공하고 ref가 main일 때만 Pages에 배포한다. PR에서는 검증 산출물만 만들고 배포하지 않는다. 이전의 독립 `deploy-pages.yml`은 제거한다.
+
+GitHub Actions에서 인계 대상 SHA와 실행 결과를 확인하고 다음 artifact를 받아 보관한다. CI artifact의 기본 보관기간은 14일이며, 기업 인수 자료는 별도의 승인된 보관 위치로 옮긴다.
+
+- `handoff-verification-<SHA>`: 커밋·실행 링크·검사별 결과·외부 미검증 범위
+- `postgres-http-evidence-<SHA>`: 실제 PostgreSQL/Node HTTP 시험 로그
+- `vibecare-debug-apk-<SHA>`: 내부 시연용 APK와 `app-debug.apk.sha256`
+- `github-pages`: 같은 커밋의 Pages 웹 산출물과 `SHA256SUMS.txt`
+
+PR 검사 SHA는 GitHub가 만든 임시 병합 커밋일 수 있다. PR head와 검사 SHA를 구분하고, 최종 main 인계 판정은 병합 후 main SHA의 성공한 실행으로 한다. 성공한 실행이 없으면 검증 완료로 기록하지 않는다.
+
+main 보호의 필수 검사는 `Backend typecheck and tests`, `PostgreSQL HTTP integration`, `Flutter format, analyze, tests and debug APK`, `Flutter web build`이다. GitHub의 실제 보호 설정은 API 또는 저장소 Settings에서 확인한다.
+
+2026-10-06에는 위 네 검사와 strict, 관리자 우회 금지, PR 경유를 적용하고 API로 재조회했다. 필수 승인자 수는 0이다. 기업 리뷰 담당자와 실제 승인 절차는 인수 시 확정하며, 검사 성공만으로 기업 승인이나 운영 출시를 선언하지 않는다.
+
+### 7.3 인수자가 확인할 범위와 운영 결정
+
+현재 승인 범위는 Mock 연구 시연판이다. 다음 항목을 기존 체크리스트에 증거와 함께 기록한다.
+
+1. 새 개발 환경에서 잠금 파일로 설치하고 합성 데이터의 로그인→측정→Mock 시작/중지→피드백 흐름을 재현한다.
+2. 공개 웹은 별도 시험 Auth 계정 두 개로 각자의 예약·출석·연결 측정만 보이는지, 다른 계정의 조회/수정/소유권 변경이 거부되는지 확인한다. PIN 계정의 PostgreSQL 시험으로 대체하지 않는다.
+3. 인계 대상이 Android를 포함하면 실제 기기의 알림 권한 거부·재부팅·배터리 제한과 접근성을 확인한다.
+4. 기업 담당자가 인계 SHA·산출물·알려진 제한을 검토하고 인수 결과를 기록한다.
+
+아래 값과 담당자는 사용자·기업이 결정한다. 확정 전에는 임의 수치로 합격 판정하거나 새 저장·삭제 정책을 적용하지 않는다.
+
+| 결정 | 확정할 내용 | 현재 상태 |
+|---|---|---|
+| 인계 제품 | Mock 시연 / 실사용 운영 / 스토어 출시, 포함 플랫폼 | 이번 작업은 기존 Mock 시연 범위 |
+| 성능·비용 | 예상 동시 사용자, p95 응답 시간, 허용 오류율, 월 비용 한도 | 담당자와 목표값 결정 필요 |
+| 알림 | 페이지 종료 후 전달 필요 여부, 허용 지연 | 현재 웹은 열린 페이지에서만 안내 |
+| 데이터 | 보존기간, 삭제 요청 처리, 접근자와 감사 기록 | 정책·담당자 결정 및 구현 필요 |
+| 장애·복구 | 복구 시간, 허용 유실량, 백업 복구 시험, 경보 수신자 | 목표·담당자 결정 및 실환경 시험 필요 |
+| 소유권·승인 | GitHub·호스팅·DB·배포 키 소유자, 인수 승인자 | 기업과 확정 필요 |
 
 ## 8. Play Store 배포 전 추가 작업
 

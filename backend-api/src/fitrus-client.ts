@@ -62,9 +62,9 @@ export class FitrusClient {
       controller.abort();
     }, timeoutMs);
 
-    let response: Response;
+    let responseReceived = false;
     try {
-      response = await this.fetcher(`${this.baseUrl}${fitrusPaths[kind]}`, {
+      const response = await this.fetcher(`${this.baseUrl}${fitrusPaths[kind]}`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -75,23 +75,25 @@ export class FitrusClient {
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
+      responseReceived = true;
+
+      if (!response.ok) {
+        throw new FitrusApiError(response.status, await response.text());
+      }
+
+      const contentType = response.headers.get('content-type') ?? '';
+      if (!contentType.includes('json')) {
+        throw new FitrusApiError(response.status, 'Expected a JSON response');
+      }
+      return (await response.json()) as FitrusPayload;
     } catch (error) {
       if (timedOut) throw new FitrusTimeoutError(timeoutMs);
       if (options.signal?.aborted) throw error;
+      if (responseReceived) throw error;
       throw new FitrusNetworkError(error);
     } finally {
       clearTimeout(timeout);
       options.signal?.removeEventListener('abort', abortFromCaller);
     }
-
-    if (!response.ok) {
-      throw new FitrusApiError(response.status, await response.text());
-    }
-
-    const contentType = response.headers.get('content-type') ?? '';
-    if (!contentType.includes('json')) {
-      throw new FitrusApiError(response.status, 'Expected a JSON response');
-    }
-    return (await response.json()) as FitrusPayload;
   }
 }

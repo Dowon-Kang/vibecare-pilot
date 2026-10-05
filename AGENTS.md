@@ -19,6 +19,8 @@
 
 ## Working rules
 
+- Before editing, confirm the repository/worktree, branch, HEAD, remote tracking state, and uncommitted changes. Compare overlapping work instead of overwriting it; fetch before calling a revision the latest GitHub version.
+- State the task purpose, allowed scope, preserved behavior, and observable acceptance criteria. Use existing files where their responsibilities fit; file-count reduction is not evidence of runtime performance.
 - Keep changes inside one approved vertical slice and preserve unrelated user changes.
 - Do not add dependencies, deployment, secrets, FITRUS assumptions, or physical-device behavior without an explicit contract and approval.
 - Keep raw/provider data separate from normalized and derived results.
@@ -26,6 +28,7 @@
 - Treat missing supplier definitions, device calibration, real-device ACK behavior, and clinical validation as blockers, not implementation details to infer.
 - For behavior changes, establish a failing regression test for the intended reason, make the smallest implementation change, then run focused and repository-wide checks. If the test does not fail for the intended reason, stop and report `BLOCKED`.
 - Do not describe a check as passed unless it ran. Use `PASS`, `FAIL`, or `NOT RUN` and include the command or evidence link.
+- Handoff evidence must identify the tested commit, environment, commands, artifacts, and remaining external checks. Individual unit suites do not establish live Auth/RLS, PostgreSQL HTTP, or device integration success.
 
 ## Verification
 

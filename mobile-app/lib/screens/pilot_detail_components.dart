@@ -1,9 +1,13 @@
 part of 'pilot_screen.dart';
 
 class _ProfileMeasurementsScreen extends ConsumerWidget {
-  const _ProfileMeasurementsScreen({required this.initialSnapshot});
+  const _ProfileMeasurementsScreen({
+    required this.initialSnapshot,
+    this.showHistory = false,
+  });
 
   final MeasurementSnapshot initialSnapshot;
+  final bool showHistory;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,6 +27,7 @@ class _ProfileMeasurementsScreen extends ConsumerWidget {
 
     return DefaultTabController(
       length: 2,
+      initialIndex: showHistory ? 1 : 0,
       child: Scaffold(
         key: const ValueKey('profile-measurements-screen'),
         appBar: AppBar(

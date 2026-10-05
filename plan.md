@@ -36,15 +36,10 @@ FITRUS의 동일 참여자 체성분 측정 4건을 검증·평균하고, 근육
 ## 2. 기준 아키텍처
 
 ```text
-Flutter mobile-app
-  → VibeCare backend-api
-    → FITRUS Adapter
-    → Algorithm Service
-    → Repository interface
-    → AWS DB Adapter (미구현)
-  → DeviceGateway
-    → Mock (구현)
-    → REST/BLE real adapter (미구현)
+Flutter 연결 웹 → Supabase Auth / RLS 예약·측정 보기
+Flutter 백엔드 모드 → VibeCare Hono API → PostgreSQL adapter / FITRUS 프록시
+Flutter 샘플 모드 → 앱 내부 합성 데이터 / MockDeviceGateway
+모든 모드: 물리 장치 실행 금지
 ```
 
 - Flutter는 FITRUS API 키와 서버 권위 규칙을 보관하지 않는다.
@@ -57,11 +52,13 @@ Flutter mobile-app
 
 | 버전 | 용도 | 상태 |
 |---|---|---|
-| `pilot-0.8.0` | SMM 4건 평균·6개 부위 기준값·성별/나이/체지방 연구용 보정·Mock 후보 | 연결됨 |
+| `pilot-0.9.1` | 최신 근육지수 등급·6개 부위 기본값·연구용 0.95 계수·Mock 강도 | 현재 코드 기준; 운영 PostgreSQL 적용 미검증 |
+| `pilot-0.9.0` | 최신 근육지수 등급·6개 부위 기본값, 추가 계수 없음 | 이전 규칙 보존 |
+| `pilot-0.8.0` | SMM 4건 평균·6개 부위 기준값·성별/나이/체지방 연구용 보정·Mock 후보 | 이전 규칙 보존 |
 | `pilot-0.7.0` | 이전 ASM/SMM 연구 층화 방식 | 폐기·감사 기록만 보존 |
 | `pilot-0.6.0` | 이전 ASM/SMM 가정 선택 방식 | 폐기·감사 기록만 보존 |
 
-현재 구현 기준은 [pilot-0.8.0 설계](docs/algorithm/pilot-0.8.0-design.md)를 따른다.
+현재 구현 기준은 [pilot-0.9.1 설계](docs/algorithm/pilot-0.9.1-design.md)를 따른다. 아래 `pilot-0.8.0` 설명과 연구 항목은 당시 작업 이력이다.
 
 2026-09-14 추가 연구: [근육량 기반 반응 추론 모델 설계](docs/algorithm/response-model-design.md).
 멀티에이전트 문헌·오픈소스 조사와 오프라인 평가 도구 검증을 완료했다.
@@ -75,7 +72,17 @@ Flutter mobile-app
 
 ## 4. 구현 단계
 
-### 현재 Build — Supabase PostgreSQL 저장소 연결
+### 현재 Build — Mock 시연판 기업 인계 검증 (2026-10-06)
+
+사용자 승인 범위: 인계 기준 버전 확인, 기존 Mock 흐름의 실제 PostgreSQL HTTP 검증, 기존 기능의 회귀검사, CI와 Pages 배포 연결, 기존 문서의 현재 상태 정리. 기존 작업 폴더의 미커밋 변경은 비교 후 보존한다. 새 제품 요구사항·실장비 동작·운영 배포·보존기간 수치의 임의 결정은 포함하지 않는다.
+
+기준 소스: GitHub main `69307b9015f420803a132048ee98031c322d3cc1` (2026-10-06 fetch 확인). 작업 브랜치: `handoff-verification-20261006`, 작업 폴더: `E:\산학협력\vibecare-pages-update`.
+
+완료 조건: 실제 migration/seed/Node HTTP의 핵심 Mock 흐름과 실패 상황을 시험하고, 같은 SHA의 백엔드·PostgreSQL·Flutter·웹 검사 및 산출물을 CI에 기록한다. 운영 책임·데이터 정책·실계정/기기 시험의 남은 조건을 인수자가 확인할 수 있게 한다.
+
+회귀 문제: 동시 PIN 오입력 횟수 유실과 FITRUS 본문 수신 중 deadline 해제를 RED로 재현한 뒤 최소 수정한다. 물리 실행 금지와 공개 API 형식은 유지한다.
+
+### 후속 Build — Supabase PostgreSQL 운영 연결
 
 상태: **Supabase project and private schema provisioned / backend hosting and HTTP integration pending**
 

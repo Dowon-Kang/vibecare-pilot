@@ -142,5 +142,34 @@ void main() {
     await tester.tap(find.text('로그인'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('participation-button')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('profile-data-button')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('profile-measurements-screen')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('샘플 데이터'), findsWidgets);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('profile-continue-button')),
+    );
+    await tester.tap(find.byKey(const ValueKey('profile-continue-button')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('measurement-history-button')),
+    );
+    await tester.tap(find.byKey(const ValueKey('measurement-history-button')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('trend-chart-skeletalMuscleMassKg')),
+      findsOneWidget,
+    );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('current-skeletal-muscle')),
+      findsOneWidget,
+    );
   });
 }

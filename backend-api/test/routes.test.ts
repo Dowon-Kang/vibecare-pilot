@@ -57,6 +57,24 @@ afterEach(() => {
   db.close();
 });
 
+it('locks the account after five concurrent incorrect PIN requests', async () => {
+  const responses = await Promise.all(Array.from({ length: 5 }, () => app.request(
+    'https://test.local/v1/auth/pin',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ participantCode: 'A', pin: '000000' }),
+    },
+    env,
+  )));
+  expect(responses.map((response) => response.status)).toContain(423);
+  const credentials = db.prepare(
+    'SELECT failed_attempts, locked_until FROM pin_credentials WHERE participant_id = ?',
+  ).get('A') as { failed_attempts: number; locked_until: string | null };
+  expect(credentials.failed_attempts).toBe(0);
+  expect(Date.parse(credentials.locked_until ?? '')).toBeGreaterThan(Date.now());
+});
+
 it('stores the new simulator coefficients under a new rule version', () => {
   const previous = db.prepare("SELECT enabled FROM algorithm_rule_sets WHERE version='pilot-0.9.0'").get() as { enabled: number };
   const current = db.prepare("SELECT enabled, rules_json FROM algorithm_rule_sets WHERE version='pilot-0.9.1'").get() as { enabled: number; rules_json: string };

@@ -24,13 +24,26 @@ export function registerAuthRoutes(app: VibeCareApp): void {
 
     const valid = await verifyPin(parsed.data.pin, String(row.salt), String(row.pin_hash));
     if (!valid) {
-      const failures = Number(row.failed_attempts) + 1;
-      const lockedUntil = failures >= 5
-        ? new Date(Date.now() + 15 * 60_000).toISOString()
-        : null;
-      await context.env.DB.prepare(
-        'UPDATE pin_credentials SET failed_attempts = ?, locked_until = ? WHERE participant_id = ?',
-      ).bind(failures >= 5 ? 0 : failures, lockedUntil, row.id).run();
+      const now = new Date();
+      const credentials = await context.env.DB.prepare(
+        `UPDATE pin_credentials SET
+           failed_attempts = CASE
+             WHEN locked_until > ? THEN failed_attempts
+             WHEN failed_attempts + 1 >= 5 THEN 0
+             ELSE failed_attempts + 1 END,
+           locked_until = CASE
+             WHEN locked_until > ? THEN locked_until
+             WHEN failed_attempts + 1 >= 5 THEN ?
+             ELSE NULL END
+         WHERE participant_id = ?
+         RETURNING locked_until`,
+      ).bind(
+        now.toISOString(),
+        now.toISOString(),
+        new Date(now.getTime() + 15 * 60_000).toISOString(),
+        row.id,
+      ).first<{ locked_until: string | null }>();
+      const lockedUntil = credentials?.locked_until ?? null;
       return context.json(
         { error: lockedUntil ? 'ACCOUNT_LOCKED' : 'INVALID_CREDENTIALS', lockedUntil },
         lockedUntil ? 423 : 401,

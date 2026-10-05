@@ -7,20 +7,22 @@
 - [ ] PostgreSQL 실환경 마이그레이션과 배포 검증
 - [ ] 임상 및 기기별 보정 근거 검증 (현재 실제 장치 실행 금지)
 
-기준일: 2026-09-19
+문서 점검 기준일: 2026-10-06. 과거 검사 결과는 당시 커밋·환경의 이력이며 현재 인계 버전의 통과 증거로 대체하지 않는다.
 상태: [x] 코드와 검증 증거 있음 · [~] 일부 구현 · [ ] 미구현/외부 차단
 
 ## A. 저장소 품질 게이트
 
 - [x] 공개 문서 진입점: `docs/README.md`
 - [x] GitHub Actions 구성: 백엔드 typecheck/test, Flutter format/analyze/test/debug APK build
+- [x] 실제 PostgreSQL/Node HTTP 시험과 같은 커밋의 검사·APK·웹 산출물 기록 구성
+- [x] 독립 Pages 배포 workflow 제거, main의 백엔드·PostgreSQL·Flutter·웹 성공 뒤 같은 실행에서 배포하도록 연결
 - [x] 실제 환경값 제외: `.env*`, `.dev.vars`, `*.local.txt`, 로컬 상태·빌드 산출물 ignore
 - [x] 패키지 버전 잠금: 백엔드 `package-lock.json`, Flutter `pubspec.lock`
 - [x] AWS 인계 범위와 미구현 항목 분리
 - [x] `pilot-0.7.0` 구현 커밋 `2d15e9f`의 원격 `quality-gates` 통과: [run 34459978932](https://github.com/Dowon-Kang/vibecare-pilot/actions/runs/34459978932)
-- [ ] branch protection에서 `quality-gates` 필수화
+- [x] main branch protection: PR 경유·최신 main 기준·백엔드/PostgreSQL HTTP/Flutter/웹 네 검사 필수, 관리자 우회 금지 (2026-10-06 API 적용·재조회)
 
-## B. 현재 정량 검증
+## B. 정량 검증 이력 (2026-09-21)
 
 | 검사 | 마지막 결과 | 합격 기준 |
 |---|---:|---:|
@@ -33,6 +35,31 @@
 
 수치는 실행한 자동 검사 기준이며 임상 안전성 수치가 아니다.
 2026-09-19에는 골격근량 기준 변경 후 백엔드·Flutter 전체 테스트와 debug APK를 다시 검증했다.
+
+### 2026-10-06 인계 검증 작업
+
+기준: GitHub main `69307b9015f420803a132048ee98031c322d3cc1`를 fetch로 확인한 뒤 `handoff-verification-20261006`에서 작업했다. 로컬 결과는 해당 기준에 이번 변경을 적용한 작업 트리의 결과다. 확정 SHA의 결과는 GitHub Actions 실행·artifact로 판정한다.
+
+| 검사 | 현재 실제 결과 |
+|---|---|
+| RED: 동시 PIN 오입력 | FAIL 재현: 5개 요청 모두 401, 잠금 누락 |
+| RED: FITRUS 응답 본문 지연 | FAIL 재현: 1초 시험 제한 초과, 본문 deadline 누락 |
+| GREEN: 관련 회귀검사 | PASS: `npm test -- test/routes.test.ts test/fitrus-client.test.ts --reporter=dot --silent`, 26/26 |
+| 백엔드 전체 | PASS: `npm test -- --reporter=dot --silent`, 86/86 |
+| TypeScript | PASS: `npm run typecheck` |
+| 운영 의존성 high 기준 | PASS: `npm audit --omit=dev --audit-level=high`; moderate 경고 1건은 남음 |
+| Flutter format | PASS: `dart format --output=none --set-exit-if-changed lib test`, 55개 파일 변경 0 |
+| Flutter analyze | 첫 한글 경로 실행 FAIL: LSP JSON 수신 종료. 같은 폴더의 임시 영문 `X:` 경로에서 `flutter analyze --no-pub` PASS; `dart analyze .`도 PASS |
+| Flutter 전체 | 최초 86 PASS / 1 FAIL: 출석 시험의 화면 밖 tap. 버튼 노출 후 hitTestable tap으로 보완해 `flutter test --no-pub --reporter expanded` 87/87 PASS |
+| 로컬 debug APK | FAIL: `flutter build apk --debug --no-pub`, JVM native memory 부족으로 Gradle daemon 종료. CI Android 결과는 별도 확인 |
+| 로컬 웹 release | PASS: CI와 같은 공개 Supabase 설정의 `flutter build web --release --base-href /vibecare-pilot/ --pwa-strategy=none --no-pub`, 174.8초. Wasm dry-run 경고는 있으나 JS 웹 빌드는 성공 |
+| 로컬 PostgreSQL HTTP | NOT RUN: Docker 엔진 시작 시도 후에도 named pipe를 사용할 수 없음 |
+| CI PostgreSQL HTTP | 실제 결과는 같은 SHA의 Actions 실행과 `postgres-http-evidence-<SHA>` artifact에서 확인; SQLite 결과로 대체하지 않음 |
+| 실환경·인수 | NOT RUN: 실제 Supabase 두 Auth 계정, FITRUS, Android 기기·접근성, 운영 백업/복구, 기업 인수 확인 |
+
+GitHub 설정: 작업 시작 시 main protection은 없고 적용된 rules는 빈 목록이었다. 네 필수 검사·strict·enforce_admins·PR 경유를 적용하고 API로 재조회했다. 승인자 수는 0으로 두며, 별도 기업 리뷰 담당자를 임의로 지정하지 않았다. Draft PR과 기업의 인수 확인은 별도로 진행한다.
+
+다른 작업 트리의 변경 보존: `E:\산학협력\vibration-control-app`의 Android 알림·장치 상태 시험은 최신판에 반영돼 있고, 합성 날짜·알림 helper·freshness 시험도 반영돼 있다. 예약·화면 변경은 최신판에서 확대·수정됐으므로 오래된 파일로 덮어쓰지 않는다. FITRUS 본문 timeout 수정은 이번 브랜치에 다시 RED/GREEN으로 반영했다. 미적용 `docs/supabase-rls-proposal.sql`은 검토용으로 원래 폴더에 보존하고 원격 DB에 적용하지 않았다. `E:\industry-cooperation\vibration-control-app`의 별도 UI 변경과 이 작업 트리의 미추적 `docs/architecture-map.md`도 보존한다.
 
 ## C. 데이터와 FITRUS
 
