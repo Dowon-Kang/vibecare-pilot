@@ -51,7 +51,8 @@
 | Flutter format | PASS: `dart format --output=none --set-exit-if-changed lib test`, 55개 파일 변경 0 |
 | Flutter analyze | 첫 한글 경로 실행 FAIL: LSP JSON 수신 종료. 같은 폴더의 임시 영문 `X:` 경로에서 `flutter analyze --no-pub` PASS; `dart analyze .`도 PASS |
 | Flutter 전체 | 최초 86 PASS / 1 FAIL: 출석 시험의 화면 밖 tap. 버튼 노출 후 hitTestable tap으로 보완해 `flutter test --no-pub --reporter expanded` 87/87 PASS |
-| APK/web 빌드 | 로컬 NOT RUN; 같은 SHA의 CI 실행과 산출물에서 확인 |
+| 로컬 debug APK | FAIL: `flutter build apk --debug --no-pub`, JVM native memory 부족으로 Gradle daemon 종료. CI Android 결과는 별도 확인 |
+| 로컬 웹 release | PASS: CI와 같은 공개 Supabase 설정의 `flutter build web --release --base-href /vibecare-pilot/ --pwa-strategy=none --no-pub`, 174.8초. Wasm dry-run 경고는 있으나 JS 웹 빌드는 성공 |
 | 로컬 PostgreSQL HTTP | NOT RUN: Docker 엔진 시작 시도 후에도 named pipe를 사용할 수 없음 |
 | CI PostgreSQL HTTP | 실제 결과는 같은 SHA의 Actions 실행과 `postgres-http-evidence-<SHA>` artifact에서 확인; SQLite 결과로 대체하지 않음 |
 | 실환경·인수 | NOT RUN: 실제 Supabase 두 Auth 계정, FITRUS, Android 기기·접근성, 운영 백업/복구, 기업 인수 확인 |
