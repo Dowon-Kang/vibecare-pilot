@@ -385,7 +385,7 @@ class _ProfileValueEditorSheetState extends State<_ProfileValueEditorSheet> {
   );
 }
 
-class _SkeletalMuscleMeasurementCard extends StatelessWidget {
+class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
   const _SkeletalMuscleMeasurementCard({
     required this.profile,
     required this.snapshot,
@@ -397,7 +397,8 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
   final VoidCallback onDetails;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isSample = ref.watch(appEnvironmentProvider).usesSampleData;
     final assessment = buildSkeletalMuscleAssessment(
       profile: profile,
       history: snapshot.bodyCompositionHistory,
@@ -439,6 +440,17 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
             Text('골격근량 결과', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 6),
             Text(
+              isSample ? '샘플 · 합성 측정 데이터' : '서버에 저장된 측정 데이터',
+              key: const ValueKey('measurement-source'),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (isSample)
+              Text(
+                '실제 참여자의 측정 결과가 아닙니다.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            const SizedBox(height: 6),
+            Text(
               '${assessment.currentKg.toStringAsFixed(1)}kg',
               key: const ValueKey('current-skeletal-muscle'),
               style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900),
@@ -451,6 +463,11 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
               ).textTheme.titleMedium?.copyWith(color: AppColors.brand),
             ),
             const SizedBox(height: 4),
+            Text(
+              '이 등급은 연구용 시연 설정을 선택하기 위한 분류입니다. 건강 진단이나 운동·영양 처방 기준이 아닙니다.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
             Text(
               '키로 보정한 근육지수 ${assessment.currentIndexKgM2.toStringAsFixed(2)}kg/m²로 판정',
               key: const ValueKey('muscle-index-explanation'),
@@ -500,14 +517,8 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
-            if (latestMeasurement != null) ...[
-              _MeasurementStepStatusPanel(
-                profile: profile,
-                ruleSet: snapshot.ruleSet,
-                values: latestMeasurement.values,
-              ),
-              const SizedBox(height: 18),
-            ],
+            Text('직전 기록과 비교', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
             Container(
               key: const ValueKey('measurement-comparison'),
               padding: const EdgeInsets.all(14),
@@ -524,18 +535,43 @@ class _SkeletalMuscleMeasurementCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _IncreasedMeasurements(snapshot: snapshot),
-            const SizedBox(height: 10),
             Text(
-              'DB에 저장된 최신 API 골격근량과 직전 기록 비교',
+              '작은 차이는 측정 조건에 따라 달라질 수 있습니다. 한 번의 증가·감소만으로 건강 변화를 판단하지 마세요.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
+            const SizedBox(height: 16),
+            Text('다음 단계', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
+            Text(
+              '아래의 부위별 설정 확인으로 연구용 설정을 살펴보세요. 안전 문진을 마친 뒤 시뮬레이터로만 시연하며 실제 진동은 없습니다.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
             TextButton.icon(
               key: const ValueKey('measurement-history-button'),
               onPressed: onDetails,
               icon: const Icon(Icons.history),
               label: const Text('전체 측정 기록 보기'),
             ),
+            if (latestMeasurement != null)
+              ExpansionTile(
+                key: const ValueKey('measurement-details-toggle'),
+                tilePadding: EdgeInsets.zero,
+                title: const Text('상세 지표와 연구 기준 보기'),
+                children: [
+                  const Text(
+                    '아래 상태는 연구 참고 기준과의 비교입니다. 기준 범위 밖 항목 수는 독립적인 건강 문제의 수가 아닙니다. 체지방률과 체지방량은 같은 체지방 기준을 사용합니다.',
+                  ),
+                  const SizedBox(height: 12),
+                  _MeasurementStepStatusPanel(
+                    profile: profile,
+                    ruleSet: snapshot.ruleSet,
+                    values: latestMeasurement.values,
+                  ),
+                  const SizedBox(height: 12),
+                  _IncreasedMeasurements(snapshot: snapshot),
+                ],
+              ),
           ],
         ),
       ),

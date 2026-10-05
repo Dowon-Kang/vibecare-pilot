@@ -277,6 +277,13 @@ void main() {
     );
     expect(find.text('연구 참고 등급 · 낮음'), findsOneWidget);
     expect(find.textContaining('직전 측정보다 +0.1kg'), findsOneWidget);
+    expect(find.text('샘플 · 합성 측정 데이터'), findsOneWidget);
+    expect(find.textContaining('건강 진단이나 운동·영양 처방 기준이 아닙니다.'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('measurement-step-status-summary')),
+      findsNothing,
+    );
+    await _tap(tester, 'measurement-details-toggle');
     expect(
       find.byKey(const ValueKey('measurement-step-composition-statuses')),
       findsOneWidget,
@@ -682,7 +689,31 @@ void main() {
       _size(tester, const Size(320, 568));
       tester.platformDispatcher.textScaleFactorTestValue = scale;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      await _login(tester);
+      await _rawLogin(tester);
+      await _tap(tester, 'profile-continue-button');
+      await _tap(tester, 'measurement-details-toggle');
+      expect(
+        find.byKey(const ValueKey('measurement-step-status-summary')),
+        findsOneWidget,
+      );
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'expanded result at 320px',
+      );
+      await _tap(tester, 'measurement-history-button');
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('trend-chart-skeletalMuscleMassKg')),
+        180,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(
+        find.byKey(const ValueKey('trend-chart-skeletalMuscleMassKg')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      await _tap(tester, 'device-setup-button');
       expect(
         find.byKey(const ValueKey('send-button')).hitTestable(),
         findsOneWidget,
