@@ -4,13 +4,13 @@ Mock 추천 계산의 현재 규칙은 [`pilot-0.9.1`](docs/algorithm/pilot-0.9.
 
 FITRUS 체성분 측정 이력을 저장·검증하고, 최신 API 골격근량의 근육지수를 낮음·중간·높음으로 분류해 확정된 부위별 시간·Hz·강도를 보여주는 Flutter 연구 프로토타입입니다.
 
-> `pilot-0.9.0`은 의료 처방이 아닙니다. 물리 장치 실행은 모든 경로에서 `PROHIBITED`이며, 현재 허가는 Mock 시뮬레이션에만 발급됩니다.
+> `pilot-0.9.1`은 의료 처방이 아닙니다. 물리 장치 실행은 모든 경로에서 `PROHIBITED`이며, 현재 허가는 Mock 시뮬레이션에만 발급됩니다.
 
 ## 공개 시연판
 
 [VibeCare Web 시연판 열기](https://dowon-kang.github.io/vibecare-pilot/)
 
-웹 시연판의 예약·출석 기록은 현재 브라우저에 저장되며 예약 시각 알림은 페이지가 열려 있을 때 표시된다.
+연결 모드의 예약·출석은 Supabase에 계정별로 저장하고, 샘플 시연 기록은 브라우저에 저장한다. 웹 예약 알림은 페이지가 열려 있을 때 표시한다.
 
 공개 웹 화면은 Supabase Auth 이메일 계정으로 로그인해 본인 예약·출석과 연결된 측정 기록을 읽는다. 별도의 샘플 시연 화면에서는 `USER-001 / 123456`과 합성 데이터로 추천 매핑을 체험할 수 있다. 실제 진동기에는 연결되지 않는다.
 
@@ -60,11 +60,19 @@ Supabase DB, 백엔드 API와 Android APK의 배포 순서는 [배포 Runbook](d
 
 - Backend algorithm: SMM 정의 검증, 최신 골격근량/키² 근육지수 등급, 6개 부위 고정값, 안전 차단 구현
 - Baselines and coefficients: 프로젝트 제공값을 코드·서버 규칙·화면에서 추적하며 모두 `HYPOTHESIS_UNVALIDATED`로 표시
-- Demographics: 나이·성별·체지방을 진동량에 곱하지 않음. 성별과 키는 근육지수 연구 경계 판정에만 사용
+- Demographics: 성별과 키로 근육지수 연구 경계를 판정한다. `pilot-0.9.1`의 여성·70세 이상·체지방 범위 이탈 계수는 Mock 강도에만 적용하며 실제 진동량으로 해석하지 않는다.
 - FITRUS: 공식 요청·응답 필드에 맞춘 서버 전용 프록시와 체성분·활력 자동 저장 경로가 구현됨. 단위·유효 범위·근육 산출법이 미확인인 값은 추정하지 않고 미지원 응답은 raw로 보존
 - Device: 앱 내부 Mock과 서버 시뮬레이터만 구현. REST/BLE 물리 장치 어댑터는 없음
-- AWS: 인계 문서와 저장소 포트만 있음. 운영 인프라·AWS DB 어댑터는 미구현
+- Storage: Node/PostgreSQL adapter·migration·합성 seed 구현. AWS 운영 인프라와 운영 백엔드 배포는 미완료
 
 테스트 통과는 코드 흐름의 재현성을 뜻하며 임상 효과나 물리 장치 안전을 증명하지 않습니다. 정량 결과와 원격 빌드 상태는 [검증 체크리스트](checklist.md)와 최신 GitHub Actions 실행을 함께 확인하세요.
 
 자세한 내용은 [문서 안내](docs/README.md), [계획](plan.md), [검증 체크리스트](checklist.md)를 확인하세요.
+
+## 기업 인계 기준
+
+현재 인계 범위는 기존 기능을 유지하는 **Mock 연구 시연판의 재현·검증**이다. 운영 서비스·스토어 출시·FITRUS 실연동·실장비 검증의 완료 판정은 별도로 한다. 작업을 시작할 때 폴더·브랜치·커밋과 미커밋 변경을 확인한다.
+
+`quality-gates`는 백엔드, 실제 로컬 PostgreSQL/Node HTTP, Flutter 검사·debug APK, 웹 빌드를 같은 커밋으로 검사한다. main의 검사 성공 뒤에만 같은 실행의 Pages 산출물을 배포한다. APK·PostgreSQL 시험 로그·검증 요약 artifact 이름에는 검사한 SHA가 들어간다. PR에서는 배포하지 않는다.
+
+새 환경에서 재현하는 명령은 [백엔드 실행 안내](backend-api/README.md), 인수자가 확인할 범위와 운영 결정은 [배포 Runbook](docs/deployment.md)을 따른다. 실제 수행 결과는 [체크리스트](checklist.md)에 기록한다.
