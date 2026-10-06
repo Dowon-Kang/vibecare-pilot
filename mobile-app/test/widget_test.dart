@@ -27,6 +27,23 @@ class FailFirstStop extends MockDeviceGateway {
 }
 
 void main() {
+  testWidgets('result offers an honestly labeled AI wellness preview', (
+    tester,
+  ) async {
+    _size(tester, const Size(390, 844));
+    await _rawLogin(tester);
+    await _tap(tester, 'profile-continue-button');
+    final preview = find.byKey(const ValueKey('ai-wellness-preview'));
+    expect(preview, findsOneWidget);
+    await tester.ensureVisible(preview);
+    await tester.pumpAndSettle();
+    await tester.tap(preview);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('AI 미연결'), findsWidgets);
+    expect(find.text('측정값 해석'), findsOneWidget);
+    expect(find.text('음식 후보'), findsOneWidget);
+    expect(find.text('운동 후보'), findsOneWidget);
+  });
   testWidgets('past pain shows a confirmation before the next simulation', (
     tester,
   ) async {

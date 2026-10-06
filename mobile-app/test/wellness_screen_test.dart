@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibecare_pilot/screens/wellness_screen.dart';
 import 'package:vibecare_pilot/services/wellness_repository.dart';
+import 'package:vibecare_pilot/models/models.dart';
 
 class _Memory implements WellnessRepository {
   final plans = <String, WellnessPlan>{};
@@ -32,6 +33,136 @@ class _Memory implements WellnessRepository {
 }
 
 void main() {
+  Future<void> showPreview(
+    WidgetTester tester,
+    SafetyCheck safety, {
+    bool accepted = true,
+    double muscle = 12.5,
+    bool large = false,
+  }) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(large ? 2 : 1)),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: ListView(
+            children: [
+              WellnessResultPreview(
+                currentMuscleKg: muscle,
+                deltaMuscleKg: 0.1,
+                weightKg: 50,
+                bodyFatPct: 28,
+                sample: true,
+                safety: safety,
+                measurementReviewed: accepted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('ai-wellness-preview')));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('result preview holds movement until complete and clear safety', (
+    tester,
+  ) async {
+    await showPreview(tester, const SafetyCheck());
+    expect(
+      find.byKey(const ValueKey('wellness-exercise-hold')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('wellness-exercise-example')),
+      findsNothing,
+    );
+    expect(find.textContaining('AI 생성 결과가 아닙니다'), findsOneWidget);
+    expect(find.textContaining('개인 식단 추천 보류'), findsOneWidget);
+  });
+
+  testWidgets('safety updates remove stale movement candidates immediately', (
+    tester,
+  ) async {
+    await showPreview(tester, const SafetyCheck.confirmedClear());
+    expect(
+      find.byKey(const ValueKey('wellness-exercise-example')),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            children: [
+              const WellnessResultPreview(
+                currentMuscleKg: 12.5,
+                deltaMuscleKg: 0.1,
+                weightKg: 50,
+                bodyFatPct: 28,
+                sample: true,
+                safety: SafetyCheck(
+                  acutePain: true,
+                  dizziness: false,
+                  clinicianHold: false,
+                ),
+                measurementReviewed: true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('ai-wellness-preview')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('wellness-exercise-hold')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('wellness-exercise-example')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('invalid values cannot be interpreted or enable movement', (
+    tester,
+  ) async {
+    await showPreview(
+      tester,
+      const SafetyCheck.confirmedClear(),
+      muscle: double.nan,
+    );
+    expect(find.textContaining('해석 가능한 측정값을 확인할 수 없습니다'), findsOneWidget);
+    expect(find.textContaining('NaN'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('wellness-exercise-example')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('expanded result preview fits 320px at double text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await showPreview(tester, const SafetyCheck.confirmedClear(), large: true);
+    expect(tester.takeException(), isNull);
+    await tester.scrollUntilVisible(
+      find.text('실제 AI 연결에 필요한 정보').hitTestable(),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'owner changes discard in-flight data from the previous account',
     (tester) async {

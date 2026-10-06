@@ -553,6 +553,27 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
               icon: const Icon(Icons.history),
               label: const Text('전체 측정 기록 보기'),
             ),
+            if (latestMeasurement != null &&
+                latestMeasurement.participantId == profile.id &&
+                latestMeasurement.muscleDefinition == MuscleMassBasis.smm &&
+                latestMeasurement.muscleMassUnit == 'kg') ...[
+              WellnessResultPreview(
+                currentMuscleKg: latestMeasurement.values.skeletalMuscleMassKg,
+                deltaMuscleKg: wellnessComparableMuscleDelta(
+                  latestMeasurement,
+                  snapshot.bodyCompositionHistory,
+                ),
+                weightKg: latestMeasurement.values.weightKg,
+                bodyFatPct: latestMeasurement.values.bodyFatPct,
+                sample: isSample,
+                measuredAt: latestMeasurement.measuredAt,
+                safety: ref.watch(pilotControllerProvider).safety,
+                measurementReviewed:
+                    ref.watch(pilotControllerProvider).result?.status ==
+                    RecommendationStatus.ready,
+              ),
+              const SizedBox(height: 12),
+            ],
             if (latestMeasurement != null)
               ExpansionTile(
                 key: const ValueKey('measurement-details-toggle'),

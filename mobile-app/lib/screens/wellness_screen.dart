@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/wellness_repository.dart';
+import '../models/models.dart';
 import '../widgets/page_content.dart';
 
 class WellnessEntryCard extends StatelessWidget {
@@ -29,6 +30,132 @@ class WellnessEntryCard extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Preview contract for the result UI. No model call or external transmission.
+class WellnessResultPreview extends StatelessWidget {
+  const WellnessResultPreview({
+    super.key,
+    required this.currentMuscleKg,
+    required this.deltaMuscleKg,
+    required this.weightKg,
+    required this.bodyFatPct,
+    required this.sample,
+    required this.safety,
+    required this.measurementReviewed,
+    this.measuredAt,
+  });
+
+  final double currentMuscleKg, weightKg, bodyFatPct;
+  final double? deltaMuscleKg;
+  final bool sample, measurementReviewed;
+  final SafetyCheck safety;
+  final DateTime? measuredAt;
+
+  Widget _heading(BuildContext context, String title) => Padding(
+    padding: const EdgeInsets.only(top: 16, bottom: 8),
+    child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final valuesValid =
+        currentMuscleKg.isFinite &&
+        currentMuscleKg > 0 &&
+        weightKg.isFinite &&
+        weightKg > 0 &&
+        bodyFatPct.isFinite &&
+        bodyFatPct >= 0 &&
+        bodyFatPct <= 100;
+    final movementHeld =
+        !safety.isComplete ||
+        safety.hasSymptoms ||
+        !measurementReviewed ||
+        !valuesValid;
+    final change = deltaMuscleKg;
+    final measured = measuredAt?.toLocal();
+    return ExpansionTile(
+      key: const ValueKey('ai-wellness-preview'),
+      tilePadding: EdgeInsets.zero,
+      title: const Text('AI 건강관리 안내'),
+      subtitle: const Text('미리보기 · AI 미연결'),
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              '아래는 미리 준비한 안내 예시입니다. AI 생성 결과가 아닙니다. 개인별 추천은 아직 제공하지 않습니다.',
+            ),
+            Text(
+              sample
+                  ? '자료: 합성 측정 · 실제 참여자 분석 아님'
+                  : '자료: 서버 측정 · 아래 수치 해석은 앱 계산',
+            ),
+            if (measured != null)
+              Text(
+                '사용한 측정: ${measured.year}년 ${measured.month}월 ${measured.day}일 ${measured.hour.toString().padLeft(2, '0')}:${measured.minute.toString().padLeft(2, '0')}',
+              ),
+            _heading(context, '측정값 해석'),
+            if (!valuesValid)
+              const Text('해석 가능한 측정값을 확인할 수 없습니다. 담당자와 측정 기록을 확인해 주세요.')
+            else ...[
+              Text(
+                '골격근량 ${currentMuscleKg.toStringAsFixed(1)}kg · 체중 ${weightKg.toStringAsFixed(1)}kg · 체지방률 ${bodyFatPct.toStringAsFixed(1)}%',
+              ),
+              Text(
+                change == null || !change.isFinite
+                    ? '비교 가능한 이전 골격근량 기록이 없습니다.'
+                    : '직전 대비 골격근량 ${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)}kg · 수치 차이만 표시합니다.',
+              ),
+              const Text(
+                '체성분만으로 전체 건강상태나 질병을 판단할 수 없습니다. 연구 등급과 작은 수치 변화를 건강 점수·진단으로 해석하지 마세요.',
+              ),
+            ],
+            _heading(context, '음식 후보'),
+            const Text('개인 식단 추천 보류 · 알레르기와 질환별 식사 제한을 아직 확인하지 않았습니다.'),
+            const Text(
+              '일반 식품군 예시: 밥 등 곡류, 채소, 콩·생선·달걀 등 단백질 식품. 하루·일주일의 다양한 식사 구성을 살펴볼 때 참고하는 예시입니다. 내게 적합한 식품이나 섭취량을 정한 것이 아닙니다.',
+            ),
+            const Text('근거: NHS The Eatwell Guide · 확인일 2026-10-06'),
+            const SelectableText(
+              'https://www.nhs.uk/live-well/eat-well/food-guidelines-and-food-labels/the-eatwell-guide/',
+            ),
+            _heading(context, '운동 후보'),
+            if (movementHeld)
+              Text(
+                safety.hasSymptoms
+                    ? '운동 안내 보류 · 통증·어지럼 또는 사용 보류 응답이 있습니다. 오늘 활동은 담당자와 먼저 확인해 주세요.'
+                    : !safety.isComplete
+                    ? '운동 안내 보류 · 오늘 상태 확인이 끝나지 않았습니다. 기존 안전 문진을 먼저 완료해 주세요.'
+                    : '운동 안내 보류 · 측정값 검토가 필요합니다. 담당자와 먼저 확인해 주세요.',
+                key: const ValueKey('wellness-exercise-hold'),
+              )
+            else ...[
+              const Text(
+                '일반 활동 예시: 걷기와 집안일 등 일상의 움직임. 담당자와 가능한 활동을 정할 때 살펴볼 후보이며 활동 허가가 아닙니다.',
+                key: ValueKey('wellness-exercise-example'),
+              ),
+              const Text(
+                '연구 등급으로 운동 종류·강도·시간·횟수를 정하지 않습니다. 문진 완료도 개인 운동의 안전성을 보장하지 않습니다.',
+              ),
+            ],
+            const Text('근거: WHO Physical activity · 확인일 2026-10-06'),
+            const SelectableText(
+              'https://www.who.int/news-room/fact-sheets/detail/physical-activity',
+            ),
+            _heading(context, '실제 AI 연결에 필요한 정보'),
+            const Text(
+              '음식 알레르기·식사 제한, 활동 제약·선호와 목적을 확인한 뒤 동의를 받아야 합니다. 현재는 정보를 수집하거나 측정 데이터를 외부로 보내지 않습니다.',
+            ),
+            const Text(
+              '연결 후에는 사용한 측정 시점·자료, 추천 이유와 한계, 출처, 생성 시각을 함께 표시하고 오류·재시도·안전 보류를 구분합니다.',
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 class WellnessScreen extends StatefulWidget {

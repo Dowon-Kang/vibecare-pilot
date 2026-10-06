@@ -1,6 +1,50 @@
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../models/models.dart';
+
+/// Only compare same-owner, same-device, documented SMM acquisition records.
+double? wellnessComparableMuscleDelta(
+  BiaMeasurement current,
+  List<BiaMeasurement> history,
+) {
+  bool documented(String value) => value.isNotEmpty && value != 'UNKNOWN';
+  if (!current.qualityPassed ||
+      current.muscleDefinition != MuscleMassBasis.smm ||
+      current.muscleMassUnit != 'kg' ||
+      !documented(current.muscleMeasurementMethod) ||
+      !documented(current.acquisitionProtocolRef) ||
+      !current.values.skeletalMuscleMassKg.isFinite ||
+      current.values.skeletalMuscleMassKg <= 0) {
+    return null;
+  }
+  final eligible =
+      history
+          .where(
+            (item) =>
+                item.id != current.id &&
+                item.participantId == current.participantId &&
+                item.deviceId == current.deviceId &&
+                item.muscleDefinition == current.muscleDefinition &&
+                item.muscleMassUnit == current.muscleMassUnit &&
+                item.muscleMeasurementMethod ==
+                    current.muscleMeasurementMethod &&
+                item.acquisitionProtocolRef == current.acquisitionProtocolRef &&
+                item.qualityPassed &&
+                item.measuredAt.isBefore(current.measuredAt) &&
+                item.values.skeletalMuscleMassKg.isFinite &&
+                item.values.skeletalMuscleMassKg > 0,
+          )
+          .toList()
+        ..sort((a, b) {
+          final order = b.measuredAt.compareTo(a.measuredAt);
+          return order == 0 ? b.id.compareTo(a.id) : order;
+        });
+  return eligible.isEmpty
+      ? null
+      : current.values.skeletalMuscleMassKg -
+            eligible.first.values.skeletalMuscleMassKg;
+}
 
 enum WellnessHabit {
   movement('내게 맞는 움직임'),
