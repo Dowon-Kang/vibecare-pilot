@@ -5,6 +5,7 @@ import 'package:vibecare_pilot/app/app_environment.dart';
 import 'package:vibecare_pilot/screens/sample_pilot_scope.dart';
 import 'package:vibecare_pilot/screens/sample_home.dart';
 import 'package:vibecare_pilot/services/participation_repository.dart';
+import 'package:vibecare_pilot/main.dart';
 
 class _MemoryBookings implements VisitBookingRepository {
   _MemoryBookings(this.bookings);
@@ -31,6 +32,25 @@ class _FailingBookings implements VisitBookingRepository {
 }
 
 void main() {
+  testWidgets('standalone sample app can reach the health management home', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const ProviderScope(child: VibeCareApp()));
+    await tester.pumpAndSettle();
+    expect(find.text('샘플 홈·생활 습관 보기'), findsOneWidget);
+    await tester.ensureVisible(find.text('샘플 홈·생활 습관 보기'));
+    await tester.tap(find.text('샘플 홈·생활 습관 보기').hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.text('생활 습관 관리'), findsOneWidget);
+  });
+  testWidgets('sample home offers everyday health management', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(home: SampleHome(repository: _MemoryBookings([]))),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('생활 습관 관리'), findsOneWidget);
+  });
+
   testWidgets('sample home fits a 320px screen with large text', (
     tester,
   ) async {

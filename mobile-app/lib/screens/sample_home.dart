@@ -9,6 +9,7 @@ import '../widgets/app_menu_button.dart';
 import '../widgets/page_content.dart';
 import 'participation_screen.dart';
 import 'pilot_screen.dart';
+import 'wellness_screen.dart';
 
 class SampleHome extends StatefulWidget {
   const SampleHome({
@@ -166,6 +167,17 @@ class _SampleHomeState extends State<SampleHome> with WidgetsBindingObserver {
           const SizedBox(height: 8),
           const Text('샘플 참가자 USER-001 · 실제 측정 기록과 분리된 시연입니다.'),
           const SizedBox(height: 24),
+          WellnessEntryCard(
+            onOpen: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => const WellnessScreen(
+                  owner: 'sample:USER-001',
+                  sample: true,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           if (_loadError != null) ...[
             Card(
               color: Theme.of(context).colorScheme.errorContainer,

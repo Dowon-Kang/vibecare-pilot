@@ -16,6 +16,7 @@ import '../widgets/app_menu_button.dart';
 import '../theme/app_theme.dart';
 import 'overview_card.dart';
 import 'participation_screen.dart';
+import 'sample_pilot_scope.dart';
 
 part 'pilot_control_components.dart';
 part 'pilot_dashboard_components.dart';
@@ -181,6 +182,15 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                       : const Text('로그인'),
                 ),
                 const SizedBox(height: 12),
+                if (ref.read(appEnvironmentProvider).usesSampleData)
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => const SamplePilotScope(),
+                      ),
+                    ),
+                    child: const Text('샘플 홈·생활 습관 보기'),
+                  ),
                 if (ref.read(appEnvironmentProvider).usesSampleData)
                   const Text(
                     '시연용 계정 · USER-001 / 123456\n현재 Mock 모드는 실제 진동을 발생시키지 않습니다.',

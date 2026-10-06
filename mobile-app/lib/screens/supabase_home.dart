@@ -9,6 +9,7 @@ import '../widgets/app_menu_button.dart';
 import '../widgets/page_content.dart';
 import 'participation_screen.dart';
 import 'sample_pilot_scope.dart';
+import 'wellness_screen.dart';
 
 class _MeasurementPoint {
   const _MeasurementPoint(this.date, this.weight, this.muscle, this.bodyFat);
@@ -73,20 +74,33 @@ class _SupabaseHomeState extends State<SupabaseHome> {
       const Duration(seconds: 20),
       (_) => _checkReminders(),
     );
-    _authSubscription = _client.auth.onAuthStateChange.listen((event) {
-      if (!mounted) return;
-      setState(() {
-        final nextUser = event.session?.user;
-        if (nextUser?.id != _user?.id) _message = null;
-        _user = nextUser;
-        if (_user == null) {
+    _authSubscription = _client.auth.onAuthStateChange.listen(
+      (event) {
+        if (!mounted) return;
+        setState(() {
+          final nextUser = event.session?.user;
+          if (nextUser?.id != _user?.id) _message = null;
+          _user = nextUser;
+          if (_user == null) {
+            _measurements = [];
+            _bookings = [];
+            _announcements = [];
+          }
+        });
+        if (_user != null) unawaited(_reload());
+      },
+      onError: (Object error, StackTrace stack) {
+        if (!mounted) return;
+        setState(() {
+          _user = null;
           _measurements = [];
           _bookings = [];
           _announcements = [];
-        }
-      });
-      if (_user != null) unawaited(_reload());
-    });
+          _messageIsError = true;
+          _message = '계정 연결 상태를 확인할 수 없습니다. 다시 로그인해 주세요.';
+        });
+      },
+    );
     if (_user != null) unawaited(_reload());
   }
 
@@ -241,6 +255,22 @@ class _SupabaseHomeState extends State<SupabaseHome> {
     Navigator.of(
       context,
     ).push<void>(MaterialPageRoute(builder: (_) => const SamplePilotScope()));
+  }
+
+  void _openWellness() {
+    final id = _client.auth.currentUser?.id;
+    if (id == null) return;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => WellnessScreen(
+          owner: 'account:$id',
+          canAccess: () => _client.auth.currentUser?.id == id,
+          accessChanges: _client.auth.onAuthStateChange.map(
+            (event) => event.session?.user.id == id,
+          ),
+        ),
+      ),
+    );
   }
 
   void _showAnnouncements() {
@@ -418,8 +448,10 @@ class _SupabaseHomeState extends State<SupabaseHome> {
         children: [
           Text('오늘의 홈', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
-          const Text('실행, 출석, 공지를 한곳에서 확인하세요.'),
+          const Text('생활 습관, 출석, 측정 기록을 한곳에서 확인하세요.'),
           const SizedBox(height: 24),
+          WellnessEntryCard(onOpen: _openWellness),
+          const SizedBox(height: 16),
           if (_message != null) ...[
             Semantics(
               liveRegion: true,

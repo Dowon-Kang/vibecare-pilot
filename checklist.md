@@ -1,5 +1,29 @@
 # VibeCare 검증 체크리스트
 
+## 건강관리 1차 확장 검증 (2026-10-06)
+
+대상: 기존 연구 참여자·고령 사용자. 작업 폴더 `E:\산학협력\vibecare-pages-update`, 브랜치 `health-management-20261006`. 검사한 앱은 fetch 확인 main `61b1cb064b16564e002a17ed6d4b0cecb0f8f7fb`에 생활관리 변경을 적용한 작업 트리다. 아래 결과는 이번 로컬 작업판이며 기존 공개 Pages의 배포 성공을 이번 변경의 배포로 대체하지 않는다.
+
+| 검사 | 실제 결과·명령 |
+| --- | --- |
+| RED 홈 진입 | FAIL 재현: `sample home offers everyday health management`, 생활관리 문구 0개. `standalone sample app can reach the health management home`, 기본 APK 샘플 홈 접근 문구 0개 |
+| RED Auth 오류 | FAIL 재현: `auth refresh stream failure clears access and remains recoverable`, 처리되지 않은 `offline refresh` 예외 |
+| 삭제 실패 피드백 | FAIL 재현: 하단에서 삭제 실패 시 상단 안내가 화면 밖에 있어 확인 불가. 화면 알림을 추가한 뒤 기록 유지·재시도 PASS |
+| 형식 | PASS: `dart format --output=none --set-exit-if-changed lib test`, 59개 파일 변경 0 |
+| 정적 분석 | PASS: `flutter analyze --no-pub`, No issues found |
+| 최종 전체 Flutter | PASS: `flutter test --no-pub --concurrency=1 --reporter expanded`, **103/103**, 98초 |
+| 핵심 저장·화면 | PASS: 관심 습관·실천/쉬기/취소·다른 날짜 보존·샘플/두 계정 저장 키 분리·계정별 삭제·90일 실제 저장 정리·손상/버전 미지원 기록 보존·실패 복구·늦은 응답/계정 변경·Auth 스트림 오류 차단·자정 날짜 변경·320px/글자 2배 |
+| Android debug APK | PASS: `flutter build apk --debug --no-pub`, assembleDebug 180.9초. SHA256 `F814C936EEB87BF2E5192CD5FDFD6C86CA6914E44F626CF8A93F05C5A0CC5D60` |
+| 웹 release | PASS: `flutter build web --release --base-href / --pwa-strategy=none --no-pub` + CI와 같은 공개 Supabase URL/publishable 설정, 204.6초. 기존 secure-storage의 Wasm dry-run 및 Cupertino font 경고는 남으며 JS 웹 빌드는 성공 |
+| 실제 로컬 웹 | PASS: `http://127.0.0.1:8766/`, 연결 로그인 화면 → 샘플 홈 → 선택 → 실천 저장 → 홈 복귀/재진입 유지 → 쉬기 → 기록 취소 → WHO 안내 펼침/주소 복사 → 삭제 확인/취소. 390×844 및 320×700, 기본 글자 크기. 브라우저 error/warn 로그 0개. 실제 계정/측정 정보는 입력·조회하지 않음 |
+| 미실행 | NOT RUN: 새 브랜치의 원격 CI/공개 배포, 실제 Auth 두 계정과 RLS, Android 설치·실기기·스크린리더 전체 동선, 고령 사용자의 이해도 시험, 전문가의 개인별 건강 콘텐츠 검토, 서버 생활 기록 동기화·백업·복구 |
+
+환경 이력: 웹 빌드와 전체 검사를 동시에 실행한 시도는 로컬 PC의 메모리/PowerShell·Dart native 오류로 FAIL/중단됐다. 단일 전체 시험과 직렬 빌드로 위 PASS를 다시 확인했다. APK 완료 후 Gradle 데몬 정상 종료 명령은 가상 메모리 부족으로 FAIL했고, 이번 빌드가 생성한 Java PID 32324만 종료했다. 사용자 PC의 메모리 설정은 바꾸지 않았다. 로컬 시각 검사 서버·임시 X: 경로는 완료 후 정리한다.
+
+캡처: [홈](docs/assets/ux-review-20261006/25-health-home-390x844.jpg), [빈 상태](docs/assets/ux-review-20261006/26-health-empty-390x844.jpg), [실천과 7일](docs/assets/ux-review-20261006/27-health-done-390x844.jpg), [쉬기](docs/assets/ux-review-20261006/28-health-rest-390x844.jpg), [공식 안내](docs/assets/ux-review-20261006/29-health-guide-390x844.jpg), [삭제 확인](docs/assets/ux-review-20261006/30-health-delete-confirm-390x844.jpg), [320px 안내](docs/assets/ux-review-20261006/31-health-guide-320x700.jpg), [320px 오늘 기록](docs/assets/ux-review-20261006/32-health-today-320x700.jpg). 모두 로컬 작업판·샘플 공간·사용자가 조작한 시험 입력이며 실제 참여자의 건강 기록이 아니다. 글자 2배는 위젯 검사이며 웹 캡처나 Android 실기기 증거로 간주하지 않는다.
+
+운영 전 결정: 이 기기에만 저장하는 1차 범위와 90일 보관 기본값을 수용할지, 계정 서버 동기화를 먼저 도입할지 결정한다. 동기화 도입 시 동의·보존/삭제·백업·소유권/RLS·두 실제 계정 검증이 필요하다. 다중 탭의 동시 수정 병합은 현재 지원하지 않는다. 기존 측정 알고리즘·API·예약과 `PROHIBITED`/`SIMULATOR_ONLY`/`realDeviceSendAllowed=false`는 변경하지 않았다.
+
 ## `pilot-0.9.1` 연구용 계수
 
 - [x] `0.95 × 0.95 × 0.95 = 0.857375` Mock 강도 계산, 기존 버전 분리, SQLite 규칙 마이그레이션
