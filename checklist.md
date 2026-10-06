@@ -1,5 +1,27 @@
 # VibeCare 검증 체크리스트
 
+## 음식·운동 카드 개선 / AI 연결 보류 (2026-10-07)
+
+기준 로컬 `4115032`, `health-management-20261006`, `E:\산학협력\vibecare-pages-update`. 이번 구현은 샘플 안내 UI 개선이며 실제 AI 연결 완료가 아니다. 자동 승인 검토가 구체적 건강정보/OpenAI 목적지 전송 승인 부재로 실제 호출 코드 추가를 거절했다. 승인·키/서버 위치 질문에 답변이 없어 API 구현을 보류했다. OpenAPI·Backend에 이번 턴에서 추가했던 미구현 계약/RED 테스트만 read-only diff 확인 후 복원했다. OpenAI·Gemini 키·외부 요청·DB 마이그레이션·새 의존성은 추가하지 않았다.
+
+| 검사 | 실제 결과 |
+| --- | --- |
+| UI RED | FAIL 의도: `result advice separates actions from reasons and cautions`, 행동 제목이 없었음 |
+| 첫 UI 시도 | FAIL: 색상 DecoratedBox가 nested ListTile 터치 효과를 가리는 assertion. Material 표면으로 수정 |
+| 전체 Flutter | PASS **110/110**, `flutter test --no-pub --concurrency=1 --reporter expanded`, 62초. 이후 강화한 두 테스트도 개별 PASS |
+| 펼침 조작 | PASS: 이유·주의사항 펼치기 전후 내용 구분, 공식 출처 버튼 접근 |
+| 320px·글자 2배 | PASS: 이유 펼치기·출처 버튼까지 실제 hit-test 가능한 요소에 접근. 첫 보강 시도는 화면 밖 요소를 찾는 테스트 오류로 FAIL했고 hitTestable 조건 수정 후 PASS |
+| 정적 분석 | PASS: `flutter analyze --no-pub`, No issues found (33.7초); format 대상3파일 변경0 |
+| Android debug APK | PASS: `flutter build apk --debug --no-pub`, 125.6초. SHA256 `AA1250C332F295EA297A007BA337B207FB192741313A793C6D264DF928335EA3` |
+| 웹 release | PASS: JavaScript 빌드 173.3초. 기존 secure-storage Wasm 비호환·Cupertino font·PWA 옵션 경고 유지; Wasm 검증 성공은 아님 |
+| 실제 샘플 웹 | PASS: localhost8766 → 샘플 홈 → 샘플 실행 → 기본 로그인 → 프로필 완료 → 결과/AI 미연결 펼침 → 두 카드 → 이유·주의사항 → 공식 출처 복사 성공 피드백. 390×844·320×700 기본 글자 크기, browser error/warn0. 합성USER-001, 골격근12.5kg/체중42kg/체지방18.8%/비교+0.1kg, 안전 문진 미완료 상태. 실제 계정이나 외부 AI 요청을 사용하지 않음 |
+| Backend 동의 RED | FAIL 의도: 신규 endpoint 부재로404, 기대400. 실제 AI 코드 승인이 보류되어 해당 테스트는 이번 턴 추가분만 제거. GREEN이나 실제 연결 증거로 사용하지 않음 |
+| 미실행 | 실제 OpenAI 호출·응답 품질/비용·개인 추천·운영 활성화·Android 실기기·공개 배포·참가자 이해도 조사 NOT RUN. Backend는 최종 변경이 없어 추가 전체 검사 미실행 |
+
+환경: 형식·전체 테스트를 시작하는 명령의 자동 승인 검토가 시간 초과되어 실행되지 않았고, 같은 로컬 검사 한 번 재시도 후 PASS. 빌드/테스트는 순차 실행했다. 완료된 이번 Gradle 데몬 PID40876만 종료해 웹 빌드 메모리를 확보했으며 PC 설정은 바꾸지 않았다. 사용자 기존 파일·22~24 캡처는 제외한다.
+
+2026-10-07 웹 캡처: [미연결·음식 진입](docs/assets/ux-review-20261006/37-advice-entry-390x844.jpg), [두 카드](docs/assets/ux-review-20261006/38-advice-cards-390x844.jpg), [출처 복사 피드백](docs/assets/ux-review-20261006/39-advice-source-feedback-390x844.jpg), [320px 상세](docs/assets/ux-review-20261006/40-advice-details-320x700.jpg). Android 실기기 캡처나 사용자 피드백이 아니다. 글자 두 배는 위젯 검사에서 검증했다. 서버·브라우저 탭·임시 viewport는 완료 후 정리한다.
+
 ## 결과 AI 안내 샘플 미리보기 검증 (2026-10-06)
 
 사용자 선택: **결과 화면·샘플 응답 먼저 구현하고 검증**. 기준은 로컬 `317c9605`이며 실제 AI 연결이나 공개 배포는 포함하지 않는다. 기존 결과 카드에 접이식 안내를 추가하고 파일·폴더·의존성을 늘리지 않았다.

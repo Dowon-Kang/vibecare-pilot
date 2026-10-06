@@ -33,6 +33,43 @@ class _Memory implements WellnessRepository {
 }
 
 void main() {
+  testWidgets('result advice separates actions from reasons and cautions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: WellnessResultPreview(
+              currentMuscleKg: 12.5,
+              deltaMuscleKg: 0.1,
+              weightKg: 50,
+              bodyFatPct: 28,
+              sample: true,
+              safety: SafetyCheck(),
+              measurementReviewed: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('ai-wellness-preview')));
+    await tester.pumpAndSettle();
+    expect(find.text('다음 식사에서 확인할 것'), findsOneWidget);
+    expect(find.text('추천 이유·주의사항'), findsWidgets);
+    expect(find.text('내게 맞는 안내 준비'), findsOneWidget);
+    expect(find.textContaining('내게 적합한 식품이나 섭취량'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('추천 이유·주의사항').first,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('추천 이유·주의사항').first);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('내게 적합한 식품이나 섭취량'), findsOneWidget);
+    expect(find.text('공식 출처 주소 복사'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   Future<void> showPreview(
     WidgetTester tester,
     SafetyCheck safety, {
@@ -155,11 +192,24 @@ void main() {
     await showPreview(tester, const SafetyCheck.confirmedClear(), large: true);
     expect(tester.takeException(), isNull);
     await tester.scrollUntilVisible(
-      find.text('실제 AI 연결에 필요한 정보').hitTestable(),
+      find.text('내게 맞는 안내 준비').hitTestable(),
       400,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.scrollUntilVisible(
+      find.text('추천 이유·주의사항').first.hitTestable(),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('추천 이유·주의사항').first.hitTestable());
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('공식 출처 주소 복사').hitTestable(),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(tester.takeException(), isNull);
   });
 

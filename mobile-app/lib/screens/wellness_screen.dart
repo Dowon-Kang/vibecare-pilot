@@ -57,6 +57,70 @@ class WellnessResultPreview extends StatelessWidget {
     child: Text(title, style: Theme.of(context).textTheme.titleMedium),
   );
 
+  Widget _guideCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String status,
+    required String action,
+    required String reason,
+    required String caution,
+    required String sourceName,
+    required String source,
+    Key? actionKey,
+  }) => Container(
+    margin: const EdgeInsets.only(top: 16),
+    child: Material(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Icon(icon),
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(status, style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 12),
+            Text(action, key: actionKey),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              title: const Text('추천 이유·주의사항'),
+              children: [
+                Text(reason),
+                const SizedBox(height: 8),
+                Text(caution),
+                const SizedBox(height: 12),
+                Text('$sourceName · 확인일 2026-10-06'),
+                TextButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: source));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('공식 출처 주소를 복사했습니다.')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.copy),
+                  label: const Text('공식 출처 주소 복사'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final valuesValid =
@@ -111,39 +175,44 @@ class WellnessResultPreview extends StatelessWidget {
                 '체성분만으로 전체 건강상태나 질병을 판단할 수 없습니다. 연구 등급과 작은 수치 변화를 건강 점수·진단으로 해석하지 마세요.',
               ),
             ],
-            _heading(context, '음식 후보'),
-            const Text('개인 식단 추천 보류 · 알레르기와 질환별 식사 제한을 아직 확인하지 않았습니다.'),
-            const Text(
-              '일반 식품군 예시: 밥 등 곡류, 채소, 콩·생선·달걀 등 단백질 식품. 하루·일주일의 다양한 식사 구성을 살펴볼 때 참고하는 예시입니다. 내게 적합한 식품이나 섭취량을 정한 것이 아닙니다.',
+            _guideCard(
+              context,
+              icon: Icons.restaurant_outlined,
+              title: '다음 식사에서 확인할 것',
+              status: '음식 후보 · 개인 식단 추천 보류',
+              action: '평소 식사에 곡류·채소·단백질 식품이 어떻게 들어 있는지 살펴보세요.',
+              reason: '하루·일주일에 걸쳐 다양한 식사 구성을 돌아보는 예시입니다.',
+              caution:
+                  '개인 식단 추천 보류 · 알레르기와 질환별 식사 제한을 아직 확인하지 않았습니다. 내게 적합한 식품이나 섭취량을 정한 것이 아닙니다.',
+              sourceName: 'NHS The Eatwell Guide',
+              source:
+                  'https://www.nhs.uk/live-well/eat-well/food-guidelines-and-food-labels/the-eatwell-guide/',
             ),
-            const Text('근거: NHS The Eatwell Guide · 확인일 2026-10-06'),
-            const SelectableText(
-              'https://www.nhs.uk/live-well/eat-well/food-guidelines-and-food-labels/the-eatwell-guide/',
-            ),
-            _heading(context, '운동 후보'),
-            if (movementHeld)
-              Text(
-                safety.hasSymptoms
-                    ? '운동 안내 보류 · 통증·어지럼 또는 사용 보류 응답이 있습니다. 오늘 활동은 담당자와 먼저 확인해 주세요.'
-                    : !safety.isComplete
-                    ? '운동 안내 보류 · 오늘 상태 확인이 끝나지 않았습니다. 기존 안전 문진을 먼저 완료해 주세요.'
-                    : '운동 안내 보류 · 측정값 검토가 필요합니다. 담당자와 먼저 확인해 주세요.',
-                key: const ValueKey('wellness-exercise-hold'),
-              )
-            else ...[
-              const Text(
-                '일반 활동 예시: 걷기와 집안일 등 일상의 움직임. 담당자와 가능한 활동을 정할 때 살펴볼 후보이며 활동 허가가 아닙니다.',
-                key: ValueKey('wellness-exercise-example'),
+            _guideCard(
+              context,
+              icon: Icons.directions_walk_outlined,
+              title: movementHeld ? '오늘 상태부터 확인해요' : '익숙한 움직임부터 살펴봐요',
+              status: movementHeld ? '운동 후보 · 안내 보류' : '운동 후보 · 일반 안내',
+              action: movementHeld
+                  ? (safety.hasSymptoms
+                        ? '운동 안내 보류 · 통증·어지럼 또는 사용 보류 응답이 있습니다. 오늘 활동은 담당자와 먼저 확인해 주세요.'
+                        : !safety.isComplete
+                        ? '운동 안내 보류 · 오늘 상태 확인이 끝나지 않았습니다. 기존 안전 문진을 먼저 완료해 주세요.'
+                        : '운동 안내 보류 · 측정값 검토가 필요합니다. 담당자와 먼저 확인해 주세요.')
+                  : '평소 무리 없이 하던 걷기나 가벼운 집안 활동 중 가능한 움직임을 담당자와 살펴보세요.',
+              actionKey: ValueKey(
+                movementHeld
+                    ? 'wellness-exercise-hold'
+                    : 'wellness-exercise-example',
               ),
-              const Text(
-                '연구 등급으로 운동 종류·강도·시간·횟수를 정하지 않습니다. 문진 완료도 개인 운동의 안전성을 보장하지 않습니다.',
-              ),
-            ],
-            const Text('근거: WHO Physical activity · 확인일 2026-10-06'),
-            const SelectableText(
-              'https://www.who.int/news-room/fact-sheets/detail/physical-activity',
+              reason: '걷기와 집안일 등 일상의 움직임도 신체활동에 포함됩니다.',
+              caution:
+                  '연구 등급에서 운동 강도·시간·횟수를 만들지 않습니다. 문진 완료는 활동 허가나 개인 운동 안전을 증명하지 않습니다.',
+              sourceName: 'WHO Physical activity',
+              source:
+                  'https://www.who.int/news-room/fact-sheets/detail/physical-activity',
             ),
-            _heading(context, '실제 AI 연결에 필요한 정보'),
+            _heading(context, '내게 맞는 안내 준비'),
             const Text(
               '음식 알레르기·식사 제한, 활동 제약·선호와 목적을 확인한 뒤 동의를 받아야 합니다. 현재는 정보를 수집하거나 측정 데이터를 외부로 보내지 않습니다.',
             ),

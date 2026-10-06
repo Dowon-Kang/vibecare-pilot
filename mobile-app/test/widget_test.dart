@@ -41,8 +41,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('AI 미연결'), findsWidgets);
     expect(find.text('측정값 해석'), findsOneWidget);
-    expect(find.text('음식 후보'), findsOneWidget);
-    expect(find.text('운동 후보'), findsOneWidget);
+    expect(find.textContaining('음식 후보'), findsOneWidget);
+    expect(find.textContaining('운동 후보'), findsOneWidget);
   });
   testWidgets('past pain shows a confirmation before the next simulation', (
     tester,
