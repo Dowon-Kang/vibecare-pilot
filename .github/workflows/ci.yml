@@ -157,15 +157,134 @@ jobs:
       - name: Record the verified commit and check results
         shell: bash
         run: |
+          status() {
+            case "$1" in
+              success) echo PASS ;;
+              failure) echo FAIL ;;
+              *) echo 'NOT RUN' ;;
+            esac
+          }
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          source_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA"
           {
             echo "# VibeCare Mock handoff verification"
-            echo "Commit: $GITHUB_SHA"
-            echo "Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            echo "Backend: $BACKEND_RESULT"
-            echo "PostgreSQL HTTP: $POSTGRES_RESULT"
-            echo "Flutter tests and debug APK: $FLUTTER_RESULT"
-            echo "Flutter web build: $WEB_RESULT"
-            echo "NOT RUN: live Supabase Auth/RLS accounts, FITRUS, Android hardware/accessibility, production backup/restore, clinical or physical device validation."
+            echo "Commit: [$GITHUB_SHA]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)"
+            echo "Run attempt: [$GITHUB_RUN_ATTEMPT]($run_url/attempts/$GITHUB_RUN_ATTEMPT)"
+            echo "Workflow and exact job logs: [.github/workflows/ci.yml]($source_url/.github/workflows/ci.yml), [$run_url]($run_url)"
+            echo "Contract: [AGENTS.md]($source_url/AGENTS.md)"
+            echo
+            echo '## CI scope and results'
+            echo 'PASS means the complete CI job succeeded. FAIL means a job failed; earlier steps may have passed. NOT RUN means skipped/cancelled/unknown; inspect job logs for partial execution. Commands below describe the configured sequence, not proof that every step ran.'
+            echo "Backend: $(status "$BACKEND_RESULT") (job result: $BACKEND_RESULT)"
+            echo "PostgreSQL HTTP: $(status "$POSTGRES_RESULT") (job result: $POSTGRES_RESULT)"
+            echo "Flutter tests and debug APK: $(status "$FLUTTER_RESULT") (job result: $FLUTTER_RESULT)"
+            echo "Flutter web build: $(status "$WEB_RESULT") (job result: $WEB_RESULT)"
+            echo
+            cat <<'ENVIRONMENT'
+          ## Configured test environments
+          All four jobs use GitHub-hosted ubuntu-latest and Bash (explicit shell: bash steps use -e -o pipefail). ubuntu-latest and postgres:16-alpine are floating labels; actual runner image, npm/Dart/Java patch versions and service image details must be checked in this attempt's setup/service logs. This evidence job's runner is not the test runner.
+          - backend: Node 22.19.0; npm dependencies locked by backend-api/package-lock.json.
+          - postgres: Node 22.19.0; postgres:16-alpine, loopback port 5432; isolated synthetic test database, not live Supabase.
+            POSTGRES_DB=vibecare_test, POSTGRES_USER=vibecare, POSTGRES_PASSWORD=vibecare_test_only (test-only).
+            POSTGRES_TEST_URL=postgresql://vibecare:vibecare_test_only@127.0.0.1:5432/vibecare_test
+            Service health command: pg_isready -U vibecare -d vibecare_test (interval 3s, timeout 3s, retries 20).
+          - flutter: Flutter 3.47.2 stable (bundled Dart), Temurin Java 17; mobile-app/pubspec.lock; Android SDK provided by runner.
+          - web: Flutter 3.47.2 stable (bundled Dart); mobile-app/pubspec.lock; existing public Supabase build settings below do not verify live Auth/RLS.
+
+          ## Exact configured commands
+          Start from a checkout of the tested commit. Each block identifies its working directory; run the commands in order. For PostgreSQL, start the service with the settings above and export POSTGRES_TEST_URL first.
+          ENVIRONMENT
+            echo '### backend'
+            cat <<'COMMANDS'
+          Working directory: `backend-api`
+          ```bash
+          npm ci
+          ```
+          Working directory: `backend-api`
+          ```bash
+          npm audit --omit=dev --audit-level=high
+          ```
+          Working directory: `backend-api`
+          ```bash
+          npm run typecheck
+          ```
+          Working directory: `backend-api`
+          ```bash
+          npm test -- --reporter=dot
+          ```
+          COMMANDS
+            echo '### postgres'
+            cat <<'COMMANDS'
+          Working directory: `backend-api`
+          ```bash
+          npm ci
+          ```
+          Working directory: `backend-api`
+          ```bash
+          npm run test:postgres 2>&1 | tee postgres-integration.tap
+          ```
+          COMMANDS
+            echo '### flutter'
+            cat <<'COMMANDS'
+          Working directory: `mobile-app`
+          ```bash
+          flutter pub get
+          ```
+          Working directory: `mobile-app`
+          ```bash
+          dart format --output=none --set-exit-if-changed lib test
+          ```
+          Working directory: `mobile-app`
+          ```bash
+          flutter analyze --no-pub
+          ```
+          Working directory: `mobile-app`
+          ```bash
+          flutter test --no-pub --reporter compact
+          ```
+          Working directory: `mobile-app`
+          ```bash
+          flutter build apk --debug --no-pub
+          ```
+          Working directory: `mobile-app/build/app/outputs/flutter-apk`
+          ```bash
+          sha256sum app-debug.apk > app-debug.apk.sha256
+          ```
+          COMMANDS
+            echo '### web'
+            cat <<'COMMANDS'
+          Working directory: `mobile-app`
+          ```bash
+          flutter pub get
+          ```
+          Working directory: `mobile-app`
+          ```bash
+          flutter build web --release --base-href /vibecare-pilot/ --pwa-strategy=none --dart-define=VIBECARE_SUPABASE_URL=https://jaekmjiupbsufxaevosf.supabase.co --dart-define=VIBECARE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YvezVqzuHVi8Nuxio01k9Q_v25aPNdK
+          ```
+          Working directory: `.`
+          ```bash
+          cp mobile-app/build/web/index.html mobile-app/build/web/404.html
+          touch mobile-app/build/web/.nojekyll
+          ```
+          Working directory: `mobile-app/build/web`
+          ```bash
+          find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+          ```
+          COMMANDS
+            echo
+            echo '## Associated artifacts (expected names, not proof of upload)'
+            echo "Downloads and upload status: [$run_url]($run_url) (Artifacts section). Metadata: [$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts]($GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts)."
+            echo "- backend: no separate artifact; use job/step logs in this attempt."
+            echo "- postgres-http-evidence-$GITHUB_SHA: backend-api/postgres-integration.tap; upload attempted even on failure; retention 14 days."
+            echo "- vibecare-debug-apk-$GITHUB_SHA: mobile-app/build/app/outputs/flutter-apk/app-debug.apk and app-debug.apk.sha256; uploaded after successful build/hash; retention 14 days."
+            echo "- github-pages: mobile-app/build/web (including SHA256SUMS.txt, 404.html and .nojekyll); Pages archive, default retention 1 day."
+            echo "- handoff-verification-$GITHUB_SHA: verification.md (this report); uploaded after this step; retention 14 days."
+            echo 'Artifacts may be missing, expired or from a different attempt on reruns. Check artifact metadata and upload logs before relying on them; downloads may require GitHub access. Verify APK with sha256sum -c app-debug.apk.sha256 and web files with sha256sum -c SHA256SUMS.txt in their respective extracted directories.'
+            echo
+            echo '## External checks and safety'
+            echo 'NOT RUN: live Supabase Auth/RLS accounts, FITRUS, Android hardware/accessibility, AWS/production backend deployment, production backup/restore, enterprise acceptance, clinical or physical device validation.'
+            echo 'Web build PASS does not establish Pages deployment success or live-account operation. Deploy runs separately for eligible main events; confirm its job/environment evidence in the run. The existing public Pages deployment configuration is unchanged.'
+            echo 'Safety remains physical execution PROHIBITED, commands SIMULATOR_ONLY, realDeviceSendAllowed=false. Automated Mock/isolated PostgreSQL checks do not authorize physical execution or establish clinical safety.'
           } | tee verification.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
