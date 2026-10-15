@@ -1,3 +1,6 @@
 project_id = "vibecare-ai"
 [functions.wellness-advice]
 verify_jwt = true
+
+[functions.wellness-sample]
+verify_jwt = false

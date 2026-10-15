@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import { createHandler } from '../supabase/functions/wellness-advice/core';
+import { createHandler, createSampleHandler } from '../supabase/functions/wellness-advice/core';
 const config = { supabaseUrl: 'https://example.supabase.co', publishableKey: 'public-test', openaiKey: 'synthetic-test-key', allowRealData: true };
 it('AI endpoint rejects unauthenticated requests before any external fetch', async () => {
   const fetcher = vi.fn();
@@ -69,4 +69,51 @@ it('discards AI result if the current measurement changed during generation', as
 });
 it('returns an actionable timeout without automatic provider retry', async () => {
   const s=setup({fail:true}); expect((await s.call()).status).toBe(504); expect(s.external()).toHaveLength(1);
+});
+
+const sampleConfig = {supabaseUrl:'https://example.supabase.co',publishableKey:'sample-public',geminiKey:'synthetic-key',allowSample:true};
+it('Gemini sample refuses missing consent and arbitrary real-data fields before any fetch', async()=>{
+ const fetcher=vi.fn();const handler=createSampleHandler({...sampleConfig,fetcher});
+ for(const body of [{action:'generate'},{action:'generate',consentVersion:'gemini-sample-v1',weightKg:72}]){
+  const response=await handler(new Request('https://example.test',{method:'POST',headers:{apikey:'sample-public'},body:JSON.stringify(body)}));
+  expect(response.status).toBe(400);
+ }
+ expect(fetcher).not.toHaveBeenCalled();
+});
+
+function sampleSetup(options:{limited?:boolean;bad?:boolean;timeout?:boolean}={}) {
+ const fetcher=vi.fn(async(url:unknown,_init?:RequestInit)=>{
+  if(String(url).endsWith('/consume_wellness_sample_request'))return Response.json({allowed:!options.limited,remaining:options.limited?0:19,code:'SAMPLE_MINUTE_LIMIT'});
+  if(String(url).includes('generativelanguage.googleapis.com')){
+   if(options.timeout)throw new DOMException('timeout','TimeoutError');
+   return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({focus:'context',food:[options.bad?'prescription':'balanced_plate'],movement:['usual_walk']})}]}}]});
+  }
+  throw new Error('Unexpected endpoint');
+ });
+ const handler=createSampleHandler({...sampleConfig,fetcher:fetcher as typeof fetch});
+ const call=(body:unknown={action:'generate',consentVersion:'gemini-sample-v1'},key='sample-public')=>handler(new Request('https://example.test',{method:'POST',headers:{apikey:key,Authorization:'Bearer NEVER_FORWARD_PERSONAL_TOKEN'},body:JSON.stringify(body)}));
+ return{call,fetcher};
+}
+it('Gemini context uses a fixed fixture without Auth or measurement queries and requires the app key',async()=>{
+ const s=sampleSetup();expect((await s.call({action:'context'},'wrong')).status).toBe(401);
+ const r=await s.call({action:'context'});expect(r.status).toBe(200);expect(await r.json()).toMatchObject({sample:true,measurementId:'gemini-fixed-sample-v1',muscleKg:22,weightKg:60,bodyFatPct:27,provider:'Gemini'});expect(s.fetcher).not.toHaveBeenCalled();
+});
+it('Gemini forwards only fixed synthetic values and no caller authorization or real-data fields',async()=>{
+ const s=sampleSetup();const r=await s.call();expect(r.status).toBe(200);expect(await r.json()).toMatchObject({sample:true,food:[{id:'balanced_plate'}],movement:[{id:'usual_walk'}],remaining:19});
+ expect(s.fetcher).toHaveBeenCalledTimes(2);
+ const mockCalls=s.fetcher.mock.calls as unknown as [unknown,RequestInit][];
+ const provider=mockCalls.find(c=>String(c[0]).includes('googleapis.com'))!;
+ const body=JSON.parse(provider[1].body as string);
+ expect(JSON.parse(body.contents[0].parts[0].text)).toEqual({synthetic:true,muscleKg:22,weightKg:60,bodyFatPct:27,goal:'regular_meals'});
+ expect(JSON.stringify(mockCalls)).not.toContain('NEVER_FORWARD_PERSONAL_TOKEN');
+});
+it('Gemini public quota denial prevents all provider calls',async()=>{
+ const s=sampleSetup({limited:true});expect((await s.call()).status).toBe(429);expect(s.fetcher).toHaveBeenCalledTimes(1);
+});
+it('Gemini rejects arbitrary IDs and does not retry or substitute after timeout',async()=>{
+ const bad=sampleSetup({bad:true});expect((await bad.call()).status).toBe(502);
+ const timeout=sampleSetup({timeout:true});expect((await timeout.call()).status).toBe(504);expect(timeout.fetcher).toHaveBeenCalledTimes(2);
+});
+it('Gemini rejects oversized input before quota or provider use',async()=>{
+ const s=sampleSetup();expect((await s.call({action:'generate',consentVersion:'x'.repeat(600)})).status).toBe(413);expect(s.fetcher).not.toHaveBeenCalled();
 });

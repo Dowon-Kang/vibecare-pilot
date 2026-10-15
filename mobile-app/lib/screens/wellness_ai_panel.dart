@@ -9,8 +9,10 @@ class WellnessAiPanel extends StatefulWidget {
     super.key,
     required this.service,
     required this.measurementKey,
+    this.sample = false,
   });
   final WellnessAiService service;
+  final bool sample;
   final String measurementKey;
   @override
   State<WellnessAiPanel> createState() => _WellnessAiPanelState();
@@ -55,7 +57,8 @@ class _WellnessAiPanelState extends State<WellnessAiPanel> {
   void didUpdateWidget(covariant WellnessAiPanel old) {
     super.didUpdateWidget(old);
     if (old.measurementKey != widget.measurementKey ||
-        old.service != widget.service) {
+        old.service != widget.service ||
+        old.sample != widget.sample) {
       _food = _activity = _symptoms = 'unknown';
       _load();
     }
@@ -124,25 +127,34 @@ class _WellnessAiPanelState extends State<WellnessAiPanel> {
         _consentNavigator = Navigator.of(context);
         _consentRoute = ModalRoute.of(context);
         return AlertDialog(
-          title: const Text('OpenAI 전송 동의'),
+          title: Text(widget.sample ? 'Gemini 합성 시연 동의' : 'OpenAI 전송 동의'),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('이번 요청에서 다음 정보만 OpenAI API로 보냅니다.'),
+                Text(
+                  widget.sample
+                      ? '서버가 정한 다음 고정 합성값만 Google Gemini API로 보냅니다. 실제 사용자 정보는 사용하지 않습니다.'
+                      : '이번 요청에서 다음 정보만 OpenAI API로 보냅니다.',
+                ),
                 const SizedBox(height: 12),
                 Text(
-                  '골격근량 ${measurement['muscleKg']} kg\n체중 ${measurement['weightKg']} kg\n체지방률 ${measurement['bodyFatPct']}%\n목표: ${_goals[_goal]}',
+                  '골격근량 ${measurement['muscleKg']} kg\n체중 ${measurement['weightKg']} kg\n체지방률 ${measurement['bodyFatPct']}%\n목표: ${_goals[widget.sample ? 'regular_meals' : _goal]}',
                 ),
                 const SizedBox(height: 12),
                 const Text(
                   '이름·이메일·계정 정보·원본 CSV·제한/문진 답변은 보내지 않습니다. AI는 일반 안내 후보를 선택하며 질병 진단·처방을 하지 않습니다.',
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  '응답 저장을 요청하지 않지만 OpenAI의 기본 남용 감시 로그에는 최대 30일 보존될 수 있습니다. 앱은 답변을 기기나 DB에 저장하지 않습니다. 요청은 하루 최대 3회이며 실패한 외부 호출도 포함됩니다.',
-                ),
+                if (widget.sample)
+                  const Text(
+                    '무료 Gemini는 입력·응답을 서비스 개선과 사람의 검토에 사용할 수 있습니다. 실제 측정·프로필·문진·CSV는 전송하지 않습니다. 앱은 답변을 저장하지 않습니다. 공용 시연은 UTC 하루20회·분당3회이며 실패한 외부 호출도 포함됩니다.',
+                  )
+                else
+                  const Text(
+                    '응답 저장을 요청하지 않지만 OpenAI의 기본 남용 감시 로그에는 최대 30일 보존될 수 있습니다. 앱은 답변을 기기나 DB에 저장하지 않습니다. 요청은 하루 최대 3회이며 실패한 외부 호출도 포함됩니다.',
+                  ),
               ],
             ),
           ),
@@ -172,13 +184,18 @@ class _WellnessAiPanelState extends State<WellnessAiPanel> {
       _error = null;
     });
     try {
-      final answer = await widget.service.generate({
-        'measurementId': measurement['measurementId'],
-        'goal': _goal,
-        'foodRestriction': _food,
-        'activityRestriction': _activity,
-        'symptoms': _symptoms,
-      }, token);
+      final answer = await widget.service.generate(
+        widget.sample
+            ? const <String, dynamic>{}
+            : {
+                'measurementId': measurement['measurementId'],
+                'goal': _goal,
+                'foodRestriction': _food,
+                'activityRestriction': _activity,
+                'symptoms': _symptoms,
+              },
+        token,
+      );
       if (!mounted || generation != _generation || token.isCancelled) return;
       if (answer['measurementId'] != measurement['measurementId']) {
         throw const WellnessAiFailure('측정이 달라져 결과를 표시하지 않았어요. 다시 불러와 주세요.');
@@ -293,13 +310,16 @@ class _WellnessAiPanelState extends State<WellnessAiPanel> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       _surface(const Color(0xFFE8F1ED), [
-        Text('내 측정으로 생활 돌보기', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          widget.sample ? 'Gemini 합성 데이터 시연' : '내 측정으로 생활 돌보기',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 8),
         const Text('측정값 이해 · 음식 후보 · 움직임 후보'),
         if (_loading) ...[
           const SizedBox(height: 16),
           const LinearProgressIndicator(),
-          const Text('내 측정 정보를 확인하고 있어요.'),
+          Text(widget.sample ? '합성 시연 연결을 확인하고 있어요.' : '내 측정 정보를 확인하고 있어요.'),
         ],
         if (_measurement != null) ...[
           const SizedBox(height: 16),
@@ -307,53 +327,70 @@ class _WellnessAiPanelState extends State<WellnessAiPanel> {
             '골격근량 ${_measurement!['muscleKg']} kg · 체중 ${_measurement!['weightKg']} kg\n체지방률 ${_measurement!['bodyFatPct']}%',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          Text(
-            '측정: ${DateTime.tryParse(_measurement!['measuredAt'] as String)?.toLocal().toString().split('.').first ?? ''}',
-          ),
+          if (widget.sample)
+            const Text('고정 합성 예시 · 실제 사용자와 무관합니다.')
+          else
+            Text(
+              '측정: ${DateTime.tryParse(_measurement!['measuredAt'] as String)?.toLocal().toString().split('.').first ?? ''}',
+            ),
           if (_measurement!['configured'] != true)
             const Text('AI 서버가 아직 준비되지 않았어요. 일반 생활 안내는 아래에서 볼 수 있어요.')
           else ...[
-            const SizedBox(height: 20),
-            DropdownButtonFormField<String>(
-              key: const ValueKey('ai-goal'),
-              initialValue: _goal,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: '오늘의 관심'),
-              items: [
-                for (final g in _goals.entries)
-                  DropdownMenuItem(value: g.key, child: Text(g.value)),
-              ],
-              onChanged: _busy
-                  ? null
-                  : (v) {
-                      if (v != null) _change(() => _goal = v);
-                    },
-            ),
-            const SizedBox(height: 20),
-            _question(
-              'ai-food',
-              '알레르기·질환별 식사 제한이 있나요?',
-              _food,
-              (v) => _food = v,
-            ),
-            _question(
-              'ai-activity',
-              '의료진이 정한 활동 제한이 있나요?',
-              _activity,
-              (v) => _activity = v,
-            ),
-            _question(
-              'ai-symptoms',
-              '지금 통증·어지럼·사용 보류 지시가 있나요?',
-              _symptoms,
-              (v) => _symptoms = v,
-            ),
-            const Text('제한 여부를 확인하지 않았거나 제한이 있으면 해당 음식·운동 후보는 보류합니다.'),
+            if (widget.sample) ...[
+              const SizedBox(height: 16),
+              const Text(
+                '식사 구성을 돌아보는 가상 상황으로 음식·움직임 후보를 체험해요. 실제 내 상태를 분석한 결과가 아닙니다.',
+              ),
+            ],
+            if (!widget.sample) ...[
+              const SizedBox(height: 20),
+              DropdownButtonFormField<String>(
+                key: const ValueKey('ai-goal'),
+                initialValue: _goal,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: '오늘의 관심'),
+                items: [
+                  for (final g in _goals.entries)
+                    DropdownMenuItem(value: g.key, child: Text(g.value)),
+                ],
+                onChanged: _busy
+                    ? null
+                    : (v) {
+                        if (v != null) _change(() => _goal = v);
+                      },
+              ),
+              const SizedBox(height: 20),
+              _question(
+                'ai-food',
+                '알레르기·질환별 식사 제한이 있나요?',
+                _food,
+                (v) => _food = v,
+              ),
+              _question(
+                'ai-activity',
+                '의료진이 정한 활동 제한이 있나요?',
+                _activity,
+                (v) => _activity = v,
+              ),
+              _question(
+                'ai-symptoms',
+                '지금 통증·어지럼·사용 보류 지시가 있나요?',
+                _symptoms,
+                (v) => _symptoms = v,
+              ),
+              const Text('제한 여부를 확인하지 않았거나 제한이 있으면 해당 음식·운동 후보는 보류합니다.'),
+            ],
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: _busy ? null : _generate,
               icon: const Icon(Icons.auto_awesome_outlined),
-              label: Text(_busy ? 'AI 안내 준비 중…' : 'AI 생활 안내 받기'),
+              label: Text(
+                _busy
+                    ? 'AI 안내 준비 중…'
+                    : widget.sample
+                    ? 'Gemini 합성 시연 시작'
+                    : 'AI 생활 안내 받기',
+              ),
             ),
             if (_busy)
               TextButton(
@@ -373,22 +410,29 @@ class _WellnessAiPanelState extends State<WellnessAiPanel> {
           ),
           TextButton(
             onPressed: _busy ? null : _load,
-            child: const Text('측정 정보 다시 불러오기'),
+            child: Text(widget.sample ? '시연 연결 다시 확인' : '측정 정보 다시 불러오기'),
           ),
         ],
       ]),
       if (_answer != null) ...[
         const SizedBox(height: 16),
         _surface(const Color(0xFFEDF2FA), [
-          Text('측정값 이해하기', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            widget.sample ? '합성 측정값 이해하기' : '측정값 이해하기',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 12),
           Text(_answer!['analysis'] as String),
           const SizedBox(height: 12),
-          const Text(
-            '수치는 측정 기록입니다. AI가 설명 관점과 일반 후보를 골랐으며 전체 건강 판정이나 개인 처방은 아닙니다.',
+          Text(
+            widget.sample
+                ? 'Gemini가 고정 합성 예시의 설명 관점과 일반 후보를 골랐습니다. 실제 건강 분석·개인 처방으로 적용하지 마세요.'
+                : '수치는 측정 기록입니다. AI가 설명 관점과 일반 후보를 골랐으며 전체 건강 판정이나 개인 처방은 아닙니다.',
           ),
           Text(
-            'OpenAI · ${_answer!['model']} · 오늘 남은 요청 ${_answer!['remaining']}회',
+            widget.sample
+                ? 'Gemini · ${_answer!['model']} · 공용 시연 남은 요청 ${_answer!['remaining']}회'
+                : 'OpenAI · ${_answer!['model']} · 오늘 남은 요청 ${_answer!['remaining']}회',
           ),
         ]),
         const SizedBox(height: 12),

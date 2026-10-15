@@ -327,3 +327,16 @@ DSPy 후속:
 - PASS: 코드 0c3f727의 PR CI 38737976307에서 backend, PostgreSQL HTTP, Flutter 포맷/분석/124개 테스트/debug APK, 웹 릴리스 빌드 통과. 문서만 추가한 후 최종 main 배포는 GitHub Actions로 다시 검증한다.
 - NOT RUN: 실제 로그인 계정→소유 측정→OpenAI 성공→앱 표시 전체 경로, Android 실기기, 임상·FITRUS·물리 출력. 샘플은 외부 AI에 전송하지 않으며 물리 출력 PROHIBITED/SIMULATOR_ONLY는 유지된다.
 - 증거: docs/assets/20261015-ai-sql-applied.png, docs/assets/20261015-ai-quota-rollback-verified.png. 서버 Secret 값은 캡처/문서에 포함하지 않는다.
+
+## 2026-10-15 Gemini 합성 시연 연결
+
+- 승인: 무료 Gemini를 샘플 시연에 연결하며 실제 건강정보를 전송하지 않는다.
+- PASS RED→GREEN: 서버의 동의/임의 필드 거절(501 vs400), 화면의 Gemini 시연 진입 부재. 새 클라이언트 검사가 합성 응답 ID 비교 오류를 찾아 수정했다. 테스트 작성 중 괄호 문법 오류는 수정 후 의도한 RED를 재확인했으며 기능 RED로 계산하지 않았다.
+- PASS: Backend typecheck 및 전체102개 (`npm test -- --reporter=dot --maxWorkers=1 --no-file-parallelism`). 기본 다중 워커 실행은 로컬 메모리 부족으로 실패해 단일 워커로 재검증했다.
+- PASS: Flutter 포맷/분석, 전체128개 (`flutter test --no-pub --concurrency=1 --reporter expanded`). 320px/2배 글자, Gemini 동의/취소, 실제 입력 폐기/JWT 미전송, 잘못된 샘플 응답 차단, 기존 OpenAI·안전 흐름 포함. 실행 중 로컬 Dart IO 스레드 경고가 있었으나 최종128개/exit0이며 CI에서도 확인한다.
+- PASS: wellness-sample v1 ACTIVE, apikey 직접 확인, 고정 합성 입력, verify_jwt=false. 실제 wellness-advice는 변경하지 않는다. 문서의 과거 샘플 미연결 상태는 새 합성 시연 계약으로 갱신했다.
+- PASS: migration20261015142131_wellness_sample_quota 적용. anon의 실제 측정 RPC/usage 테이블 직접 접근 false. 실제 공개 REST quota 예약19/18/17 후 네 번째 SAMPLE_MINUTE_LIMIT. 이 검증은 Google 호출 없이 공용 일일 한도3회를 소비했다.
+- PARTIAL: 일일20회 경계의 운영 SQL transaction assertion은 관리 도구 requestState 오류로 미실행. 운영 카운터를 초기화하거나20회를 소진하지 않았다. 한도 분기/차단 후 provider 미호출은 단위 검사로 검증했다.
+- PASS: 배포 endpoint의 context200/고정합성/configured=false, 동의 누락400, 임의 체중 필드400. 서버 Secret 등록 전에는 Gemini를 호출하지 않는다.
+- BLOCKED activation: 현재 Supabase 관리 탭 접근이 브라우저 URL 보안 정책으로 차단됐다. 다른 브라우저/토큰 경로로 우회하지 않았다. GEMINI_API_KEY와 GEMINI_SAMPLE_ENABLED=true 서버 Secret 설정이 필요하다. 앱→함수→Gemini 실제 응답, 새 웹/APK 배포는 아직 NOT RUN.
+- 이전 개별 합성 Gemini 호출은 HTTP200/스키마 정상(운영 함수와 앱을 통하지 않은 테스트)이다. 이를 앱 연결 완료로 해석하지 않는다. 실제 사용자 정보·CSV 전송 및 Android 실기기/물리 출력 검증은 NOT RUN. PROHIBITED/SIMULATOR_ONLY 유지.

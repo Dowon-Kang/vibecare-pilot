@@ -744,8 +744,10 @@ class _ParticipantShellState extends State<ParticipantShell>
       if (widget.aiService != null) ...[
         WellnessAiPanel(
           service: widget.aiService!,
-          measurementKey:
-              '${widget.owner}:${_readings.isEmpty ? '' : '${_readings.first.date}:${_readings.first.muscle}:${_readings.first.weight}:${_readings.first.fat}'}',
+          sample: widget.sample,
+          measurementKey: widget.sample
+              ? 'gemini-fixed-sample-v1'
+              : '${widget.owner}:${_readings.isEmpty ? '' : '${_readings.first.date}:${_readings.first.muscle}:${_readings.first.weight}:${_readings.first.fat}'}',
         ),
         const SizedBox(height: 20),
       ] else

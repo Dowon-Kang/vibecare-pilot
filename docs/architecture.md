@@ -175,3 +175,8 @@ GitHub Pages는 Supabase Auth 이메일 로그인 후 `public.visit_bookings`에
 ## 사용 후 피드백과 현재 안전 문진 구분 (2026-10-03)
 
 사용 후 설문의 이전 통증 기록은 feedback-0.4.0 강도 상한과 다음 시연 전 확인 안내로 전달한다. 사용 전 SafetyCheck의 현재 통증·어지럼·전문가 보류는 별도 차단 조건이다. 백엔드에서는 이전 통증만으로 만든 보류 기록을 0013 마이그레이션으로 제한적으로 전환하고, 이전 어지럼이나 심한 시간·주파수 불편 기록은 유지한다. UI 확인은 서버 승인과 시뮬레이터 상태 검사를 우회하지 않는다.
+
+
+### Gemini 샘플 연결 (2026-10-15)
+
+SampleHome → 기존 WellnessAiPanel의 sample 모드 → wellness-sample Edge Function → 고정 합성 입력으로 Gemini generateContent. 샘플 클라이언트는 사용자 JWT나 측정값을 전송하지 않는다. 새 함수는 publishable apikey를 직접 검증하므로 verify_jwt=false이며 실제 측정용 wellness-advice의 verify_jwt=true는 유지한다. 공개키는 비밀 인증 수단이 아니므로 DB의 원자적 공용 3/min·20/day quota가 비용/요청 폭주를 제한한다. quota RPC는 기존 비공개 RLS usage 테이블의 정해진 샘플 카운터 두 개만 바꾸는 제한적 SECURITY DEFINER 예외이며 익명에게 측정/usage 직접 접근을 주지 않는다. 외부 요청은 동의 후 한 번, 자동 재시도/실제 데이터 fallback/사용자 입력 프롬프트는 없다. 결과는 기존 검토 카탈로그 ID만 허용하고 기기/DB에 답변을 저장하지 않는다.
