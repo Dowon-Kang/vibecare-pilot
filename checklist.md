@@ -316,3 +316,14 @@ DSPy 후속:
 - NOT APPLIED: Supabase RPC/요청 한도 마이그레이션은 apply_migration 2회 및 트랜잭션 execute_sql 요청에서 Invalid or expired requestState 오류. 두 함수가 없는 것을 메타데이터로 확인했다. 실제 데이터 수정·quota 사용은 없다.
 - NOT RUN: 실제 OpenAI 응답/비용/계정 모델 접근, 운영 RPC/RLS/원자적 quota, 최신 변경 웹/APK 빌드/배포, 실제 Android/임상/물리 장치. 기존 물리 출력 PROHIBITED/SIMULATOR_ONLY 유지.
 - 기존 보안 점검 결과(변경 전): prevent_overlapping_device_sessions_fn search_path, 유출 비밀번호 보호 비활성 경고. 이번 작업은 해당 기존 설정을 바꾸지 않았다.
+
+## 2026-10-15 AI 서버 활성화 후 검증
+
+- 승인: 지정된 `.dev.vars`의 OPENAI_API_KEY만 Supabase jaekmjiupbsufxaevosf 서버 Secret에 등록하고 AI 설정을 적용하도록 사용자가 명시 승인했다. 위의 초기 BLOCKED/NOT APPLIED 상태는 아래 결과로 갱신한다.
+- PASS: Dashboard에 OPENAI_API_KEY, OPENAI_WELLNESS_MODEL=gpt-6-luna, WELLNESS_ALLOW_REAL_DATA=true 등록. 키를 소스·Flutter·Git에 포함하지 않는다.
+- PASS: MCP DDL 도구의 requestState 오류가 계속되어 로그인된 Dashboard SQL Editor에서 준비한 20261015112043_wellness_ai.sql을 트랜잭션으로 적용했다. 함수/테이블 존재와 권한을 별도 읽기 쿼리로 재확인했다. CLI migration history 등록은 수행하지 않았다.
+- PASS: anon의 두 RPC 실행 거부, authenticated의 context 실행 허용, usage 테이블 직접 접근 거부, RLS 활성화. SQL authenticated 역할의 합성 JWT 두 개로 소유 측정 없음, 3회 허용/4번째 차단, 다른 사용자 quota 분리를 assertion 검증했다. 전체 ROLLBACK 후 합성 usage 행 0개 확인. 실제 Auth 두 계정의 종단간 검증과 동시 부하 검증을 뜻하지 않는다.
+- BLOCKED (공급자): 합성 세 수치+목표로 실제 OpenAI 요청 2회, 각각 HTTP 429. 마지막 응답의 안전한 오류 코드 credit_balance_exhausted 확인. Auth와 측정/quota RPC는 이 공급자 검증에서 stub이었다. 실제 AI 추천 성공·모델 접근 가능성을 검증했다고 표시하지 않는다. 사용자의 OpenAI API 크레딧 충전 후 재검증이 필요하다.
+- PASS: 코드 0c3f727의 PR CI 38737976307에서 backend, PostgreSQL HTTP, Flutter 포맷/분석/124개 테스트/debug APK, 웹 릴리스 빌드 통과. 문서만 추가한 후 최종 main 배포는 GitHub Actions로 다시 검증한다.
+- NOT RUN: 실제 로그인 계정→소유 측정→OpenAI 성공→앱 표시 전체 경로, Android 실기기, 임상·FITRUS·물리 출력. 샘플은 외부 AI에 전송하지 않으며 물리 출력 PROHIBITED/SIMULATOR_ONLY는 유지된다.
+- 증거: docs/assets/20261015-ai-sql-applied.png, docs/assets/20261015-ai-quota-rollback-verified.png. 서버 Secret 값은 캡처/문서에 포함하지 않는다.
