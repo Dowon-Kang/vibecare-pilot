@@ -88,3 +88,6 @@ next-env.d.ts
 
 # Task-local build tools and verification cache
 /.local-temp/
+
+# Supabase CLI generated state
+**/supabase/.temp/
