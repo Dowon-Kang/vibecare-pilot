@@ -12,13 +12,11 @@ import '../algorithm/skeletal_muscle_assessment.dart';
 import '../models/models.dart';
 import '../services/device_gateway.dart';
 import '../services/participation_repository.dart';
-import '../services/wellness_repository.dart';
 import '../widgets/app_menu_button.dart';
 import '../theme/app_theme.dart';
 import 'overview_card.dart';
 import 'participation_screen.dart';
 import 'sample_pilot_scope.dart';
-import 'wellness_screen.dart';
 
 part 'pilot_control_components.dart';
 part 'pilot_dashboard_components.dart';

@@ -289,3 +289,13 @@ DSPy 후속:
 - PASS: `flutter test test/participation_screen_test.dart` 예약·달력 회귀 테스트, `flutter test --no-pub --reporter compact` 85/85, `dart analyze .` 문제 없음. 웹 릴리스 빌드 완료.
 - FAIL: `flutter analyze --no-pub` 분석 서버가 LSP JSON 수신 오류로 종료했다. 같은 전체 Dart 프로젝트를 `dart analyze .`로 확인했다.
 - NOT RUN: 실제 사용자 관찰, 전체 키보드·스크린리더 동선, Android 실기기 알림, 실제 Supabase 계정의 종단간 동작. 웹 푸시는 구현되지 않았다.
+
+
+## 2026-10-15 실제 Flutter 모바일 화면 연결
+
+- PASS: 의도한 RED — `test/sample_route_scope_test.dart`의 새 탐색/프로필/알림 설정 검사가 구현 전 `participant-navigation` 부재로 실패했다(0d6cb54 계약 커밋).
+- PASS: 새 홈, 하단 4개 탐색, 알림함/설정, 기록에서 기존 예약·출석 달력 연결. 샘플 상태는 독립 ProviderContainer, 실계정은 기존 Supabase Auth/측정/예약 조회를 사용한다.
+- PASS: Windows Flutter 3.47.2/Dart 3.13.3, ASCII X: 작업 경로와 TEMP 사용. `flutter analyze --no-pub` 문제 없음. `flutter test --no-pub --concurrency=1 --reporter expanded` 115개 통과. 이후 추가한 계정 상실 검사는 최종 CI에 포함한다.
+- PASS: 기존 연구 흐름의 프로필·측정·안전 문진·시뮬레이터·중지 실패 복구·피드백 회귀 유지. 결과 화면의 생활 안내를 생활 돌보기로 이동했다.
+- 검증 대상: `ui/mobile-release-20261015` 최종 HEAD 및 해당 PR CI. 빌드/배포 최종 결과는 PR과 Actions 실행을 함께 확인한다.
+- NOT RUN: Android 실기기, 실제 계정 두 개의 종단간 격리, 실제 스크린리더·사용자 평가, AI 외부 데이터 전송, FITRUS 수집/물리 장치. 닫힌 웹의 푸시는 구현되지 않았다. AI 미연결과 샘플 구분 및 SIMULATOR_ONLY/PROHIBITED를 유지한다.

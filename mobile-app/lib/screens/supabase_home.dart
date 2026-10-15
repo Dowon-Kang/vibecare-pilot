@@ -6,10 +6,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_input_validation.dart';
 import '../services/participation_repository.dart';
 import '../widgets/app_menu_button.dart';
-import '../widgets/page_content.dart';
-import 'participation_screen.dart';
+import 'participant_shell.dart';
+import '../services/booking_reminder.dart';
 import 'sample_pilot_scope.dart';
-import 'wellness_screen.dart';
 
 class _MeasurementPoint {
   const _MeasurementPoint(this.date, this.weight, this.muscle, this.bodyFat);
@@ -54,12 +53,8 @@ class _SupabaseHomeState extends State<SupabaseHome> {
   final _confirmPassword = TextEditingController();
   GlobalKey<FormState> _authFormKey = GlobalKey<FormState>();
   StreamSubscription<AuthState>? _authSubscription;
-  Timer? _reminderTimer;
-  final Set<String> _shownReminders = {};
-  final _announcementsKey = GlobalKey();
   User? _user;
   List<_MeasurementPoint> _measurements = [];
-  List<VisitBooking> _bookings = [];
   List<_Announcement> _announcements = [];
   bool _busy = false;
   bool _signUpMode = false;
@@ -70,20 +65,27 @@ class _SupabaseHomeState extends State<SupabaseHome> {
   void initState() {
     super.initState();
     _user = _client.auth.currentUser;
-    _reminderTimer = Timer.periodic(
-      const Duration(seconds: 20),
-      (_) => _checkReminders(),
-    );
     _authSubscription = _client.auth.onAuthStateChange.listen(
       (event) {
         if (!mounted) return;
         setState(() {
           final nextUser = event.session?.user;
-          if (nextUser?.id != _user?.id) _message = null;
+          if (nextUser?.id != _user?.id) {
+            final oldId = _user?.id;
+            if (oldId != null) {
+              unawaited(
+                const BookingReminder()
+                    .deactivate('account:$oldId')
+                    .catchError((Object _) {}),
+              );
+            }
+            _measurements = [];
+            _announcements = [];
+            _message = null;
+          }
           _user = nextUser;
           if (_user == null) {
             _measurements = [];
-            _bookings = [];
             _announcements = [];
           }
         });
@@ -91,10 +93,17 @@ class _SupabaseHomeState extends State<SupabaseHome> {
       },
       onError: (Object error, StackTrace stack) {
         if (!mounted) return;
+        final oldId = _user?.id;
+        if (oldId != null) {
+          unawaited(
+            const BookingReminder()
+                .deactivate('account:$oldId')
+                .catchError((Object _) {}),
+          );
+        }
         setState(() {
           _user = null;
           _measurements = [];
-          _bookings = [];
           _announcements = [];
           _messageIsError = true;
           _message = '계정 연결 상태를 확인할 수 없습니다. 다시 로그인해 주세요.';
@@ -107,7 +116,6 @@ class _SupabaseHomeState extends State<SupabaseHome> {
   @override
   void dispose() {
     _authSubscription?.cancel();
-    _reminderTimer?.cancel();
     _email.dispose();
     _password.dispose();
     _confirmPassword.dispose();
@@ -196,7 +204,6 @@ class _SupabaseHomeState extends State<SupabaseHome> {
               'measured_at, weight_kg, skeletal_muscle_mass_kg, body_fat_pct',
             )
             .order('measured_at', ascending: false),
-        SupabaseParticipationRepository(_client).load(id),
         _client
             .from('announcements')
             .select('title, body')
@@ -209,45 +216,16 @@ class _SupabaseHomeState extends State<SupabaseHome> {
           for (final row in results[0] as List<dynamic>)
             _MeasurementPoint.fromJson(row as Map<String, dynamic>),
         ];
-        _bookings = results[1] as List<VisitBooking>;
         _announcements = [
-          for (final row in results[2] as List<dynamic>)
+          for (final row in results[1] as List<dynamic>)
             _Announcement.fromJson(row as Map<String, dynamic>),
         ];
         _message = null;
       });
     } catch (_) {
-      if (mounted) {
+      if (mounted && _client.auth.currentUser?.id == id) {
         setState(() => _message = 'Supabase 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
       }
-    }
-  }
-
-  Future<void> _openParticipation() async {
-    final id = _client.auth.currentUser?.id;
-    if (id == null) return;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => ParticipationScreen(
-          participantId: id,
-          repository: SupabaseParticipationRepository(_client),
-          onChanged: () => unawaited(_reload()),
-        ),
-      ),
-    );
-    await _reload();
-  }
-
-  void _checkReminders() {
-    if (!mounted || _user == null) return;
-    for (final _ in dueBookingReminders(
-      _bookings,
-      DateTime.now(),
-      _shownReminders,
-    )) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('예약한 참여 시간입니다. 출석 체크를 해 주세요.')),
-      );
     }
   }
 
@@ -255,32 +233,6 @@ class _SupabaseHomeState extends State<SupabaseHome> {
     Navigator.of(
       context,
     ).push<void>(MaterialPageRoute(builder: (_) => const SamplePilotScope()));
-  }
-
-  void _openWellness() {
-    final id = _client.auth.currentUser?.id;
-    if (id == null) return;
-    Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => WellnessScreen(
-          owner: 'account:$id',
-          canAccess: () => _client.auth.currentUser?.id == id,
-          accessChanges: _client.auth.onAuthStateChange.map(
-            (event) => event.session?.user.id == id,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showAnnouncements() {
-    final target = _announcementsKey.currentContext;
-    if (target != null) {
-      Scrollable.ensureVisible(
-        target,
-        duration: const Duration(milliseconds: 300),
-      );
-    }
   }
 
   @override
@@ -404,243 +356,27 @@ class _SupabaseHomeState extends State<SupabaseHome> {
   );
 
   Widget _dashboard() {
-    final now = DateTime.now();
-    final summary = AttendanceSummary.fromBookings(_bookings, now);
-    final upcoming =
-        _bookings.where((booking) => booking.startsAt.isAfter(now)).toList()
-          ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('VibeCare 홈'),
-        actions: [
-          AppMenuButton(
-            actions: [
-              AppMenuAction(
-                label: '예약·출석',
-                icon: Icons.event_available_outlined,
-                onSelected: _openParticipation,
-              ),
-              AppMenuAction(
-                label: '시연 실행',
-                icon: Icons.play_arrow,
-                onSelected: _openDemo,
-              ),
-              AppMenuAction(
-                label: '공지·안내',
-                icon: Icons.campaign_outlined,
-                onSelected: _showAnnouncements,
-              ),
-              AppMenuAction(
-                label: '새로고침',
-                icon: Icons.refresh,
-                onSelected: _reload,
-              ),
-              AppMenuAction(
-                label: '로그아웃',
-                icon: Icons.logout,
-                onSelected: () => _client.auth.signOut(),
-              ),
-            ],
-          ),
-        ],
+    final id = _user!.id;
+    return ParticipantShell(
+      key: ValueKey('account:$id'),
+      owner: 'account:$id',
+      participantId: id,
+      sample: false,
+      repository: SupabaseParticipationRepository(_client),
+      identity: _user!.email ?? '참여자',
+      canAccess: () => _client.auth.currentUser?.id == id,
+      accessChanges: _client.auth.onAuthStateChange.map(
+        (event) => event.session?.user.id == id,
       ),
-      body: PageContent(
-        children: [
-          Text('오늘의 홈', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          const Text('생활 습관, 출석, 측정 기록을 한곳에서 확인하세요.'),
-          const SizedBox(height: 24),
-          WellnessEntryCard(onOpen: _openWellness),
-          const SizedBox(height: 16),
-          if (_message != null) ...[
-            Semantics(
-              liveRegion: true,
-              child: Text(
-                _message!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('출석 체크', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 12),
-                  Text(
-                    '참여 ${summary.attended}회 · 빠진 날 ${summary.missed}회 · 예정 ${_bookings.length - summary.completed}회',
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        summary.hasStar ? Icons.star : Icons.star_border,
-                        color: summary.hasStar ? const Color(0xFFE5A700) : null,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          summary.rate == null
-                              ? '첫 출석을 기다리고 있습니다.'
-                              : '참석률 ${(summary.rate! * 100).round()}% · ${summary.hasStar ? '별 획득' : '80% 달성 시 별 획득'}',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  FilledButton.icon(
-                    onPressed: _openParticipation,
-                    icon: const Icon(Icons.event_available),
-                    label: const Text('예약 · 출석체크 · 달력 열기'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('실행', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '측정값과 추천 매핑을 샘플 데이터로 체험할 수 있습니다. 이 값은 Supabase 기록이 아닙니다.',
-                  ),
-                  const SizedBox(height: 18),
-                  OutlinedButton(
-                    onPressed: _openDemo,
-                    child: const Text('샘플 시연 실행하기'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            key: _announcementsKey,
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '공지 · 안내',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    upcoming.isEmpty
-                        ? '예정된 예약이 없습니다. 출석 체크 화면에서 매주 참여 시간을 예약해 주세요.'
-                        : '다음 참여: ${upcoming.first.startsAt.month}월 ${upcoming.first.startsAt.day}일 ${TimeOfDay.fromDateTime(upcoming.first.startsAt).format(context)}',
-                  ),
-                  if (summary.missed > 0)
-                    Text('빠진 날 ${summary.missed}회가 있습니다. 출석 달력에서 확인해 주세요.'),
-                  const Text('웹 알림은 페이지가 열려 있을 때 표시됩니다.'),
-                  if (_announcements.isEmpty) ...[
-                    const SizedBox(height: 8),
-                    const Text('현재 운영 공지는 없습니다.'),
-                  ],
-                  for (final announcement in _announcements) ...[
-                    const Divider(),
-                    Text(
-                      announcement.title,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text(announcement.body),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('측정 변화', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  if (_measurements.isEmpty)
-                    const Text(
-                      '연결된 측정 기록이 없습니다. 담당자가 계정과 참가자 기록을 연결하면 여기에 표시됩니다.',
-                    ),
-                  if (_measurements.isNotEmpty) ...[
-                    Text(
-                      '최근 측정 ${_measurements.first.date.year}.${_measurements.first.date.month}.${_measurements.first.date.day}',
-                    ),
-                    const SizedBox(height: 12),
-                    _MetricChange(
-                      '골격근량',
-                      _measurements.first.muscle,
-                      _measurements.length > 1 ? _measurements[1].muscle : null,
-                      'kg',
-                    ),
-                    _MetricChange(
-                      '체중',
-                      _measurements.first.weight,
-                      _measurements.length > 1 ? _measurements[1].weight : null,
-                      'kg',
-                    ),
-                    _MetricChange(
-                      '체지방률',
-                      _measurements.first.bodyFat,
-                      _measurements.length > 1
-                          ? _measurements[1].bodyFat
-                          : null,
-                      '%',
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetricChange extends StatelessWidget {
-  const _MetricChange(this.label, this.current, this.previous, this.unit);
-
-  final String label;
-  final double current;
-  final double? previous;
-  final String unit;
-
-  @override
-  Widget build(BuildContext context) {
-    final delta = previous == null ? null : current - previous!;
-    final increased = delta != null && delta > 0;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        children: [
-          Expanded(child: Text(label)),
-          Text('${current.toStringAsFixed(1)}$unit'),
-          const SizedBox(width: 12),
-          Text(
-            delta == null
-                ? '첫 기록'
-                : '${increased
-                      ? '▲'
-                      : delta < 0
-                      ? '▼'
-                      : '−'} ${delta.abs().toStringAsFixed(1)}$unit',
-            style: TextStyle(
-              color: increased ? const Color(0xFF087F6B) : null,
-              fontWeight: increased ? FontWeight.bold : null,
-            ),
-          ),
-        ],
-      ),
+      readings: [
+        for (final m in _measurements)
+          ParticipantReading(m.date, m.muscle, m.weight, m.bodyFat),
+      ],
+      notices: [for (final a in _announcements) (title: a.title, body: a.body)],
+      onStart: _openDemo,
+      onRefresh: _reload,
+      dataError: _message,
+      onSignOut: () => _client.auth.signOut(),
     );
   }
 }

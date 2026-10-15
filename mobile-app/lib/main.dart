@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app_environment.dart';
+import 'screens/sample_pilot_scope.dart';
 import 'screens/pilot_screen.dart';
 import 'screens/supabase_home.dart';
 import 'theme/app_theme.dart';
@@ -37,7 +38,9 @@ class VibeCareApp extends StatelessWidget {
       theme: AppTheme.light,
       home: buildEnvironment.usesSupabase
           ? const SupabaseHome()
-          : const PilotScreen(),
+          : buildEnvironment.usesBackendApi
+          ? const PilotScreen()
+          : const SamplePilotScope(),
     );
   }
 }
