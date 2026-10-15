@@ -304,3 +304,15 @@ DSPy 후속:
 - 2026-10-15 CI 38719986774: Backend 승인 테스트 11개가 고정 9월 측정값의 30일 유효기간 경과로 실패했다(운영 코드 변경 없음). 테스트에만 2026-10-05 Date 기준을 고정하고 실제 타이머·운영 측정 유효기간·안전 차단은 유지한다. PostgreSQL HTTP, Flutter 포맷/분석/전체 테스트는 해당 CI에서 통과했다.
 
 - PASS (수정 후 로컬): Backend npm run typecheck 및 npm test -- --reporter=dot, 86/86. 실제 Flutter 웹 릴리스 빌드와 데스크톱 베젤/홈 표시 확인. 캡처: docs/assets/20261015-web-home-bezel.png (507x871 브라우저, 연결 측정 없음 상태; 실제 개인 측정/계정 식별자 미포함).
+
+## 2026-10-15 실제 생활 돌보기 AI 연결 준비
+
+- 승인: 앱의 매 요청 동의 후 골격근량/체중/체지방률과 목표만 OpenAI로 전송. 계정 식별자·원본 CSV·제한/문진 답변은 공급자 입력에서 제외한다.
+- PASS: 측정 시작을 출석보다 앞에 배치하는 RED(504px vs 212px), 실계정 측정 준비 부재 RED, 예약 하위 탭 index 0/1 RED 후 GREEN.
+- PASS: AI 인증 RED(501 vs 401), 동의 버튼 부재 RED, 측정 변경 시 동의창이 남는 RED 후 GREEN. Flutter 포맷/분석과 전체 테스트 124개, Backend typecheck/전체 테스트 96개.
+- PASS: 최소 전송, 제한은 서버 필터만 적용, 최신 측정/출처/30일 검증, quota 초과, 비허용 AI ID/불완전 응답, 타임아웃 비자동 재시도, 표시 중 변경과 취소/늦은 응답 폐기, 320px/2배 글자.
+- PARTIAL: wellness-advice Edge Function v1 ACTIVE, verify_jwt=true. 키 미등록이면 configured=false이고 일반 안내와 실패 상태를 구분한다.
+- BLOCKED: 자동 승인 검토가 저장된 .dev.vars 비밀키 파일 읽기와 Supabase 비밀값 대시보드 접근을 각각 거절했다. 키는 읽거나 출력하지 않았으며 다른 경로로 우회하지 않았다. 구체적 키 읽기/등록 승인이 마지막 활성화 조건이다.
+- NOT APPLIED: Supabase RPC/요청 한도 마이그레이션은 apply_migration 2회 및 트랜잭션 execute_sql 요청에서 Invalid or expired requestState 오류. 두 함수가 없는 것을 메타데이터로 확인했다. 실제 데이터 수정·quota 사용은 없다.
+- NOT RUN: 실제 OpenAI 응답/비용/계정 모델 접근, 운영 RPC/RLS/원자적 quota, 최신 변경 웹/APK 빌드/배포, 실제 Android/임상/물리 장치. 기존 물리 출력 PROHIBITED/SIMULATOR_ONLY 유지.
+- 기존 보안 점검 결과(변경 전): prevent_overlapping_device_sessions_fn search_path, 유출 비밀번호 보호 비활성 경고. 이번 작업은 해당 기존 설정을 바꾸지 않았다.

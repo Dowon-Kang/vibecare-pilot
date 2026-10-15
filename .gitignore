@@ -85,3 +85,6 @@ next-env.d.ts
 
 # Local secret notes must never be committed.
 *.local.txt
+
+# Task-local build tools and verification cache
+/.local-temp/

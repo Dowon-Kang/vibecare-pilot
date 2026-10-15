@@ -6,6 +6,7 @@ import '../services/participation_repository.dart';
 import '../widgets/page_content.dart';
 import 'participation_screen.dart';
 import 'wellness_screen.dart';
+import 'wellness_ai_panel.dart';
 
 class ParticipantReading {
   const ParticipantReading(this.date, this.muscle, this.weight, this.fat);
@@ -39,6 +40,7 @@ class ParticipantShell extends StatefulWidget {
     this.accessChanges,
     this.clock,
     this.webReminders,
+    this.aiService,
   });
   final String owner, participantId, identity;
   final String? dataError;
@@ -52,6 +54,7 @@ class ParticipantShell extends StatefulWidget {
   final Stream<bool>? accessChanges;
   final DateTime Function()? clock;
   final bool? webReminders;
+  final WellnessAiService? aiService;
   @override
   State<ParticipantShell> createState() => _ParticipantShellState();
 }
@@ -64,7 +67,7 @@ class _ParticipantShellState extends State<ParticipantShell>
   final Set<String> _shown = {}, _read = {};
   StreamSubscription<bool>? _access;
   Timer? _timer;
-  int _tab = 1, _generation = 0;
+  int _tab = 1, _recordTab = 0, _generation = 0;
   bool _notifications = false,
       _active = true,
       _busy = true,
@@ -298,10 +301,11 @@ class _ParticipantShellState extends State<ParticipantShell>
     }
   }
 
-  void _select(int value) {
+  void _select(int value, {bool attendance = false}) {
     if (!_allowed) return;
     setState(() {
       _tab = value;
+      if (value == 0) _recordTab = attendance ? 1 : 0;
       _notifications = false;
     });
   }
@@ -518,6 +522,59 @@ class _ParticipantShellState extends State<ParticipantShell>
     child: Text(text, style: Theme.of(context).textTheme.headlineSmall),
   );
   String _date(DateTime value) => '${value.month}월 ${value.day}일';
+  Future<void> _measurementPreparation() async {
+    if (!_allowed) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(child: _heading('측정 준비')),
+                IconButton(
+                  tooltip: '닫기',
+                  onPressed: () => Navigator.pop(sheetContext),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const Text(
+              '실제 체성분 측정은 담당자와 기기에서 진행해 주세요. 현재 앱에서 FITRUS 기기를 원격으로 시작하는 기능은 연결되어 있지 않습니다.',
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(sheetContext);
+                _select(0);
+              },
+              child: const Text('연결된 측정 기록 보기'),
+            ),
+            OutlinedButton(
+              onPressed: () {
+                Navigator.pop(sheetContext);
+                _select(0, attendance: true);
+              },
+              child: const Text('예약·출석 화면 열기'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(sheetContext);
+                if (_allowed) widget.onStart();
+              },
+              child: const Text('합성 데이터로 측정 흐름 살펴보기'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _home() {
     final readings = _readings;
     final today = _bookings
@@ -533,22 +590,9 @@ class _ParticipantShellState extends State<ParticipantShell>
         _heading('오늘의 건강 기록'),
         if (widget.sample) const Text('샘플 데이터 · 실제 참여자 기록과 분리됩니다.'),
         const SizedBox(height: 16),
-        _card(const Color(0xFFEDF3DF), [
-          Text(
-            today.any((b) => b.attended) ? '오늘 출석을 남겼어요' : '오늘 참여 기록을 확인해요',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: () => _select(0),
-            icon: const Icon(Icons.event_available_outlined),
-            label: const Text('예약 · 출석체크 · 달력 열기'),
-          ),
-        ]),
-        const SizedBox(height: 16),
         _card(const Color(0xFF164F47), [
           const Text(
-            '내 몸의 변화를\n확인할 시간',
+            '측정으로 시작하는\n오늘의 건강 관리',
             style: TextStyle(
               color: Colors.white,
               fontSize: 28,
@@ -560,7 +604,7 @@ class _ParticipantShellState extends State<ParticipantShell>
           Text(
             widget.sample
                 ? '프로필부터 연구용 시뮬레이션까지 차근차근 살펴봐요.'
-                : '연결된 측정 기록을 확인합니다. 실제 측정은 담당자와 진행해 주세요.',
+                : '담당자와 측정할 준비를 하고 기록을 확인해요.',
             style: const TextStyle(color: Color(0xFFDCEEE4)),
           ),
           const SizedBox(height: 20),
@@ -568,10 +612,28 @@ class _ParticipantShellState extends State<ParticipantShell>
             style: FilledButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: const Color(0xFF164F47),
+              minimumSize: const Size.fromHeight(56),
+              textStyle: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            onPressed: widget.sample ? widget.onStart : () => _select(0),
-            icon: const Icon(Icons.arrow_forward),
-            label: Text(widget.sample ? '측정 시작 · 샘플' : '측정 기록 확인'),
+            onPressed: widget.sample ? widget.onStart : _measurementPreparation,
+            icon: const Icon(Icons.monitor_heart_outlined),
+            label: Text(widget.sample ? '측정 시작 · 샘플' : '측정 시작'),
+          ),
+        ]),
+        const SizedBox(height: 16),
+        _card(const Color(0xFFEDF3DF), [
+          Text(
+            today.any((b) => b.attended) ? '오늘 출석을 남겼어요' : '오늘 참여 기록을 확인해요',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () => _select(0, attendance: true),
+            icon: const Icon(Icons.event_available_outlined),
+            label: const Text('예약 · 출석체크 · 달력 열기'),
           ),
         ]),
         const SizedBox(height: 24),
@@ -618,11 +680,14 @@ class _ParticipantShellState extends State<ParticipantShell>
   }
 
   Widget _records() => DefaultTabController(
+    key: ValueKey('record-tab:$_recordTab'),
+    initialIndex: _recordTab,
     length: 2,
     child: Column(
       children: [
-        const TabBar(
-          tabs: [
+        TabBar(
+          onTap: (index) => _recordTab = index,
+          tabs: const [
             Tab(text: '측정 기록'),
             Tab(text: '예약·출석'),
           ],
@@ -676,7 +741,16 @@ class _ParticipantShellState extends State<ParticipantShell>
   Widget _life() => PageContent(
     children: [
       _heading('오늘, 나를 돌보는 방법'),
-      const Text('일반 생활 안내 · AI 미연결'),
+      if (widget.aiService != null) ...[
+        WellnessAiPanel(
+          service: widget.aiService!,
+          measurementKey:
+              '${widget.owner}:${_readings.isEmpty ? '' : '${_readings.first.date}:${_readings.first.muscle}:${_readings.first.weight}:${_readings.first.fat}'}',
+        ),
+        const SizedBox(height: 20),
+      ] else
+        const Text('샘플 일반 안내 · 외부 AI 요청 없음'),
+      const Text('일반 생활 안내'),
       const SizedBox(height: 18),
       _card(const Color(0xFFFFF0E0), [
         const Icon(
@@ -689,7 +763,7 @@ class _ParticipantShellState extends State<ParticipantShell>
         const SizedBox(height: 12),
         const Text('평소 식사에 곡류·채소·단백질 식품이 어떻게 들어 있는지 돌아보세요.'),
         const SizedBox(height: 8),
-        const Text('개인 식단 추천은 보류 중입니다. 알레르기·질환별 제한과 의료진의 안내를 우선하세요.'),
+        const Text('알레르기·질환별 제한과 의료진의 식사 안내를 우선하세요.'),
       ]),
       const SizedBox(height: 16),
       _card(const Color(0xFFF2F6E9), [
@@ -699,7 +773,7 @@ class _ParticipantShellState extends State<ParticipantShell>
         const SizedBox(height: 12),
         const Text('걷기나 집안일처럼 평소 움직임을 살펴보세요. 새로운 운동의 시간·강도를 정해드리지 않습니다.'),
         const SizedBox(height: 8),
-        const Text('개인 운동 추천은 보류 중입니다. 통증·어지럼·활동 제한이 있으면 담당자에게 먼저 확인하세요.'),
+        const Text('통증·어지럼·활동 제한이 있으면 담당자에게 먼저 확인하세요.'),
       ]),
       const SizedBox(height: 20),
       OutlinedButton(
@@ -799,7 +873,7 @@ class _ParticipantShellState extends State<ParticipantShell>
             TextButton(
               onPressed: () {
                 setState(() => _read.add(booking.id));
-                _select(0);
+                _select(0, attendance: true);
               },
               child: const Text('일정 확인하기'),
             ),

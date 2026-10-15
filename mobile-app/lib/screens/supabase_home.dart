@@ -9,6 +9,8 @@ import '../widgets/app_menu_button.dart';
 import 'participant_shell.dart';
 import '../services/booking_reminder.dart';
 import 'sample_pilot_scope.dart';
+import '../services/wellness_ai_service.dart';
+import '../app/app_environment.dart';
 
 class _MeasurementPoint {
   const _MeasurementPoint(this.date, this.weight, this.muscle, this.bodyFat);
@@ -48,6 +50,11 @@ class SupabaseHome extends StatefulWidget {
 
 class _SupabaseHomeState extends State<SupabaseHome> {
   late final SupabaseClient _client = widget.client ?? Supabase.instance.client;
+  late final _aiService = SupabaseWellnessAiService(
+    client: _client,
+    endpoint: '$supabaseUrl/functions/v1/wellness-advice',
+    publishableKey: supabasePublishableKey,
+  );
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
@@ -363,6 +370,7 @@ class _SupabaseHomeState extends State<SupabaseHome> {
       participantId: id,
       sample: false,
       repository: SupabaseParticipationRepository(_client),
+      aiService: _aiService,
       identity: _user!.email ?? '참여자',
       canAccess: () => _client.auth.currentUser?.id == id,
       accessChanges: _client.auth.onAuthStateChange.map(
