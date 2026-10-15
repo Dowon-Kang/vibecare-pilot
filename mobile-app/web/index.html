@@ -5,13 +5,34 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="VibeCare 연구용 진동 설정 시뮬레이터">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#087F72">
   <meta name="robots" content="noindex,nofollow">
   <link rel="manifest" href="manifest.json">
   <title>VibeCare Pilot</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body { display: grid; place-items: center; background: #e9edeb; font-family: Arial, 'Malgun Gothic', sans-serif; color: #24322e; }
+    .phone { width: 434px; height: min(900px, calc(100dvh - 40px)); border: 10px solid #252a28; border-radius: 48px; background: #f9f9f8; box-shadow: 0 20px 55px #1a2e2025, 0 0 0 1px #738077; overflow: hidden; display: grid; grid-template-rows: 30px minmax(0, 1fr) 12px; position: relative; }
+    .camera { width: 86px; height: 20px; border-radius: 20px; background: #252a28; margin: 4px auto 0; }
+    .home-indicator { width: 110px; height: 4px; border-radius: 4px; background: #25332a; margin: 2px auto 6px; }
+    #vibecare-app { position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; }
+    #loading { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; padding: 24px; background: #f9f9f8; text-align: center; }
+    #loading button { padding: 12px 24px; border: 0; border-radius: 12px; background: #164f47; color: white; font: inherit; cursor: pointer; }
+    @media (max-width: 480px) {
+      body { background: #f9f9f8; }
+      .phone { width: 100%; height: 100dvh; border: 0; border-radius: 0; box-shadow: none; grid-template-rows: minmax(0, 1fr); }
+      .camera, .home-indicator { display: none; }
+    }
+  </style>
 </head>
 <body>
+  <main class="phone" aria-label="VibeCare 앱">
+    <div class="camera" aria-hidden="true"></div>
+    <div id="vibecare-app"><div id="loading" role="status">VibeCare를 열고 있어요…</div></div>
+    <div class="home-indicator" aria-hidden="true"></div>
+  </main>
   <noscript>VibeCare 시연판을 보려면 JavaScript를 활성화해 주세요.</noscript>
   <script>
     // GitHub Pages must always show the latest pilot build. Remove service
