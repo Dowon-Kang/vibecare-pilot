@@ -17,7 +17,7 @@ abstract final class AppColors {
   static const inkSoft = Color(0xFF3A3A3C);
   static const muted = Color(0xFF6C6C70);
   static const faint = Color(0xFF8E8E93);
-  static const background = Color(0xFFF2F2F7);
+  static const background = Color(0xFFF9F9F8);
   static const canvas = Color(0xFFFFFFFF);
   static const canvasSoft = Color(0xFFF9F9FB);
   static const field = Color(0xFFF9F9FB);

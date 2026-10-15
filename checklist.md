@@ -1,5 +1,70 @@
 # VibeCare 검증 체크리스트
 
+## 음식·운동 카드 개선 / AI 연결 보류 (2026-10-07)
+
+기준 로컬 `4115032`, `health-management-20261006`, `E:\산학협력\vibecare-pages-update`. 이번 구현은 샘플 안내 UI 개선이며 실제 AI 연결 완료가 아니다. 자동 승인 검토가 구체적 건강정보/OpenAI 목적지 전송 승인 부재로 실제 호출 코드 추가를 거절했다. 승인·키/서버 위치 질문에 답변이 없어 API 구현을 보류했다. OpenAPI·Backend에 이번 턴에서 추가했던 미구현 계약/RED 테스트만 read-only diff 확인 후 복원했다. OpenAI·Gemini 키·외부 요청·DB 마이그레이션·새 의존성은 추가하지 않았다.
+
+| 검사 | 실제 결과 |
+| --- | --- |
+| UI RED | FAIL 의도: `result advice separates actions from reasons and cautions`, 행동 제목이 없었음 |
+| 첫 UI 시도 | FAIL: 색상 DecoratedBox가 nested ListTile 터치 효과를 가리는 assertion. Material 표면으로 수정 |
+| 전체 Flutter | PASS **110/110**, `flutter test --no-pub --concurrency=1 --reporter expanded`, 62초. 이후 강화한 두 테스트도 개별 PASS |
+| 펼침 조작 | PASS: 이유·주의사항 펼치기 전후 내용 구분, 공식 출처 버튼 접근 |
+| 320px·글자 2배 | PASS: 이유 펼치기·출처 버튼까지 실제 hit-test 가능한 요소에 접근. 첫 보강 시도는 화면 밖 요소를 찾는 테스트 오류로 FAIL했고 hitTestable 조건 수정 후 PASS |
+| 정적 분석 | PASS: `flutter analyze --no-pub`, No issues found (33.7초); format 대상3파일 변경0 |
+| Android debug APK | PASS: `flutter build apk --debug --no-pub`, 125.6초. SHA256 `AA1250C332F295EA297A007BA337B207FB192741313A793C6D264DF928335EA3` |
+| 웹 release | PASS: JavaScript 빌드 173.3초. 기존 secure-storage Wasm 비호환·Cupertino font·PWA 옵션 경고 유지; Wasm 검증 성공은 아님 |
+| 실제 샘플 웹 | PASS: localhost8766 → 샘플 홈 → 샘플 실행 → 기본 로그인 → 프로필 완료 → 결과/AI 미연결 펼침 → 두 카드 → 이유·주의사항 → 공식 출처 복사 성공 피드백. 390×844·320×700 기본 글자 크기, browser error/warn0. 합성USER-001, 골격근12.5kg/체중42kg/체지방18.8%/비교+0.1kg, 안전 문진 미완료 상태. 실제 계정이나 외부 AI 요청을 사용하지 않음 |
+| Backend 동의 RED | FAIL 의도: 신규 endpoint 부재로404, 기대400. 실제 AI 코드 승인이 보류되어 해당 테스트는 이번 턴 추가분만 제거. GREEN이나 실제 연결 증거로 사용하지 않음 |
+| 미실행 | 실제 OpenAI 호출·응답 품질/비용·개인 추천·운영 활성화·Android 실기기·공개 배포·참가자 이해도 조사 NOT RUN. Backend는 최종 변경이 없어 추가 전체 검사 미실행 |
+
+환경: 형식·전체 테스트를 시작하는 명령의 자동 승인 검토가 시간 초과되어 실행되지 않았고, 같은 로컬 검사 한 번 재시도 후 PASS. 빌드/테스트는 순차 실행했다. 완료된 이번 Gradle 데몬 PID40876만 종료해 웹 빌드 메모리를 확보했으며 PC 설정은 바꾸지 않았다. 사용자 기존 파일·22~24 캡처는 제외한다.
+
+2026-10-07 웹 캡처: [미연결·음식 진입](docs/assets/ux-review-20261006/37-advice-entry-390x844.jpg), [두 카드](docs/assets/ux-review-20261006/38-advice-cards-390x844.jpg), [출처 복사 피드백](docs/assets/ux-review-20261006/39-advice-source-feedback-390x844.jpg), [320px 상세](docs/assets/ux-review-20261006/40-advice-details-320x700.jpg). Android 실기기 캡처나 사용자 피드백이 아니다. 글자 두 배는 위젯 검사에서 검증했다. 서버·브라우저 탭·임시 viewport는 완료 후 정리한다.
+
+## 결과 AI 안내 샘플 미리보기 검증 (2026-10-06)
+
+사용자 선택: **결과 화면·샘플 응답 먼저 구현하고 검증**. 기준은 로컬 `317c9605`이며 실제 AI 연결이나 공개 배포는 포함하지 않는다. 기존 결과 카드에 접이식 안내를 추가하고 파일·폴더·의존성을 늘리지 않았다.
+
+| 검사 | 실제 결과 |
+| --- | --- |
+| RED → GREEN | 결과 화면의 `ai-wellness-preview` 부재로 의도한 FAIL 확인 후 해당 화면 테스트 PASS |
+| 전체 Flutter 테스트 | PASS **109/109**, 단독 실행 103초 |
+| 형식·정적 분석 | PASS: 59파일 변경 0, analyze No issues found (18.8초) |
+| 내용·상태 검증 | PASS: AI 미연결·준비된 예시 표시, 안전 문진 미완료/증상/측정 검토 보류 시 운동 안내 보류, 안전 상태 변경 시 예시 제거, NaN 해석 보류, 320px·글자 2배, 같은 참여자·기기·측정 방법·프로토콜의 과거 기록만 비교 |
+| Android 디버그 APK | PASS: assembleDebug 167.8초. SHA256 `4B189A018AFD62759247A7B9EC5CDFDF142CDA4576151979AB878AF34170F53A` |
+| 웹 release | PASS: JavaScript 웹 빌드 216.8초. 기존 secure-storage Wasm dry-run 비호환·Cupertino font 및 PWA 옵션 경고는 남아 있으며 Wasm 검증 성공으로 취급하지 않음 |
+| 실제 샘플 웹 화면 | PASS: localhost8766 → 샘플 홈 → 샘플 실행 → 기본 USER-001 로그인 → 프로필 확인 → 결과 → 안내 펼치기. 390×844·320×700, 기본 글자 크기, 브라우저 error/warn 0건. 골격근량12.5kg·체중42.0kg·체지방18.8%·비교+0.1kg, 안전 문진 미완료 상태의 운동 보류를 확인 |
+| 미실행 범위 | 실제 AI 생성·외부 건강정보 전송·개인화된 음식/운동 처방·실제 계정/RLS·Android 실기기·공개 배포·사용자 이해도 연구 NOT RUN |
+
+음식은 알레르기와 식사 제한을 확인하지 않아 개인 식단 추천을 보류하고 일반 식품군 예시를 표시한다. 운동도 연구 등급에서 강도·시간·횟수를 도출하지 않는다. 측정값 해석은 동일 측정 기록의 수치 요약과 비교이며 전체 건강상태나 질병 진단이 아니다. 기존 연구 알고리즘·API·Mock/실제 구분·물리 안전 차단은 변경하지 않았다.
+
+캡처: [미연결 표시](docs/assets/ux-review-20261006/33-ai-preview-entry-390x844.jpg), [해석·음식](docs/assets/ux-review-20261006/34-ai-preview-analysis-food-390x844.jpg), [운동 보류](docs/assets/ux-review-20261006/35-ai-preview-exercise-hold-390x844.jpg), [320px](docs/assets/ux-review-20261006/36-ai-preview-320x700.jpg). 모두 합성 시연 데이터이며 Android 실기기 증거가 아니다. 글자 2배는 위젯 테스트로 확인했다. 웹 빌드 중 PC 페이징 메모리 부족으로 보조 확인 명령 실행이 실패했고 이번 APK 빌드가 생성한 완료 후 Gradle PID31828만 종료했다. 웹 빌드는 이어서 성공했다. 테스트·APK·웹 빌드는 순차 실행했으며 PC 메모리 설정은 바꾸지 않았다.
+
+## 건강관리 1차 확장 검증 (2026-10-06)
+
+대상: 기존 연구 참여자·고령 사용자. 작업 폴더 `E:\산학협력\vibecare-pages-update`, 브랜치 `health-management-20261006`. 검사한 앱은 fetch 확인 main `61b1cb064b16564e002a17ed6d4b0cecb0f8f7fb`에 생활관리 변경을 적용한 작업 트리다. 아래 결과는 이번 로컬 작업판이며 기존 공개 Pages의 배포 성공을 이번 변경의 배포로 대체하지 않는다.
+
+| 검사 | 실제 결과·명령 |
+| --- | --- |
+| RED 홈 진입 | FAIL 재현: `sample home offers everyday health management`, 생활관리 문구 0개. `standalone sample app can reach the health management home`, 기본 APK 샘플 홈 접근 문구 0개 |
+| RED Auth 오류 | FAIL 재현: `auth refresh stream failure clears access and remains recoverable`, 처리되지 않은 `offline refresh` 예외 |
+| 삭제 실패 피드백 | FAIL 재현: 하단에서 삭제 실패 시 상단 안내가 화면 밖에 있어 확인 불가. 화면 알림을 추가한 뒤 기록 유지·재시도 PASS |
+| 형식 | PASS: `dart format --output=none --set-exit-if-changed lib test`, 59개 파일 변경 0 |
+| 정적 분석 | PASS: `flutter analyze --no-pub`, No issues found |
+| 최종 전체 Flutter | PASS: `flutter test --no-pub --concurrency=1 --reporter expanded`, **103/103**, 98초 |
+| 핵심 저장·화면 | PASS: 관심 습관·실천/쉬기/취소·다른 날짜 보존·샘플/두 계정 저장 키 분리·계정별 삭제·90일 실제 저장 정리·손상/버전 미지원 기록 보존·실패 복구·늦은 응답/계정 변경·Auth 스트림 오류 차단·자정 날짜 변경·320px/글자 2배 |
+| Android debug APK | PASS: `flutter build apk --debug --no-pub`, assembleDebug 180.9초. SHA256 `F814C936EEB87BF2E5192CD5FDFD6C86CA6914E44F626CF8A93F05C5A0CC5D60` |
+| 웹 release | PASS: `flutter build web --release --base-href / --pwa-strategy=none --no-pub` + CI와 같은 공개 Supabase URL/publishable 설정, 204.6초. 기존 secure-storage의 Wasm dry-run 및 Cupertino font 경고는 남으며 JS 웹 빌드는 성공 |
+| 실제 로컬 웹 | PASS: `http://127.0.0.1:8766/`, 연결 로그인 화면 → 샘플 홈 → 선택 → 실천 저장 → 홈 복귀/재진입 유지 → 쉬기 → 기록 취소 → WHO 안내 펼침/주소 복사 → 삭제 확인/취소. 390×844 및 320×700, 기본 글자 크기. 브라우저 error/warn 로그 0개. 실제 계정/측정 정보는 입력·조회하지 않음 |
+| 미실행 | NOT RUN: 새 브랜치의 원격 CI/공개 배포, 실제 Auth 두 계정과 RLS, Android 설치·실기기·스크린리더 전체 동선, 고령 사용자의 이해도 시험, 전문가의 개인별 건강 콘텐츠 검토, 서버 생활 기록 동기화·백업·복구 |
+
+환경 이력: 웹 빌드와 전체 검사를 동시에 실행한 시도는 로컬 PC의 메모리/PowerShell·Dart native 오류로 FAIL/중단됐다. 단일 전체 시험과 직렬 빌드로 위 PASS를 다시 확인했다. APK 완료 후 Gradle 데몬 정상 종료 명령은 가상 메모리 부족으로 FAIL했고, 이번 빌드가 생성한 Java PID 32324만 종료했다. 사용자 PC의 메모리 설정은 바꾸지 않았다. 로컬 시각 검사 서버·임시 X: 경로는 완료 후 정리한다.
+
+캡처: [홈](docs/assets/ux-review-20261006/25-health-home-390x844.jpg), [빈 상태](docs/assets/ux-review-20261006/26-health-empty-390x844.jpg), [실천과 7일](docs/assets/ux-review-20261006/27-health-done-390x844.jpg), [쉬기](docs/assets/ux-review-20261006/28-health-rest-390x844.jpg), [공식 안내](docs/assets/ux-review-20261006/29-health-guide-390x844.jpg), [삭제 확인](docs/assets/ux-review-20261006/30-health-delete-confirm-390x844.jpg), [320px 안내](docs/assets/ux-review-20261006/31-health-guide-320x700.jpg), [320px 오늘 기록](docs/assets/ux-review-20261006/32-health-today-320x700.jpg). 모두 로컬 작업판·샘플 공간·사용자가 조작한 시험 입력이며 실제 참여자의 건강 기록이 아니다. 글자 2배는 위젯 검사이며 웹 캡처나 Android 실기기 증거로 간주하지 않는다.
+
+운영 전 결정: 이 기기에만 저장하는 1차 범위와 90일 보관 기본값을 수용할지, 계정 서버 동기화를 먼저 도입할지 결정한다. 동기화 도입 시 동의·보존/삭제·백업·소유권/RLS·두 실제 계정 검증이 필요하다. 다중 탭의 동시 수정 병합은 현재 지원하지 않는다. 기존 측정 알고리즘·API·예약과 `PROHIBITED`/`SIMULATOR_ONLY`/`realDeviceSendAllowed=false`는 변경하지 않았다.
+
 ## `pilot-0.9.1` 연구용 계수
 
 - [x] `0.95 × 0.95 × 0.95 = 0.857375` Mock 강도 계산, 기존 버전 분리, SQLite 규칙 마이그레이션
@@ -224,3 +289,18 @@ DSPy 후속:
 - PASS: `flutter test test/participation_screen_test.dart` 예약·달력 회귀 테스트, `flutter test --no-pub --reporter compact` 85/85, `dart analyze .` 문제 없음. 웹 릴리스 빌드 완료.
 - FAIL: `flutter analyze --no-pub` 분석 서버가 LSP JSON 수신 오류로 종료했다. 같은 전체 Dart 프로젝트를 `dart analyze .`로 확인했다.
 - NOT RUN: 실제 사용자 관찰, 전체 키보드·스크린리더 동선, Android 실기기 알림, 실제 Supabase 계정의 종단간 동작. 웹 푸시는 구현되지 않았다.
+
+
+## 2026-10-15 실제 Flutter 모바일 화면 연결
+
+- PASS: 의도한 RED — `test/sample_route_scope_test.dart`의 새 탐색/프로필/알림 설정 검사가 구현 전 `participant-navigation` 부재로 실패했다(0d6cb54 계약 커밋).
+- PASS: 새 홈, 하단 4개 탐색, 알림함/설정, 기록에서 기존 예약·출석 달력 연결. 샘플 상태는 독립 ProviderContainer, 실계정은 기존 Supabase Auth/측정/예약 조회를 사용한다.
+- PASS: Windows Flutter 3.47.2/Dart 3.13.3, ASCII X: 작업 경로와 TEMP 사용. `flutter analyze --no-pub` 문제 없음. `flutter test --no-pub --concurrency=1 --reporter expanded` 115개 통과. 이후 추가한 계정 상실 검사는 최종 CI에 포함한다.
+- PASS: 기존 연구 흐름의 프로필·측정·안전 문진·시뮬레이터·중지 실패 복구·피드백 회귀 유지. 결과 화면의 생활 안내를 생활 돌보기로 이동했다.
+- 검증 대상: `ui/mobile-release-20261015` 최종 HEAD 및 해당 PR CI. 빌드/배포 최종 결과는 PR과 Actions 실행을 함께 확인한다.
+- NOT RUN: Android 실기기, 실제 계정 두 개의 종단간 격리, 실제 스크린리더·사용자 평가, AI 외부 데이터 전송, FITRUS 수집/물리 장치. 닫힌 웹의 푸시는 구현되지 않았다. AI 미연결과 샘플 구분 및 SIMULATOR_ONLY/PROHIBITED를 유지한다.
+
+
+- 2026-10-15 CI 38719986774: Backend 승인 테스트 11개가 고정 9월 측정값의 30일 유효기간 경과로 실패했다(운영 코드 변경 없음). 테스트에만 2026-10-05 Date 기준을 고정하고 실제 타이머·운영 측정 유효기간·안전 차단은 유지한다. PostgreSQL HTTP, Flutter 포맷/분석/전체 테스트는 해당 CI에서 통과했다.
+
+- PASS (수정 후 로컬): Backend npm run typecheck 및 npm test -- --reporter=dot, 86/86. 실제 Flutter 웹 릴리스 빌드와 데스크톱 베젤/홈 표시 확인. 캡처: docs/assets/20261015-web-home-bezel.png (507x871 브라우저, 연결 측정 없음 상태; 실제 개인 측정/계정 식별자 미포함).

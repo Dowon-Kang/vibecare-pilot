@@ -4,6 +4,25 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:vibecare_pilot/screens/supabase_home.dart';
 
 void main() {
+  testWidgets(
+    'auth refresh stream failure clears access and remains recoverable',
+    (tester) async {
+      final client = SupabaseClient(
+        'https://example.supabase.co',
+        'sb_publishable_test',
+        authOptions: const AuthClientOptions(autoRefreshToken: false),
+      );
+      await tester.pumpWidget(MaterialApp(home: SupabaseHome(client: client)));
+      // Simulate the SDK's offline refresh event without a network request.
+      // ignore: invalid_use_of_internal_member
+      client.auth.notifyException(StateError('offline refresh'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('계정 연결 상태를 확인할 수 없습니다. 다시 로그인해 주세요.'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      client.dispose();
+    },
+  );
   testWidgets('top menu opens account creation from the login page', (
     tester,
   ) async {

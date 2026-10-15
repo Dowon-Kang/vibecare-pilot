@@ -29,12 +29,17 @@ class ParticipationScreen extends StatefulWidget {
     required this.onChanged,
     this.repository = const ParticipationRepository(),
     this.clock,
+    this.owner,
+    this.embedded = false,
   });
 
   final String participantId;
   final VoidCallback onChanged;
   final VisitBookingRepository repository;
   final DateTime Function()? clock;
+  final String? owner;
+  final bool embedded;
+  String get reminderOwner => owner ?? 'sample:$participantId';
 
   @override
   State<ParticipationScreen> createState() => _ParticipationScreenState();
@@ -114,14 +119,14 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
     }
     try {
       var permissionGranted = true;
-      for (final booking in newBookings) {
-        permissionGranted =
-            await const BookingReminder().schedule(
-              booking.id,
-              booking.startsAt,
-            ) &&
-            permissionGranted;
-      }
+      final preferences = await const BookingReminder().load(
+        widget.reminderOwner,
+      );
+      permissionGranted = await const BookingReminder().apply(
+        widget.reminderOwner,
+        preferences,
+        _bookings,
+      );
       if (mounted &&
           !permissionGranted &&
           Theme.of(context).platform == TargetPlatform.android) {
@@ -135,7 +140,7 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
   }
 
   Future<void> _checkIn(VisitBooking booking) async {
-    final now = DateTime.now();
+    final now = widget.clock?.call() ?? DateTime.now();
     if (booking.startsAt.year != now.year ||
         booking.startsAt.month != now.month ||
         booking.startsAt.day != now.day) {
@@ -147,7 +152,10 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
     ]);
     if (saved) {
       try {
-        await const BookingReminder().cancel(booking.id);
+        await const BookingReminder().cancel(
+          booking.id,
+          owner: widget.reminderOwner,
+        );
       } catch (_) {
         // Attendance remains saved even if the operating system cannot cancel.
       }
@@ -179,7 +187,7 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
+    final now = widget.clock?.call() ?? DateTime.now();
     final summary = AttendanceSummary.fromBookings(_bookings, now);
     final attended = summary.attended;
     final missed = summary.missed;
@@ -193,32 +201,36 @@ class _ParticipationScreenState extends State<ParticipationScreen> {
           (_selectedDay == null || date.day == _selectedDay);
     }).toList()..sort((a, b) => a.startsAt.compareTo(b.startsAt));
     return Scaffold(
-      appBar: AppBar(
-        leading: Navigator.of(context).canPop() ? const BackButton() : null,
-        title: const Text('예약과 참여 기록'),
-        actions: [
-          AppMenuButton(
-            actions: [
-              if (Navigator.of(context).canPop())
-                AppMenuAction(
-                  label: '이전 화면',
-                  icon: Icons.arrow_back,
-                  onSelected: () => Navigator.of(context).pop(),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              leading: Navigator.of(context).canPop()
+                  ? const BackButton()
+                  : null,
+              title: const Text('예약과 참여 기록'),
+              actions: [
+                AppMenuButton(
+                  actions: [
+                    if (Navigator.of(context).canPop())
+                      AppMenuAction(
+                        label: '이전 화면',
+                        icon: Icons.arrow_back,
+                        onSelected: () => Navigator.of(context).pop(),
+                      ),
+                    AppMenuAction(
+                      label: '새 예약',
+                      icon: Icons.event_available_outlined,
+                      onSelected: _book,
+                    ),
+                    AppMenuAction(
+                      label: '알림 안내',
+                      icon: Icons.notifications_outlined,
+                      onSelected: _showReminderInfo,
+                    ),
+                  ],
                 ),
-              AppMenuAction(
-                label: '새 예약',
-                icon: Icons.event_available_outlined,
-                onSelected: _book,
-              ),
-              AppMenuAction(
-                label: '알림 안내',
-                icon: Icons.notifications_outlined,
-                onSelected: _showReminderInfo,
-              ),
-            ],
-          ),
-        ],
-      ),
+              ],
+            ),
       body: PageContent(
         children: [
           FilledButton.icon(

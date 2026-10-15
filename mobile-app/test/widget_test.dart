@@ -1,11 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibecare_pilot/main.dart';
+import 'package:vibecare_pilot/screens/pilot_screen.dart';
+import 'package:vibecare_pilot/theme/app_theme.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:vibecare_pilot/controllers/pilot_controller.dart';
 import 'package:vibecare_pilot/models/models.dart';
 import 'package:vibecare_pilot/services/feedback_repository.dart';
 import 'package:vibecare_pilot/services/mock_device_gateway.dart';
+
+class _ResearchApp extends StatelessWidget {
+  const _ResearchApp();
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    theme: AppTheme.light,
+    locale: const Locale('ko'),
+    supportedLocales: const [Locale('ko'), Locale('en')],
+    localizationsDelegates: const [
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: const PilotScreen(),
+  );
+}
 
 class _PriorPainFeedbackRepository extends FeedbackRepository {
   @override
@@ -27,6 +45,18 @@ class FailFirstStop extends MockDeviceGateway {
 }
 
 void main() {
+  testWidgets('research result keeps advice in the lifestyle tab', (
+    tester,
+  ) async {
+    _size(tester, const Size(390, 844));
+    await _rawLogin(tester);
+    await _tap(tester, 'profile-continue-button');
+    expect(find.byKey(const ValueKey('ai-wellness-preview')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('measurement-details-toggle')),
+      findsOneWidget,
+    );
+  });
   testWidgets('past pain shows a confirmation before the next simulation', (
     tester,
   ) async {
@@ -38,7 +68,7 @@ void main() {
             _PriorPainFeedbackRepository(),
           ),
         ],
-        child: const VibeCareApp(),
+        child: const _ResearchApp(),
       ),
     );
     await tester.tap(find.text('로그인'));
@@ -233,7 +263,7 @@ void main() {
       findsOneWidget,
     );
     final snapshot = ProviderScope.containerOf(
-      tester.element(find.byType(VibeCareApp)),
+      tester.element(find.byType(_ResearchApp)),
     ).read(pilotControllerProvider).snapshot!;
     final oldest = snapshot.selectedMeasurements.last;
     final oldestLocal = oldest.measuredAt.toLocal();
@@ -327,7 +357,7 @@ void main() {
 
   testWidgets('로그인 페르소나 버튼이 프로필 설문과 골격근량 등급을 함께 채운다', (tester) async {
     _size(tester, const Size(390, 844));
-    await tester.pumpWidget(const ProviderScope(child: VibeCareApp()));
+    await tester.pumpWidget(const ProviderScope(child: _ResearchApp()));
     await tester.ensureVisible(find.text('높은 근육량'));
     await tester.tap(find.text('높은 근육량'));
     await tester.pumpAndSettle();
@@ -590,7 +620,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [deviceGatewayProvider.overrideWithValue(gateway)],
-        child: const VibeCareApp(),
+        child: const _ResearchApp(),
       ),
     );
     addTearDown(gateway.dispose);
@@ -749,7 +779,7 @@ Future<void> _login(WidgetTester tester) async {
 }
 
 Future<void> _rawLogin(WidgetTester tester) async {
-  await tester.pumpWidget(const ProviderScope(child: VibeCareApp()));
+  await tester.pumpWidget(const ProviderScope(child: _ResearchApp()));
   await tester.ensureVisible(find.text('로그인'));
   await tester.tap(find.text('로그인'));
   await tester.pumpAndSettle();

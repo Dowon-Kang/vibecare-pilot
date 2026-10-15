@@ -97,7 +97,10 @@ jobs:
       - working-directory: mobile-app
         run: flutter test --no-pub --reporter compact
       - working-directory: mobile-app
-        run: flutter build apk --debug --no-pub
+        run: >-
+          flutter build apk --debug --no-pub
+          --dart-define=VIBECARE_SUPABASE_URL=https://jaekmjiupbsufxaevosf.supabase.co
+          --dart-define=VIBECARE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YvezVqzuHVi8Nuxio01k9Q_v25aPNdK
       - name: Hash the internal demo APK
         working-directory: mobile-app/build/app/outputs/flutter-apk
         run: sha256sum app-debug.apk > app-debug.apk.sha256
