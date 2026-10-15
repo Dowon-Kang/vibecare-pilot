@@ -299,3 +299,8 @@ DSPy 후속:
 - PASS: 기존 연구 흐름의 프로필·측정·안전 문진·시뮬레이터·중지 실패 복구·피드백 회귀 유지. 결과 화면의 생활 안내를 생활 돌보기로 이동했다.
 - 검증 대상: `ui/mobile-release-20261015` 최종 HEAD 및 해당 PR CI. 빌드/배포 최종 결과는 PR과 Actions 실행을 함께 확인한다.
 - NOT RUN: Android 실기기, 실제 계정 두 개의 종단간 격리, 실제 스크린리더·사용자 평가, AI 외부 데이터 전송, FITRUS 수집/물리 장치. 닫힌 웹의 푸시는 구현되지 않았다. AI 미연결과 샘플 구분 및 SIMULATOR_ONLY/PROHIBITED를 유지한다.
+
+
+- 2026-10-15 CI 38719986774: Backend 승인 테스트 11개가 고정 9월 측정값의 30일 유효기간 경과로 실패했다(운영 코드 변경 없음). 테스트에만 2026-10-05 Date 기준을 고정하고 실제 타이머·운영 측정 유효기간·안전 차단은 유지한다. PostgreSQL HTTP, Flutter 포맷/분석/전체 테스트는 해당 CI에서 통과했다.
+
+- PASS (수정 후 로컬): Backend npm run typecheck 및 npm test -- --reporter=dot, 86/86. 실제 Flutter 웹 릴리스 빌드와 데스크톱 베젤/홈 표시 확인. 캡처: docs/assets/20261015-web-home-bezel.png (507x871 브라우저, 연결 측정 없음 상태; 실제 개인 측정/계정 식별자 미포함).

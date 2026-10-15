@@ -41,6 +41,10 @@ async function authorize() {
 }
 
 beforeEach(async () => {
+  // Keep acquisition fixtures inside their documented 30-day window.
+  // Only Date is mocked; asynchronous I/O keeps real timers.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-05T12:00:00Z'));
   db = new DatabaseSync(':memory:');
   for (const name of ['0001_initial.sql','0002_measurements_and_rules.sql','0003_session_safety.sql','0004_feedback_adjustments.sql','0005_parameter_feedback.sql','0006_muscle_driven_rules.sql','0007_research_safety.sql','0008_algorithm_pilot_0_7.sql','0009_algorithm_pilot_0_8.sql','0010_algorithm_pilot_0_9.sql','0011_feedback_manual_stop_policy.sql','0012_fitrus_body_composition_fields.sql','0013_past_pain_feedback_adjustment.sql','0014_algorithm_pilot_0_9_1.sql']) {
     db.exec(readFileSync(new URL('../migrations/' + name, import.meta.url), 'utf8'));
@@ -53,6 +57,7 @@ beforeEach(async () => {
   for(let i=1;i<=4;i++) db.prepare(`INSERT INTO bia_measurements(id,participant_id,device_id,measured_at,quality_passed,weight_kg,bmi,body_fat_pct,fat_mass_kg,skeletal_muscle_mass_kg,raw_json,muscle_definition,muscle_definition_ref,muscle_measurement_method,muscle_method_evidence_ref,muscle_mass_unit,acquisition_protocol) VALUES(?,?,?,?,1,45,20,25,11.25,18,'{}','SMM','TEST-SMM-DEFINITION-V1','BIA','TEST-METHOD-EVIDENCE-V1','kg','TEST-PROTOCOL')`).run('M'+i,'A','BIA','2026-09-09T00:00:0'+i+'Z');
 });
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   db.close();
 });
