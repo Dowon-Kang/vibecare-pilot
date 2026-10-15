@@ -37,6 +37,47 @@ class _FailingBookings implements VisitBookingRepository {
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   testWidgets(
+    'measurement start appears before attendance in the home reading order',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(home: SampleHome(repository: _MemoryBookings([]))),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.text('측정 시작 · 샘플')).dy,
+        lessThan(tester.getTopLeft(find.text('오늘 참여 기록을 확인해요')).dy),
+      );
+    },
+  );
+  testWidgets(
+    'account measurement start opens honest measurement preparation',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ParticipantShell(
+            owner: 'account:a',
+            participantId: 'a',
+            sample: false,
+            repository: _MemoryBookings([]),
+            onStart: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('측정 시작'));
+      await tester.pumpAndSettle();
+      expect(find.text('측정 준비'), findsOneWidget);
+      expect(find.textContaining('담당자'), findsWidgets);
+      expect(find.text('연결된 측정 기록 보기'), findsOneWidget);
+      await tester.tap(find.text('예약·출석 화면 열기'));
+      await tester.pumpAndSettle();
+      expect(
+        DefaultTabController.of(tester.element(find.text('예약·출석'))).index,
+        1,
+      );
+    },
+  );
+  testWidgets(
     'mobile shell opens profile and notification settings from tabs',
     (tester) async {
       await tester.pumpWidget(

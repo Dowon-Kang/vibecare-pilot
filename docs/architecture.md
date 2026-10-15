@@ -1,5 +1,9 @@
 # VibeCare 유스케이스와 시스템 설계
 
+## 운영 생활 AI 연결 경로 (2026-10-15)
+
+`Flutter Supabase 세션 → wellness-advice Edge Function(verify_jwt=true, Auth 검증) → 사용자 RLS 측정 RPC/일별 quota RPC → OpenAI Responses`. 공개 Pages와 Android의 기존 Supabase 세션을 사용한다. PIN 토큰을 만들거나 기존 Hono 세션과 공유하지 않는다. 함수의 공급자 독립 로직은 backend-api/supabase/functions/wellness-advice/core.ts에 두고 기존 Vitest에서 검증한다. 앱의 요청/취소·오류 계약은 Wellness AI 서비스, 동의·결과 표시는 생활 탭 전용 위젯이 맡는다. 새 외부 패키지는 추가하지 않는다. 이전 후보 비교와 미연결 이력은 아래에 보존한다. 최신 승인 범위와 가동 기준은 project-overview.md의 실제 AI 계약이 우선한다.
+
 ## 실제 AI 공급자 선정 제안 — 미연결 (2026-10-07)
 
 현재 실제 AI 연결 코드는 추가되지 않았다. 2026-10-06 자동 승인 검토가 OpenAI로 전송할 건강정보와 목적지에 대한 명시적 승인 부재로 코드 추가를 거절했다. UI 개선은 계속하며 AI 전송 승인·사용자 소유 서버 키·운영 API 주소를 기다린다. 승인이 없으면 다른 도구나 공급자로 우회하지 않는다.

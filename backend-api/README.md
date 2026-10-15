@@ -137,3 +137,12 @@ FITRUS 요청은 `measure-api-guide.md`의 엔드포인트별 필드를 서버�
 혈압·심박·스트레스·체온은 응답 계약을 통과하면 `vital_measurements`에 저장된다. 지원하지 않는
 응답 구조와 `stress2.errorcode != 0`은 raw로만 남는다. 명세에 없는 단위와 근육량의 ASM/SMM
 측정 근거는 서버가 추정하지 않는다.
+
+
+## 생활 돌보기 AI (Supabase 운영 경로)
+
+기존 PIN API와 독립된 Supabase Auth 경로다. `supabase/functions/wellness-advice`는 `verify_jwt=true`와 Auth 서버 검증을 사용한다. 앱은 `POST /functions/v1/wellness-advice`로 `action: context`를 먼저 요청하고, 표시된 measurementId·goal(enum)·foodRestriction/activityRestriction/symptoms(no/yes/unknown)·consentVersion(openai-wellness-v1)을 `action: generate`와 함께 보낸다. 건강정보 원문과 임의 자유 텍스트를 받지 않는다. provider에는 검증된 muscleKg/weightKg/bodyFatPct/goal만 전달한다.
+
+순서: `supabase/migrations/*wellness_ai.sql` 적용 → `wellness-advice` 함수 배포 → Supabase Secret에 OPENAI_API_KEY, OPENAI_WELLNESS_MODEL, WELLNESS_ALLOW_REAL_DATA 등록 → 합성 데이터의 실제 공급자 응답/인증·RLS·quota 검증 → 웹/APK 배포. Secret 예시는 `supabase/functions/.env.example`이며 키는 Git/Flutter에 넣지 않는다. 키 접근과 서버 비밀값 등록은 명시적 승인 후 진행한다. 날짜별 요청 횟수만 DB에 남으며, 신규 quota 테이블은 RLS 활성화/직접 접근 회수, 함수는 호출자의 auth.uid만 사용한다.
+
+오류는 AUTH_REQUIRED(401), MEASUREMENT_MISSING(404), MEASUREMENT_CHANGED(409), 측정 검토/신선도(422), DAILY_LIMIT(429), 설정/공급자 장애(5xx)를 구분한다. 실패를 샘플 AI 답변으로 대체하지 않는다. 테스트는 `npm test -- test/wellness-ai.test.ts`; 실제 모델 호출·운영 DB 확인 상태는 checklist.md를 따른다.
