@@ -32,6 +32,17 @@ class _FailingBookings implements VisitBookingRepository {
 }
 
 void main() {
+  testWidgets('mobile shell opens profile and notification settings from tabs', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: SampleHome(repository: _MemoryBookings([]))));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('participant-navigation')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('profile-destination')));
+    await tester.pumpAndSettle();
+    expect(find.text('알림 설정'), findsOneWidget);
+    await tester.tap(find.text('알림 설정'));
+    await tester.pumpAndSettle();
+    expect(find.text('예약 알림'), findsOneWidget);
+  });
   testWidgets('standalone sample app can reach the health management home', (
     tester,
   ) async {
