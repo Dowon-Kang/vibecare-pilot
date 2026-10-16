@@ -33,29 +33,40 @@ class _SampleHomeState extends State<SampleHome> {
             )
           : null);
   Future<void> _openPilot() async {
-    final container = ProviderScope.containerOf(context);
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => UncontrolledProviderScope(
-          container: container,
-          child: const PilotScreen(),
+    final container = ProviderContainer(
+      overrides: [
+        appEnvironmentProvider.overrideWithValue(
+          const AppEnvironment(apiBaseUrl: ''),
         ),
-      ),
-    );
-    if (!mounted) return;
-    final state = container.read(pilotControllerProvider);
-    setState(
-      () => _readings = [
-        for (final m in state.snapshot?.bodyCompositionHistory ?? [])
-          if (m.qualityPassed)
-            ParticipantReading(
-              m.measuredAt,
-              m.values.skeletalMuscleMassKg,
-              m.values.weightKg,
-              m.values.bodyFatPct,
-            ),
       ],
     );
+    final route = MaterialPageRoute<void>(
+      builder: (_) => UncontrolledProviderScope(
+        container: container,
+        child: const PilotScreen(),
+      ),
+    );
+    try {
+      await Navigator.of(context).push<void>(route);
+      if (!mounted) return;
+      final snapshot = container.read(pilotControllerProvider).snapshot;
+      if (snapshot == null) return;
+      setState(
+        () => _readings = [
+          for (final m in snapshot.bodyCompositionHistory)
+            if (m.qualityPassed)
+              ParticipantReading(
+                m.measuredAt,
+                m.values.skeletalMuscleMassKg,
+                m.values.weightKg,
+                m.values.bodyFatPct,
+              ),
+        ],
+      );
+    } finally {
+      await route.completed;
+      container.dispose();
+    }
   }
 
   @override

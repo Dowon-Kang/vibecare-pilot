@@ -361,3 +361,5 @@ DSPy 후속:
 - RED: 합성 시연 준비 화면에 TextField 2개가 존재하여 코드·PIN 입력 부재 회귀 테스트가 의도한 FAIL.
 - PASS: `flutter test --no-pub test/widget_test.dart test/sample_route_scope_test.dart --concurrency=1 --reporter expanded` 35/35. 320px·글자2배에서 대상 선택/시연 시작/프로필 반영, Backend 인증 필드 보존, 시연 취소·복귀와 기존 설정/문진 흐름 포함.
 - 전체 형식·분석·테스트·APK·웹 빌드와 공개 배포는 같은 최종 커밋의 GitHub quality-gates에서 확인한다. 실계정/RLS·실기기·임상 검증은 이번 변경 검증에 포함하지 않는다.
+- 재진입 RED: 샘플 홈에서 첫 시연을 닫고 다시 열면 persona-selector가 없어지는 FAIL 재현. 매 진입을 새 Mock 컨테이너로 분리한 뒤 sample_route_scope_test 11/11 PASS. 높은 근육량 → 홈 복귀 → 중간 근육량으로 새로 시작하는 조작 포함.
+- 최종 보완 로컬 형식·정적 분석 PASS. 첫 PR CI는 테스트의 중복 import 1건으로 FAIL하여 제거했다. 최종 커밋 전체 검증은 후속 CI 결과를 따른다.
