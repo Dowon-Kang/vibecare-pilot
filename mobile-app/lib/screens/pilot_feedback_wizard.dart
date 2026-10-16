@@ -20,6 +20,13 @@ class _FeedbackWizardState extends ConsumerState<_FeedbackWizard> {
   bool _surveyStarted = false;
   int _step = 0;
 
+  void _moveTo(int next) {
+    setState(() => _step = next);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Scrollable.ensureVisible(context, alignment: 0);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_surveyStarted) return _buildIntro(context);
@@ -27,29 +34,40 @@ class _FeedbackWizardState extends ConsumerState<_FeedbackWizard> {
     final state = widget.state;
     final isLastStep = _step == _totalSteps - 1;
     final canContinue = _hasAnswerForCurrentStep && !state.isBusy;
-    return Card(
+    return Card.outlined(
+      margin: EdgeInsets.zero,
+      color: AppColors.canvas,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '사용 후 평가',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                Text(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final title = Text(
+                  '사용 후 평가',
+                  style: Theme.of(context).textTheme.titleLarge,
+                );
+                final progress = Text(
                   '질문 ${_step + 1} / $_totalSteps',
                   key: const ValueKey('feedback-progress-label'),
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.ink,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
+                );
+                return constraints.maxWidth < 300 ||
+                        MediaQuery.textScalerOf(context).scale(16) > 22
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [title, const SizedBox(height: 8), progress],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(child: title),
+                          progress,
+                        ],
+                      );
+              },
             ),
             const SizedBox(height: 12),
             Semantics(
@@ -62,7 +80,9 @@ class _FeedbackWizardState extends ConsumerState<_FeedbackWizard> {
             ),
             const SizedBox(height: 28),
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 160),
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 160),
               child: KeyedSubtree(
                 key: ValueKey('feedback-step-$_step'),
                 child: _buildQuestion(context, state),
@@ -75,9 +95,7 @@ class _FeedbackWizardState extends ConsumerState<_FeedbackWizard> {
                   Expanded(
                     child: OutlinedButton(
                       key: const ValueKey('feedback-back-button'),
-                      onPressed: state.isBusy
-                          ? null
-                          : () => setState(() => _step -= 1),
+                      onPressed: state.isBusy ? null : () => _moveTo(_step - 1),
                       child: const Text('이전'),
                     ),
                   ),
@@ -94,7 +112,7 @@ class _FeedbackWizardState extends ConsumerState<_FeedbackWizard> {
                     onPressed: canContinue
                         ? isLastStep
                               ? _submit
-                              : () => setState(() => _step += 1)
+                              : () => _moveTo(_step + 1)
                         : null,
                     child: state.isBusy && isLastStep
                         ? const SizedBox.square(
@@ -115,56 +133,58 @@ class _FeedbackWizardState extends ConsumerState<_FeedbackWizard> {
     );
   }
 
-  Widget _buildIntro(BuildContext context) => Card(
+  Widget _buildIntro(BuildContext context) => Column(
     key: const ValueKey('feedback-intro-card'),
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const _CompletionBanner(
+        title: '사용을 마쳤습니다',
+        subtitle: '시연 종료를 확인했어요.\n이제 사용 후 느낌을 남겨 주세요.',
+      ),
+      const SizedBox(height: 16),
+      JourneySection(
+        title: '이번 시연 설정',
+        icon: Icons.tune_rounded,
         children: [
-          const Icon(
-            Icons.check_circle_outline_rounded,
-            size: 48,
-            color: AppColors.brand,
+          _SessionSettingsSummary(
+            command: widget.state.feedbackSession!.command,
           ),
-          const SizedBox(height: 16),
-          Text(
-            '사용을 마쳤습니다',
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '간단한 사용 후 평가를 남겨 주세요.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '질문은 6개이며 한 번에 하나씩 보여드립니다.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 28),
+        ],
+      ),
+      const SizedBox(height: 16),
+      JourneySection(
+        title: '마지막 단계 · 사용 후 평가',
+        icon: Icons.fact_check_outlined,
+        children: [
+          const Text('간단한 사용 후 평가를 남겨 주세요.'),
+          const SizedBox(height: 8),
+          const Text('질문은 6개이며 한 번에 하나씩 보여드립니다.'),
+          const SizedBox(height: 20),
           FilledButton.icon(
             key: const ValueKey('feedback-start-button'),
             onPressed: widget.state.isBusy
                 ? null
-                : () => setState(() => _surveyStarted = true),
+                : () {
+                    setState(() => _surveyStarted = true);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        Scrollable.ensureVisible(context, alignment: 0);
+                      }
+                    });
+                  },
             icon: const Icon(Icons.arrow_forward_rounded),
             label: const Text('사용 후 평가 시작'),
           ),
         ],
       ),
-    ),
+    ],
   );
 
   Widget _buildQuestion(BuildContext context, PilotState state) {
     switch (_step) {
       case 0:
         return _FeedbackStepChoice<FeedbackRating>(
+          enabled: !state.isBusy,
           id: 'intensity',
           title: '기기 출력을 얼마나 강하게 느꼈나요?',
           helper: '몸으로 느낀 출력의 세기를 선택해 주세요.',
@@ -184,6 +204,7 @@ class _FeedbackWizardState extends ConsumerState<_FeedbackWizard> {
         );
       case 2:
         return _FeedbackStepChoice<FeedbackRating>(
+          enabled: !state.isBusy,
           id: 'duration',
           title: '시간은 어땠나요?',
           helper: '사용한 시간이 길거나 짧게 느껴졌는지 선택해 주세요.',
@@ -197,6 +218,7 @@ class _FeedbackWizardState extends ConsumerState<_FeedbackWizard> {
         );
       case 3:
         return _FeedbackStepChoice<FeedbackRating>(
+          enabled: !state.isBusy,
           id: 'frequency',
           title: '주파수 느낌은 어땠나요?',
           helper: '진동의 빠르기가 어떻게 느껴졌는지 선택해 주세요.',
@@ -210,6 +232,7 @@ class _FeedbackWizardState extends ConsumerState<_FeedbackWizard> {
         );
       case 4:
         return _FeedbackStepChoice<int>(
+          enabled: !state.isBusy,
           id: 'pain',
           title: '사용 중 통증이 있었나요?',
           helper: '조금이라도 통증이 있었다면 “있었어요”를 선택해 주세요.',
@@ -219,6 +242,7 @@ class _FeedbackWizardState extends ConsumerState<_FeedbackWizard> {
         );
       default:
         return _FeedbackStepChoice<bool>(
+          enabled: !state.isBusy,
           id: 'dizziness',
           title: '사용 중 어지럼이 있었나요?',
           helper: '조금이라도 어지러웠다면 “있었어요”를 선택해 주세요.',
@@ -299,7 +323,11 @@ class _FeedbackRpeStep extends StatelessWidget {
       ),
       const Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [Text('0 · 편안함'), Text('10 · 매우 힘듦')],
+        children: [
+          Expanded(child: Text('0 · 편안함')),
+          SizedBox(width: 12),
+          Expanded(child: Text('10 · 매우 힘듦', textAlign: TextAlign.end)),
+        ],
       ),
       const SizedBox(height: 18),
       OutlinedButton(
@@ -319,6 +347,7 @@ class _FeedbackStepChoice<T extends Object> extends StatelessWidget {
     required this.values,
     required this.selected,
     required this.onChanged,
+    this.enabled = true,
   });
 
   final String id;
@@ -327,6 +356,7 @@ class _FeedbackStepChoice<T extends Object> extends StatelessWidget {
   final Map<T, String> values;
   final T? selected;
   final ValueChanged<T> onChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -341,30 +371,166 @@ class _FeedbackStepChoice<T extends Object> extends StatelessWidget {
       const SizedBox(height: 10),
       Text(helper, style: Theme.of(context).textTheme.bodyLarge),
       const SizedBox(height: 28),
-      SegmentedButton<T>(
-        segments: [
-          for (final entry in values.entries)
-            ButtonSegment(
-              value: entry.key,
-              label: Text(
-                entry.value,
-                key: ValueKey('feedback-$id-${entry.key}'),
-                textAlign: TextAlign.center,
-              ),
-            ),
-        ],
-        selected: selected == null ? <T>{} : {selected as T},
-        emptySelectionAllowed: true,
-        showSelectedIcon: true,
-        onSelectionChanged: (selection) {
-          if (selection.isNotEmpty) onChanged(selection.single);
+      RadioGroup<T>(
+        groupValue: selected,
+        onChanged: (value) {
+          if (enabled && value != null) onChanged(value);
         },
-        style: ButtonStyle(
-          minimumSize: WidgetStateProperty.all(const Size(0, 56)),
-          textStyle: WidgetStateProperty.all(
-            const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-          ),
+        child: Column(
+          children: [
+            for (final entry in values.entries)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Card.outlined(
+                  margin: EdgeInsets.zero,
+                  color: selected == entry.key
+                      ? AppColors.brandSoft
+                      : AppColors.canvasSoft,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.smBorder,
+                    side: BorderSide(
+                      color: selected == entry.key
+                          ? AppColors.brand
+                          : AppColors.hairlineSoft,
+                      width: selected == entry.key ? 2 : 1,
+                    ),
+                  ),
+                  child: RadioListTile<T>(
+                    enabled: enabled,
+                    value: entry.key,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    activeColor: AppColors.brand,
+                    title: Text(
+                      entry.value,
+                      key: ValueKey('feedback-$id-${entry.key}'),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
+      ),
+    ],
+  );
+}
+
+class _CompletionBanner extends StatelessWidget {
+  const _CompletionBanner({required this.title, required this.subtitle});
+  final String title, subtitle;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    child: Container(
+      padding: const EdgeInsets.all(28),
+      decoration: const BoxDecoration(
+        color: Color(0xFF124B43),
+        borderRadius: AppRadius.mdBorder,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.task_alt_rounded,
+              size: 52,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 30,
+              height: 1.25,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: Color(0xFFD8EDE7),
+              fontSize: 17,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _SessionSettingsSummary extends StatelessWidget {
+  const _SessionSettingsSummary({required this.command});
+  final DeviceCommand command;
+  @override
+  Widget build(BuildContext context) => SettingSummary(
+    values: [
+      (label: '설정 시간', value: '${command.durationSec ~/ 60}분'),
+      (label: '주파수', value: '${command.frequencyHz}Hz'),
+      (label: '설정 출력', value: '${command.intensityPct}%'),
+    ],
+  );
+}
+
+class _DemoCompleteCard extends StatelessWidget {
+  const _DemoCompleteCard({
+    required this.state,
+    required this.onHome,
+    required this.onNewDemo,
+  });
+  final PilotState state;
+  final VoidCallback onHome, onNewDemo;
+  @override
+  Widget build(BuildContext context) => Column(
+    key: const ValueKey('demo-complete-card'),
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const _CompletionBanner(
+        title: '오늘의 시연을\n마쳤어요',
+        subtitle: '사용 후 평가 저장 완료\n시연과 평가가 모두 끝났습니다.',
+      ),
+      const SizedBox(height: 16),
+      JourneySection(
+        title: '완료한 시연 요약',
+        icon: Icons.assignment_turned_in_outlined,
+        children: [
+          _SessionSettingsSummary(command: state.completedSession!.command),
+          const SizedBox(height: 16),
+          const Text('실제 진동 없이 진행한 연구용 시뮬레이션입니다.'),
+        ],
+      ),
+      if (state.feedbackAdjustment.reason.isNotEmpty) ...[
+        const SizedBox(height: 16),
+        JourneySection(
+          title: '다음 이용 전 안내',
+          icon: Icons.info_outline,
+          children: [Text(state.feedbackAdjustment.reason)],
+        ),
+      ],
+      const SizedBox(height: 24),
+      FilledButton.icon(
+        key: const ValueKey('completion-home-button'),
+        onPressed: onHome,
+        icon: const Icon(Icons.home_outlined),
+        label: Text(Navigator.canPop(context) ? '홈으로 돌아가기' : '시작 화면으로'),
+      ),
+      const SizedBox(height: 10),
+      OutlinedButton.icon(
+        key: const ValueKey('new-demo-button'),
+        onPressed: onNewDemo,
+        icon: const Icon(Icons.replay_rounded),
+        label: const Text('새 시연 준비'),
       ),
     ],
   );

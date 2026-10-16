@@ -10,10 +10,17 @@ import 'package:vibecare_pilot/services/feedback_repository.dart';
 import 'package:vibecare_pilot/services/mock_device_gateway.dart';
 
 class _ResearchApp extends StatelessWidget {
-  const _ResearchApp();
+  const _ResearchApp({this.textScale = 1});
+  final double textScale;
   @override
   Widget build(BuildContext context) => MaterialApp(
     theme: AppTheme.light,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: TextScaler.linear(textScale)),
+      child: child!,
+    ),
     locale: const Locale('ko'),
     supportedLocales: const [Locale('ko'), Locale('en')],
     localizationsDelegates: const [
@@ -35,6 +42,20 @@ class _PriorPainFeedbackRepository extends FeedbackRepository {
       );
 }
 
+class _FailFirstFeedback extends FeedbackRepository {
+  int attempts = 0;
+  @override
+  Future<FeedbackAdjustment> save(
+    String participantId,
+    String sessionId,
+    int used,
+    SessionFeedback feedback,
+  ) async {
+    if (++attempts == 1) throw StateError('평가 저장 실패');
+    return super.save(participantId, sessionId, used, feedback);
+  }
+}
+
 class FailFirstStop extends MockDeviceGateway {
   int attempts = 0;
   @override
@@ -45,6 +66,53 @@ class FailFirstStop extends MockDeviceGateway {
 }
 
 void main() {
+  testWidgets(
+    'feedback retry preserves answers and ends at home on a small large-text screen',
+    (tester) async {
+      _size(tester, const Size(320, 700));
+      final repository = _FailFirstFeedback();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [feedbackRepositoryProvider.overrideWithValue(repository)],
+          child: const _ResearchApp(textScale: 2),
+        ),
+      );
+      await tester.ensureVisible(find.text('시연 시작'));
+      await tester.tap(find.text('시연 시작'));
+      await tester.pumpAndSettle();
+      await _tap(tester, 'profile-continue-button');
+      await _tap(tester, 'device-setup-button');
+      await _clear(tester);
+      await _tap(tester, 'send-button');
+      await _tap(tester, 'start-button');
+      await _tap(tester, 'stop-button');
+      expect(find.byKey(const ValueKey('participation-button')), findsNothing);
+      await _tap(tester, 'feedback-start-button');
+      await _tap(tester, 'feedback-intensity-FeedbackRating.suitable');
+      await _tap(tester, 'feedback-next-button');
+      await _tap(tester, 'feedback-rpe-zero');
+      await _tap(tester, 'feedback-next-button');
+      await _tap(tester, 'feedback-duration-FeedbackRating.suitable');
+      await _tap(tester, 'feedback-next-button');
+      await _tap(tester, 'feedback-frequency-FeedbackRating.suitable');
+      await _tap(tester, 'feedback-next-button');
+      await _tap(tester, 'feedback-pain-0');
+      await _tap(tester, 'feedback-next-button');
+      await _tap(tester, 'feedback-dizziness-false');
+      await _tap(tester, 'feedback-submit-button');
+      expect(find.text('평가 저장 실패'), findsOneWidget);
+      expect(find.byKey(const ValueKey('feedback-step-5')), findsOneWidget);
+      expect(find.byKey(const ValueKey('demo-complete-card')), findsNothing);
+      await _tap(tester, 'feedback-submit-button');
+      expect(repository.attempts, 2);
+      expect(find.byKey(const ValueKey('demo-complete-card')), findsOneWidget);
+      expect(find.byKey(const ValueKey('send-button')), findsNothing);
+      await _tap(tester, 'completion-home-button');
+      expect(find.byKey(const ValueKey('persona-selector')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('synthetic demo starts without participant credentials', (
     tester,
   ) async {
@@ -180,6 +248,9 @@ void main() {
       await _tap(tester, 'feedback-submit-button');
 
       expect(find.text('오늘은 사용을 보류해 주세요'), findsNothing);
+      await _tap(tester, 'new-demo-button');
+      await _tap(tester, 'profile-continue-button');
+      await _tap(tester, 'device-setup-button');
       await _clear(tester);
       await _tap(tester, 'send-button');
       expect(
@@ -575,10 +646,12 @@ void main() {
 
     final hitMap = find.byKey(const ValueKey('body-hit-map'));
     expect(hitMap, findsOneWidget);
+    await tester.ensureVisible(hitMap);
+    await tester.pumpAndSettle();
     final rect = tester.getRect(hitMap);
 
     await tester.tapAt(
-      Offset(rect.left + rect.width * .50, rect.top + rect.height * .25),
+      Offset(rect.left + rect.width * .37, rect.top + rect.height * .25),
     );
     await tester.pumpAndSettle();
     expect(find.text('어깨 추천 설정'), findsOneWidget);
@@ -665,7 +738,18 @@ void main() {
       find.text('사용자 중지는 기록했으며 불편 보고가 없어 다음 사용을 보류하지 않습니다.'),
       findsOneWidget,
     );
-    expect(find.byKey(const ValueKey('send-button')), findsOneWidget);
+    expect(find.byKey(const ValueKey('demo-complete-card')), findsOneWidget);
+    expect(find.byKey(const ValueKey('send-button')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('completion-home-button')),
+      findsOneWidget,
+    );
+    await _tap(tester, 'new-demo-button');
+    expect(
+      find.byKey(const ValueKey('profile-continue-button')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('send-button')), findsNothing);
   });
 
   testWidgets('중지 실패 시 세션과 재시도 버튼을 유지한다', (tester) async {

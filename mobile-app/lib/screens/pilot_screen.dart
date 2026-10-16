@@ -13,6 +13,7 @@ import '../models/models.dart';
 import '../services/device_gateway.dart';
 import '../services/participation_repository.dart';
 import '../widgets/app_menu_button.dart';
+import '../widgets/journey_section.dart';
 import '../theme/app_theme.dart';
 import 'overview_card.dart';
 import 'participation_screen.dart';
@@ -39,6 +40,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   late final TextEditingController _participantCode;
   late final TextEditingController _pin;
   _PilotStep _step = _PilotStep.profile;
+  final _pageScroll = ScrollController();
   DemoPersona _persona = DemoPersona.low;
   final _participationRepository = const ParticipationRepository();
   List<VisitBooking> _bookings = [];
@@ -63,6 +65,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _reminderTimer?.cancel();
+    _pageScroll.dispose();
     _participantCode.dispose();
     _pin.dispose();
     super.dispose();
@@ -79,8 +82,25 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(pilotControllerProvider, (previous, next) {
+      if ((next.error != null && previous?.error != next.error) ||
+          (previous?.feedbackSession == null && next.feedbackSession != null) ||
+          (previous?.completedSession == null &&
+              next.completedSession != null)) {
+        _scrollToTop();
+      }
+    });
     final state = ref.watch(pilotControllerProvider);
     return state.isLoggedIn ? _dashboard(state) : _login(state);
+  }
+
+  void _scrollToTop() => WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted && _pageScroll.hasClients) _pageScroll.jumpTo(0);
+  });
+
+  void _goTo(_PilotStep step) {
+    setState(() => _step = step);
+    _scrollToTop();
   }
 
   Widget _login(PilotState state) => Scaffold(
@@ -276,15 +296,28 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   Widget _dashboard(PilotState state) {
     final snapshot = state.snapshot!;
     final environment = ref.watch(appEnvironmentProvider);
+    final ending =
+        state.feedbackSession != null || state.completedSession != null;
+    final title = state.completedSession != null
+        ? '시연 완료'
+        : state.feedbackSession != null
+        ? '사용 후 평가'
+        : state.session != null
+        ? '시연 진행 중'
+        : switch (_step) {
+            _PilotStep.profile => '프로필 확인',
+            _PilotStep.measurement => '측정 결과',
+            _PilotStep.device => '부위별 설정',
+          };
     return Scaffold(
       appBar: AppBar(
         leading: Navigator.of(context).canPop() ? const BackButton() : null,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('오늘의 진동 설정'),
+            Text(title),
             Text(
-              state.profile!.code,
+              environment.usesSampleData ? '합성 데이터 시연' : state.profile!.code,
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
@@ -326,7 +359,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                 enabled: !state.isBusy && !state.isRunning,
               ),
               AppMenuAction(
-                label: '로그아웃',
+                label: environment.usesSampleData ? '시연 대상 바꾸기' : '로그아웃',
                 icon: Icons.logout,
                 onSelected: ref.read(pilotControllerProvider.notifier).logout,
                 enabled: !state.isRunning,
@@ -338,28 +371,52 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+          key: const ValueKey('pilot-scroll-view'),
+          controller: _pageScroll,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _SystemStatusStrip(state: state, environment: environment),
+              if (!ending) ...[
+                _SystemStatusStrip(state: state, environment: environment),
+                const SizedBox(height: 16),
+              ],
+              if (!ending &&
+                  state.session == null &&
+                  _step == _PilotStep.profile)
+                TextButton.icon(
+                  key: const ValueKey('participation-button'),
+                  onPressed: _openParticipation,
+                  icon: const Icon(Icons.event_available_outlined),
+                  label: const Text('예약과 출석 보기'),
+                ),
               const SizedBox(height: 8),
-              OutlinedButton.icon(
-                key: const ValueKey('participation-button'),
-                onPressed: _openParticipation,
-                icon: const Icon(Icons.event_available_outlined),
-                label: const Text('예약과 출석 보기'),
-              ),
-              const SizedBox(height: 8),
-              if (state.session == null && state.feedbackSession == null) ...[
+              if (state.session == null && !ending) ...[
                 _JourneyProgress(current: _step),
-                const SizedBox(height: 8),
+                const SizedBox(height: 20),
               ],
               if (state.error != null) ...[
                 _ErrorBanner(message: state.error!),
                 const SizedBox(height: 8),
               ],
-              if (state.session != null)
+              if (state.completedSession != null)
+                _DemoCompleteCard(
+                  state: state,
+                  onHome: () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.of(context).pop();
+                    } else {
+                      ref.read(pilotControllerProvider.notifier).logout();
+                    }
+                  },
+                  onNewDemo: () {
+                    ref
+                        .read(pilotControllerProvider.notifier)
+                        .prepareNextSession();
+                    _goTo(_PilotStep.profile);
+                  },
+                )
+              else if (state.session != null)
                 _RunningCard(state: state)
               else if (state.feedbackSession != null)
                 _FeedbackWizard(state: state)
@@ -394,24 +451,22 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                 ),
               ],
               if (state.session == null &&
-                  state.feedbackSession == null &&
+                  !ending &&
                   _step == _PilotStep.device) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 20),
                 _SafetySettings(state: state),
               ],
             ],
           ),
         ),
       ),
-      bottomNavigationBar: state.feedbackSession != null
+      bottomNavigationBar: ending
           ? null
           : _PrimaryActionBar(
               state: state,
               step: _step,
-              onProfileContinue: () =>
-                  setState(() => _step = _PilotStep.measurement),
-              onOpenDeviceSetup: () =>
-                  setState(() => _step = _PilotStep.device),
+              onProfileContinue: () => _goTo(_PilotStep.measurement),
+              onOpenDeviceSetup: () => _goTo(_PilotStep.device),
             ),
     );
   }

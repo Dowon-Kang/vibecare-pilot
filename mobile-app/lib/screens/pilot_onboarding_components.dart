@@ -430,15 +430,15 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
     ];
     const levelLabels = <String>['낮음', '중간', '높음'];
 
-    return Card(
-      key: const ValueKey('skeletal-muscle-measurement-card'),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        JourneySection(
+          key: const ValueKey('skeletal-muscle-measurement-card'),
+          title: '골격근량 결과',
+          icon: Icons.monitor_heart_outlined,
+          emphasized: true,
           children: [
-            Text('골격근량 결과', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 6),
             Text(
               isSample ? '샘플 · 합성 측정 데이터' : '서버에 저장된 측정 데이터',
               key: const ValueKey('measurement-source'),
@@ -516,9 +516,14 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 18),
-            Text('직전 기록과 비교', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+          ],
+        ),
+        const SizedBox(height: 16),
+        JourneySection(
+          key: const ValueKey('measurement-comparison-card'),
+          title: '직전 기록과 비교',
+          icon: Icons.show_chart_rounded,
+          children: [
             Container(
               key: const ValueKey('measurement-comparison'),
               padding: const EdgeInsets.all(14),
@@ -539,20 +544,22 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
               '작은 차이는 측정 조건에 따라 달라질 수 있습니다. 한 번의 증가·감소만으로 건강 변화를 판단하지 마세요.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            const SizedBox(height: 16),
-            Text('다음 단계', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 6),
-            Text(
-              '아래의 부위별 설정 확인으로 연구용 설정을 살펴보세요. 안전 문진을 마친 뒤 시뮬레이터로만 시연하며 실제 진동은 없습니다.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 12),
-            TextButton.icon(
+
+            OutlinedButton.icon(
               key: const ValueKey('measurement-history-button'),
               onPressed: onDetails,
               icon: const Icon(Icons.history),
               label: const Text('전체 측정 기록 보기'),
             ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        JourneySection(
+          key: const ValueKey('measurement-details-card'),
+          title: '상세 측정 지표',
+          icon: Icons.analytics_outlined,
+          subtitle: '필요한 항목을 펼쳐서 확인하세요.',
+          children: [
             if (latestMeasurement != null)
               ExpansionTile(
                 key: const ValueKey('measurement-details-toggle'),
@@ -574,7 +581,7 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
               ),
           ],
         ),
-      ),
+      ],
     );
   }
 }
@@ -657,18 +664,32 @@ class _MeasurementStepStatusPanel extends StatelessWidget {
           ),
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Column(
-              children: [
-                for (var index = 0; index < visibleKeys.length; index++) ...[
-                  _HighlightedCompositionMetric(
-                    metricKey: visibleKeys[index],
-                    value: metrics[visibleKeys[index]]!,
-                    status: statuses[visibleKeys[index]]!,
-                  ),
-                  if (index < visibleKeys.length - 1) const Divider(height: 1),
-                ],
-              ],
+            padding: const EdgeInsets.all(12),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final columns =
+                    constraints.maxWidth >= 280 &&
+                        MediaQuery.textScalerOf(context).scale(16) <= 22
+                    ? 2
+                    : 1;
+                final width =
+                    (constraints.maxWidth - (columns - 1) * 10) / columns;
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    for (final metric in visibleKeys)
+                      SizedBox(
+                        width: width,
+                        child: _HighlightedCompositionMetric(
+                          metricKey: metric,
+                          value: metrics[metric]!,
+                          status: statuses[metric]!,
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -691,7 +712,6 @@ class _HighlightedCompositionMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _toneColor(status.tone);
-    final largeText = MediaQuery.textScalerOf(context).scale(16) > 22;
     final statusIndicator = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -724,21 +744,18 @@ class _HighlightedCompositionMetric extends StatelessWidget {
         ),
       ],
     );
-    return Padding(
+    return Container(
       key: ValueKey('highlighted-status-$metricKey'),
-      padding: const EdgeInsets.symmetric(vertical: 11),
-      child: largeText
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [metric, const SizedBox(height: 6), statusIndicator],
-            )
-          : Row(
-              children: [
-                Expanded(child: metric),
-                const SizedBox(width: 12),
-                statusIndicator,
-              ],
-            ),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.canvas,
+        borderRadius: AppRadius.smBorder,
+        border: Border.all(color: AppColors.hairlineSoft),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [metric, const SizedBox(height: 8), statusIndicator],
+      ),
     );
   }
 }

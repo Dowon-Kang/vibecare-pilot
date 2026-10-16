@@ -4,6 +4,7 @@ import '../controllers/pilot_controller.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/human_body_map.dart';
+import '../widgets/journey_section.dart';
 
 part 'overview_components.dart';
 
@@ -31,17 +32,16 @@ class OverviewCard extends StatelessWidget {
     final warning = result.warnings
         .where((w) => !w.startsWith('오늘 상태'))
         .join(' ');
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        JourneySection(
+          key: const ValueKey('recommendation-section'),
+          title: '$partLabel 추천 설정',
+          icon: Icons.tune_rounded,
+          subtitle: '선택한 부위에 적용할 시연 설정입니다.',
+          emphasized: true,
           children: [
-            Text(
-              '$partLabel 추천 설정',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 10),
             if (blocked)
               _BlockedMessage(warning: warning)
             else
@@ -63,9 +63,15 @@ class OverviewCard extends StatelessWidget {
               onSettings: onSettings,
               onCommand: onCommand,
             ),
-            const Divider(height: 28),
-            Text('부위 선택', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+          ],
+        ),
+        const SizedBox(height: 16),
+        JourneySection(
+          key: const ValueKey('body-selection-section'),
+          title: '부위 선택',
+          icon: Icons.accessibility_new_rounded,
+          subtitle: '그림이나 부위 이름을 누르면 설정이 바뀝니다.',
+          children: [
             HumanBodyMap(
               results: state.partResults,
               selected: state.bodyPart,
@@ -73,7 +79,7 @@ class OverviewCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }

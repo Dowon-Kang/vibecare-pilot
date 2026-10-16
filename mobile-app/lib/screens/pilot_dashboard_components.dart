@@ -83,17 +83,52 @@ class _JourneyProgress extends StatelessWidget {
     return Semantics(
       container: true,
       label: '진행 단계 ${current.index + 1}/3, ${labels[current.index]}',
-      child: Column(
+      child: Row(
         key: const ValueKey('journey-progress'),
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
-            child: Row(
-              children: [
-                for (var index = 0; index < labels.length; index++)
-                  Expanded(
-                    child: Text(
-                      '${index + 1}  ${labels[index]}',
+          for (var index = 0; index < labels.length; index++)
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 4,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: index == current.index
+                      ? AppColors.brandSoft
+                      : Colors.transparent,
+                  borderRadius: AppRadius.smBorder,
+                  border: Border.all(
+                    color: index == current.index
+                        ? const Color(0xFFB6DAD1)
+                        : Colors.transparent,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 15,
+                      backgroundColor: index <= current.index
+                          ? AppColors.brand
+                          : AppColors.hairlineSoft,
+                      foregroundColor: index <= current.index
+                          ? Colors.white
+                          : AppColors.muted,
+                      child: index < current.index
+                          ? const Icon(Icons.check_rounded, size: 18)
+                          : Text(
+                              '${index + 1}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      labels[index],
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
@@ -105,17 +140,10 @@ class _JourneyProgress extends StatelessWidget {
                             : AppColors.muted,
                       ),
                     ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
-          ),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              minHeight: 4,
-              value: (current.index + 1) / labels.length,
-            ),
-          ),
         ],
       ),
     );
@@ -169,59 +197,84 @@ class _RunningCard extends StatelessWidget {
     final minutes = state.remainingSec ~/ 60;
     final seconds = state.remainingSec % 60;
     final command = state.session!.command;
-    return Card(
+    final progress = command.durationSec > 0
+        ? (1 - state.remainingSec / command.durationSec).clamp(0.0, 1.0)
+        : 0.0;
+    return Card.filled(
+      key: const ValueKey('running-session-card'),
+      margin: EdgeInsets.zero,
+      color: const Color(0xFF124B43),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+        padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
+            Row(
               children: [
-                const _PulseDot(),
-                Text(
-                  state.error == null ? '시연 실행 중' : '중지 응답 미확인',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                const Icon(Icons.vibration_rounded, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    state.error == null ? '시연 실행 중' : '중지 응답 미확인',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text('남은 시간', style: Theme.of(context).textTheme.bodyLarge),
+            const SizedBox(height: 32),
+            const Text(
+              '남은 시간',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFFD8EDE7)),
+            ),
+            const SizedBox(height: 10),
             Semantics(
               liveRegion: true,
               label: '남은 시간 $minutes분 $seconds초',
-              child: Text(
-                '$minutes:${seconds.toString().padLeft(2, '0')}',
-                style: const TextStyle(
-                  fontSize: 60,
-                  height: 1.0,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.ink,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '$minutes:${seconds.toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                    fontSize: 76,
+                    height: 1.1,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
+            const SizedBox(height: 24),
+            LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              color: const Color(0xFFA6DFCE),
+              backgroundColor: Colors.white.withValues(alpha: .16),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            const SizedBox(height: 24),
             Text(
               '기기 출력 ${command.intensityPct}% · ${command.frequencyHz}Hz',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                color: AppColors.canvasSoft,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .10),
                 borderRadius: AppRadius.smBorder,
               ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, size: 21),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('시연 모드입니다. 실제 진동은 발생하지 않습니다.')),
-                ],
+              child: const Text(
+                '시연 모드입니다. 실제 진동은 발생하지 않습니다.',
+                style: TextStyle(color: Color(0xFFD8EDE7)),
               ),
             ),
           ],
@@ -229,17 +282,4 @@ class _RunningCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _PulseDot extends StatelessWidget {
-  const _PulseDot();
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 12,
-    height: 12,
-    decoration: const BoxDecoration(
-      shape: BoxShape.circle,
-      color: AppColors.brand,
-    ),
-  );
 }
