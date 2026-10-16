@@ -522,64 +522,8 @@ class _ParticipantShellState extends State<ParticipantShell>
     child: Text(text, style: Theme.of(context).textTheme.headlineSmall),
   );
   String _date(DateTime value) => '${value.month}월 ${value.day}일';
-  Future<void> _measurementPreparation() async {
-    if (!_allowed) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      builder: (sheetContext) => SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(child: _heading('측정 준비')),
-                IconButton(
-                  tooltip: '닫기',
-                  onPressed: () => Navigator.pop(sheetContext),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const Text(
-              '실제 체성분 측정은 담당자와 기기에서 진행해 주세요. 현재 앱에서 FITRUS 기기를 원격으로 시작하는 기능은 연결되어 있지 않습니다.',
-            ),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(sheetContext);
-                _select(0);
-              },
-              child: const Text('연결된 측정 기록 보기'),
-            ),
-            OutlinedButton(
-              onPressed: () {
-                Navigator.pop(sheetContext);
-                _select(0, attendance: true);
-              },
-              child: const Text('예약·출석 화면 열기'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(sheetContext);
-                if (_allowed) widget.onStart();
-              },
-              child: const Text('합성 데이터로 측정 흐름 살펴보기'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _home() {
     final readings = _readings;
-    final today = _bookings
-        .where((b) => DateUtils.isSameDay(b.startsAt, _now))
-        .toList();
     return PageContent(
       children: [
         Text(
@@ -587,12 +531,12 @@ class _ParticipantShellState extends State<ParticipantShell>
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 6),
-        _heading('오늘의 건강 기록'),
-        if (widget.sample) const Text('샘플 데이터 · 실제 참여자 기록과 분리됩니다.'),
+        _heading('합성 데이터 시연'),
+        const Text('합성 데이터로 진행하며 실제 참여자 기록과 분리됩니다.'),
         const SizedBox(height: 16),
         _card(const Color(0xFF164F47), [
           const Text(
-            '측정으로 시작하는\n오늘의 건강 관리',
+            '합성 데이터로\n측정부터 시뮬레이션까지',
             style: TextStyle(
               color: Colors.white,
               fontSize: 28,
@@ -602,9 +546,7 @@ class _ParticipantShellState extends State<ParticipantShell>
           ),
           const SizedBox(height: 12),
           Text(
-            widget.sample
-                ? '프로필부터 연구용 시뮬레이션까지 차근차근 살펴봐요.'
-                : '담당자와 측정할 준비를 하고 기록을 확인해요.',
+            '프로필 확인부터 측정 결과, 부위별 설정까지 차근차근 체험해요.',
             style: const TextStyle(color: Color(0xFFDCEEE4)),
           ),
           const SizedBox(height: 20),
@@ -618,24 +560,19 @@ class _ParticipantShellState extends State<ParticipantShell>
                 fontWeight: FontWeight.w700,
               ),
             ),
-            onPressed: widget.sample ? widget.onStart : _measurementPreparation,
+            onPressed: widget.onStart,
             icon: const Icon(Icons.monitor_heart_outlined),
-            label: Text(widget.sample ? '측정 시작 · 샘플' : '측정 시작'),
+            label: const Text('합성 데이터 시연 시작'),
           ),
         ]),
         const SizedBox(height: 16),
-        _card(const Color(0xFFEDF3DF), [
-          Text(
-            today.any((b) => b.attended) ? '오늘 출석을 남겼어요' : '오늘 참여 기록을 확인해요',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: () => _select(0, attendance: true),
-            icon: const Icon(Icons.event_available_outlined),
-            label: const Text('예약 · 출석체크 · 달력 열기'),
-          ),
-        ]),
+        const Text('실제 FITRUS 측정과 진동 기기는 연결되지 않습니다.'),
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          onPressed: () => _select(0, attendance: true),
+          icon: const Icon(Icons.event_available_outlined),
+          label: const Text('예약 · 출석체크 · 달력 열기'),
+        ),
         const SizedBox(height: 24),
         _heading('최근 측정'),
         if (readings.isEmpty)
@@ -744,8 +681,10 @@ class _ParticipantShellState extends State<ParticipantShell>
       if (widget.aiService != null) ...[
         WellnessAiPanel(
           service: widget.aiService!,
-          measurementKey:
-              '${widget.owner}:${_readings.isEmpty ? '' : '${_readings.first.date}:${_readings.first.muscle}:${_readings.first.weight}:${_readings.first.fat}'}',
+          sample: widget.sample,
+          measurementKey: widget.sample
+              ? 'gemini-fixed-sample-v1'
+              : '${widget.owner}:${_readings.isEmpty ? '' : '${_readings.first.date}:${_readings.first.muscle}:${_readings.first.weight}:${_readings.first.fat}'}',
         ),
         const SizedBox(height: 20),
       ] else

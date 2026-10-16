@@ -133,6 +133,19 @@ jobs:
           flutter build web --release --base-href /vibecare-pilot/ --pwa-strategy=none
           --dart-define=VIBECARE_SUPABASE_URL=https://jaekmjiupbsufxaevosf.supabase.co
           --dart-define=VIBECARE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YvezVqzuHVi8Nuxio01k9Q_v25aPNdK
+      - name: Version the web entrypoint to avoid stale browser code
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          path = Path('mobile-app/build/web/flutter_bootstrap.js')
+          source = path.read_text()
+          original = '"mainJsPath":"main.dart.js"'
+          assert source.count(original) == 1, 'Flutter entrypoint format changed'
+          replacement = '"mainJsPath":"main.dart.js?rev=' + os.environ['GITHUB_SHA'] + '"'
+          path.write_text(source.replace(original, replacement))
+          PY
       - name: Add Pages fallback files
         shell: bash
         run: |

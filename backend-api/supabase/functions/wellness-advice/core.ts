@@ -139,3 +139,65 @@ export function createHandler(config: Config) {
     }
   };
 }
+
+export type SampleConfig = { supabaseUrl:string; publishableKey:string; geminiKey:string; model?:string; allowSample?:boolean; fetcher?:typeof fetch };
+
+// This fixed fixture is the only measurement source for the free Gemini demo.
+const sampleContext = {sample:true,measurementId:'gemini-fixed-sample-v1',measuredAt:'SYNTHETIC',muscleKg:22,weightKg:60,bodyFatPct:27};
+export function createSampleHandler(config: SampleConfig) {
+ const send=config.fetcher??fetch;
+ return async(request:Request):Promise<Response>=>{
+  const origin=request.headers.get('Origin');
+  const allowed=!origin||origin==='https://dowon-kang.github.io'||/^http:\/\/(localhost|127\.0\.0\.1):[0-9]+$/.test(origin);
+  const headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Vary':'Origin',
+   'Access-Control-Allow-Origin':allowed&&origin?origin:'https://dowon-kang.github.io',
+   'Access-Control-Allow-Headers':'apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'};
+  const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers});
+  try{
+   if(!allowed)failure(403,'ORIGIN_DENIED');
+   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
+   if(request.method!=='POST')failure(405,'METHOD_NOT_ALLOWED');
+   // Public app key authentication; persistent global quota is the abuse boundary.
+   if(!config.publishableKey||request.headers.get('apikey')!==config.publishableKey)failure(401,'APP_KEY_REQUIRED');
+   const reader=request.body?.getReader();let size=0;const chunks:Uint8Array[]=[];
+   if(reader){try{while(true){const item=await reader.read();if(item.done)break;size+=item.value.length;if(size>512){await reader.cancel();failure(413,'REQUEST_TOO_LARGE');}chunks.push(item.value);}}finally{reader.releaseLock();}}
+   const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
+   let input:{action?:string;consentVersion?:string} = {};try{input=JSON.parse(new TextDecoder().decode(bytes));}catch{failure(400,'INVALID_JSON');}
+   if(!input||Array.isArray(input)||Object.keys(input).some(k=>!['action','consentVersion'].includes(k)))failure(400,'SAMPLE_INPUT_ONLY');
+   const model=config.model??'gemini-3.5-flash-lite';
+   if(input.action==='context'&&Object.keys(input).length===1)return json({...sampleContext,configured:Boolean(config.geminiKey&&config.allowSample),provider:'Gemini',model});
+   if(input.action!=='generate'||input.consentVersion!=='gemini-sample-v1'||Object.keys(input).length!==2)failure(400,'CONSENT_REQUIRED');
+   if(!config.geminiKey||!config.allowSample)failure(503,'AI_NOT_CONFIGURED');
+   const signal=AbortSignal.any([request.signal,AbortSignal.timeout(25000)]);
+   const reservation=await send(config.supabaseUrl+'/rest/v1/rpc/consume_wellness_sample_request',{method:'POST',signal,headers:{apikey:config.publishableKey,'Content-Type':'application/json'},body:'{}'});
+   if(!reservation.ok)failure(503,'SAMPLE_QUOTA_UNAVAILABLE');
+   const quota=await reservation.json() as {allowed?:boolean;remaining?:number;code?:string};
+   if(quota.allowed!==true)failure(429,quota.code==='SAMPLE_MINUTE_LIMIT'?'SAMPLE_MINUTE_LIMIT':'SAMPLE_DAILY_LIMIT');
+   const remaining=quota.remaining;
+   if(typeof remaining!=='number'||!Number.isInteger(remaining)||remaining<0||remaining>19)failure(503,'SAMPLE_QUOTA_UNAVAILABLE');
+   const schema={type:'OBJECT',properties:{focus:{type:'STRING',enum:Object.keys(focuses)},food:{type:'ARRAY',minItems:1,maxItems:2,items:{type:'STRING',enum:Object.keys(catalog.food)}},movement:{type:'ARRAY',minItems:1,maxItems:2,items:{type:'STRING',enum:Object.keys(catalog.movement)}}},required:['focus','food','movement']};
+   const response=await send('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{method:'POST',signal,
+    headers:{'x-goog-api-key':config.geminiKey,'Content-Type':'application/json'},
+    body:JSON.stringify({systemInstruction:{parts:[{text:'This is a synthetic software demonstration, not a real person. Select general educational candidate IDs only; never diagnose, grade health or prescribe. Food: balanced_plate=varied meal composition, protein_variety=review usual protein foods, vegetable_variety=review vegetables. Movement: usual_walk=familiar safe walking, daily_tasks=familiar daily movement. Focus: context=measurement limits, consistency=comparable conditions, measurement=understand recorded values. Return 1-2 permitted IDs per list in schema JSON.'}]},
+     contents:[{role:'user',parts:[{text:JSON.stringify({synthetic:true,muscleKg:22,weightKg:60,bodyFatPct:27,goal:'regular_meals'})}]}],
+     generationConfig:{responseMimeType:'application/json',responseSchema:schema,maxOutputTokens:512}})});
+   if(!response.ok)failure(response.status===429?503:502,'SAMPLE_AI_UNAVAILABLE');
+   const raw=await response.text();if(raw.length>65536)failure(502,'INVALID_AI_RESPONSE');
+   const result=JSON.parse(raw) as {candidates?:{finishReason?:string;content?:{parts?:{text?:string;thought?:boolean}[]}}[]};
+   if(result.candidates?.length!==1||result.candidates[0].finishReason!=='STOP')failure(502,'AI_INCOMPLETE');
+   const text=result.candidates![0].content?.parts?.filter(p=>!p.thought&&typeof p.text==='string').map(p=>p.text).join('')??'';
+   const choices=JSON.parse(text) as {focus?:string;food?:unknown;movement?:unknown};
+   const valid=(v:unknown,ids:string[])=>Array.isArray(v)&&v.length>=1&&v.length<=2&&new Set(v).size===v.length&&v.every(id=>typeof id==='string'&&ids.includes(id));
+   if(!choices||Object.keys(choices).length!==3||Object.keys(choices).some(k=>!['focus','food','movement'].includes(k))||!Object.hasOwn(focuses,choices.focus??'')||!valid(choices.food,Object.keys(catalog.food))||!valid(choices.movement,Object.keys(catalog.movement)))failure(502,'INVALID_AI_RESPONSE');
+   return json({...sampleContext,provider:'Gemini',model,generatedAt:new Date().toISOString(),remaining:quota.remaining,
+    analysis:focuses[choices.focus as keyof typeof focuses],
+    food:(choices.food as (keyof typeof catalog.food)[]).map(id=>({id,...catalog.food[id]})),
+    movement:(choices.movement as (keyof typeof catalog.movement)[]).map(id=>({id,...catalog.movement[id]})),foodHeld:false,movementHeld:false});
+  }catch(error){
+   if(error instanceof Failure)return json({error:error.code},error.status);
+   if(request.signal.aborted||(error instanceof Error&&['AbortError','TimeoutError'].includes(error.name)))return json({error:'REQUEST_TIMEOUT'},504);
+   if(error instanceof SyntaxError)return json({error:'INVALID_AI_RESPONSE'},502);
+   return json({error:'SAMPLE_AI_UNAVAILABLE'},502);
+  }
+ };
+}

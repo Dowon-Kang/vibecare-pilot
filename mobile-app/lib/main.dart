@@ -40,7 +40,7 @@ class VibeCareApp extends StatelessWidget {
           ? const SupabaseHome()
           : buildEnvironment.usesBackendApi
           ? const PilotScreen()
-          : const SamplePilotScope(),
+          : const SamplePilotScope(showHome: true),
     );
   }
 }

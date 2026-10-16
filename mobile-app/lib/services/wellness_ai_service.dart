@@ -22,7 +22,9 @@ class SupabaseWellnessAiService implements WellnessAiService {
     required this.endpoint,
     required this.publishableKey,
     Dio? dio,
-  }) : _dio =
+    bool sample = false,
+  }) : _sample = sample,
+       _dio =
            dio ??
            Dio(
              BaseOptions(
@@ -31,16 +33,28 @@ class SupabaseWellnessAiService implements WellnessAiService {
                sendTimeout: const Duration(seconds: 10),
              ),
            );
-  final SupabaseClient client;
+  factory SupabaseWellnessAiService.geminiSample({
+    required String endpoint,
+    required String publishableKey,
+    Dio? dio,
+  }) => SupabaseWellnessAiService(
+    client: null,
+    endpoint: endpoint,
+    publishableKey: publishableKey,
+    dio: dio,
+    sample: true,
+  );
+  final bool _sample;
+  final SupabaseClient? client;
   final String endpoint, publishableKey;
   final Dio _dio;
   Future<Map<String, dynamic>> _request(
     Map<String, dynamic> body,
     CancelToken token,
   ) async {
-    final owner = client.auth.currentUser?.id,
-        session = client.auth.currentSession;
-    if (owner == null || session == null) {
+    final owner = client?.auth.currentUser?.id,
+        session = client?.auth.currentSession;
+    if (!_sample && (owner == null || session == null)) {
       throw const WellnessAiFailure('다시 로그인한 뒤 AI 안내를 열어 주세요.');
     }
     try {
@@ -50,15 +64,28 @@ class SupabaseWellnessAiService implements WellnessAiService {
         cancelToken: token,
         options: Options(
           headers: {
-            'Authorization': 'Bearer ${session.accessToken}',
+            if (!_sample) 'Authorization': 'Bearer ${session!.accessToken}',
             'apikey': publishableKey,
           },
         ),
       );
-      if (client.auth.currentUser?.id != owner || token.isCancelled) {
+      if ((!_sample && client?.auth.currentUser?.id != owner) ||
+          token.isCancelled) {
         throw const WellnessAiFailure('계정이 변경되어 결과를 표시하지 않았습니다.');
       }
       final data = Map<String, dynamic>.from(response.data as Map);
+      if (_sample) {
+        if (data['sample'] != true ||
+            data['provider'] != 'Gemini' ||
+            data['measurementId'] != 'gemini-fixed-sample-v1' ||
+            data['muscleKg'] != 22 ||
+            data['weightKg'] != 60 ||
+            data['bodyFatPct'] != 27) {
+          throw const FormatException();
+        }
+      } else if (data['sample'] == true) {
+        throw const FormatException();
+      }
       if (body['action'] == 'context') {
         if (data['measurementId'] is! String ||
             data['measuredAt'] is! String ||
@@ -71,7 +98,8 @@ class SupabaseWellnessAiService implements WellnessAiService {
           throw const FormatException();
         }
       } else {
-        if (data['measurementId'] != body['measurementId'] ||
+        if (data['measurementId'] !=
+                (_sample ? 'gemini-fixed-sample-v1' : body['measurementId']) ||
             data['analysis'] is! String ||
             data['foodHeld'] is! bool ||
             data['movementHeld'] is! bool) {
@@ -109,6 +137,12 @@ class SupabaseWellnessAiService implements WellnessAiService {
         'AUTH_REQUIRED': '다시 로그인한 뒤 AI 안내를 열어 주세요.',
         'DAILY_LIMIT': '오늘의 AI 요청 한도에 도달했어요. UTC 기준 다음 날 다시 이용해 주세요.',
         'AI_NOT_CONFIGURED': 'AI 서버 설정이 준비되지 않았어요. 일반 안내를 먼저 살펴보세요.',
+        'APP_KEY_REQUIRED': '샘플 서버 연결 설정을 확인해 주세요.',
+        'SAMPLE_MINUTE_LIMIT': '공용 시연 요청이 많아요. 1분 뒤 다시 시도해 주세요.',
+        'SAMPLE_DAILY_LIMIT':
+            '오늘의 공용 Gemini 시연 한도(20회)에 도달했어요. UTC 기준 다음 날 다시 이용해 주세요.',
+        'SAMPLE_QUOTA_UNAVAILABLE': '시연 요청 한도를 확인할 수 없어 AI를 호출하지 않았어요.',
+        'SAMPLE_AI_UNAVAILABLE': 'Gemini 시연 응답을 받아오지 못했어요. 일반 안내를 먼저 살펴보세요.',
         'REQUEST_TIMEOUT': 'AI 응답이 늦어지고 있어요. 자동으로 재요청하지 않았습니다.',
       };
       throw WellnessAiFailure(
@@ -128,9 +162,14 @@ class SupabaseWellnessAiService implements WellnessAiService {
   Future<Map<String, dynamic>> generate(
     Map<String, dynamic> input,
     CancelToken token,
-  ) => _request({
-    'action': 'generate',
-    ...input,
-    'consentVersion': 'openai-wellness-v1',
-  }, token);
+  ) => _request(
+    _sample
+        ? {'action': 'generate', 'consentVersion': 'gemini-sample-v1'}
+        : {
+            'action': 'generate',
+            ...input,
+            'consentVersion': 'openai-wellness-v1',
+          },
+    token,
+  );
 }

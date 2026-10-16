@@ -89,6 +89,9 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   }
 
   Widget _login(PilotState state) => Scaffold(
+    appBar: Navigator.canPop(context)
+        ? AppBar(leading: const BackButton(), title: const Text('VibeCare'))
+        : null,
     body: SafeArea(
       child: Center(
         child: SingleChildScrollView(
@@ -186,7 +189,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                   OutlinedButton(
                     onPressed: () => Navigator.of(context).push<void>(
                       MaterialPageRoute(
-                        builder: (_) => const SamplePilotScope(),
+                        builder: (_) => const SamplePilotScope(showHome: true),
                       ),
                     ),
                     child: const Text('샘플 홈·생활 습관 보기'),

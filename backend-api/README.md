@@ -146,3 +146,12 @@ FITRUS 요청은 `measure-api-guide.md`의 엔드포인트별 필드를 서버�
 순서: `supabase/migrations/*wellness_ai.sql` 적용 → `wellness-advice` 함수 배포 → Supabase Secret에 OPENAI_API_KEY, OPENAI_WELLNESS_MODEL, WELLNESS_ALLOW_REAL_DATA 등록 → 합성 데이터의 실제 공급자 응답/인증·RLS·quota 검증 → 웹/APK 배포. Secret 예시는 `supabase/functions/.env.example`이며 키는 Git/Flutter에 넣지 않는다. 키 접근과 서버 비밀값 등록은 명시적 승인 후 진행한다. 날짜별 요청 횟수만 DB에 남으며, 신규 quota 테이블은 RLS 활성화/직접 접근 회수, 함수는 호출자의 auth.uid만 사용한다.
 
 오류는 AUTH_REQUIRED(401), MEASUREMENT_MISSING(404), MEASUREMENT_CHANGED(409), 측정 검토/신선도(422), DAILY_LIMIT(429), 설정/공급자 장애(5xx)를 구분한다. 실패를 샘플 AI 답변으로 대체하지 않는다. 테스트는 `npm test -- test/wellness-ai.test.ts`; 실제 모델 호출·운영 DB 확인 상태는 checklist.md를 따른다.
+
+
+### Gemini 합성 시연
+
+`wellness-sample`은 publishable apikey를 직접 확인하는 합성 전용 함수다. 입력은 `{action:"context"}` 또는 `{action:"generate",consentVersion:"gemini-sample-v1"}`만 받는다. 서버의 고정 합성값(22kg/60kg/27%, regular_meals) 외 데이터는 공급자에게 보내지 않으며 측정/프로필/Auth 조회를 수행하지 않는다. 함수 설정 `verify_jwt=false`는 새 샘플 함수에만 적용한다. 공개키는 비밀이 아니므로 DB RPC가 공용 3/min·20/day를 원자적으로 제한하며 누구나 공용 한도를 소진할 수 있는 시연 서비스다. 실패한 호출도 포함하고 자동 재시도는 없다.
+
+Supabase 서버 Secret에 GEMINI_API_KEY와 GEMINI_SAMPLE_ENABLED=true를 설정하고 `20261015142131_wellness_sample_quota.sql` 및 함수를 배포한다. 무료 Gemini에는 실제 건강정보를 전송하지 않는다. 운영 실제 측정용 OpenAI 경로와 물리 출력 금지는 유지한다. 키는 Flutter/Git/로그에 넣지 않는다.
+
+근거(2026-10-15): https://ai.google.dev/gemini-api/terms , https://ai.google.dev/api/generate-content , https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite .

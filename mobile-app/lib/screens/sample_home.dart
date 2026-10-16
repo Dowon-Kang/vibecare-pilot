@@ -4,6 +4,7 @@ import '../controllers/pilot_controller.dart';
 import '../services/participation_repository.dart';
 import 'participant_shell.dart';
 import 'pilot_screen.dart';
+import '../services/wellness_ai_service.dart';
 
 class SampleHome extends StatefulWidget {
   const SampleHome({
@@ -11,16 +12,26 @@ class SampleHome extends StatefulWidget {
     this.repository = const ParticipationRepository(),
     this.clock,
     this.webReminders,
+    this.aiService,
   });
   final VisitBookingRepository repository;
   final DateTime Function()? clock;
   final bool? webReminders;
+  final WellnessAiService? aiService;
   @override
   State<SampleHome> createState() => _SampleHomeState();
 }
 
 class _SampleHomeState extends State<SampleHome> {
   List<ParticipantReading> _readings = [];
+  late final _aiService =
+      widget.aiService ??
+      (supabaseUrl.isNotEmpty && supabasePublishableKey.isNotEmpty
+          ? SupabaseWellnessAiService.geminiSample(
+              endpoint: '$supabaseUrl/functions/v1/wellness-sample',
+              publishableKey: supabasePublishableKey,
+            )
+          : null);
   Future<void> _openPilot() async {
     final container = ProviderScope.containerOf(context);
     await Navigator.of(context).push<void>(
@@ -52,6 +63,7 @@ class _SampleHomeState extends State<SampleHome> {
     owner: 'sample:USER-001',
     participantId: 'USER-001',
     sample: true,
+    aiService: _aiService,
     repository: widget.repository,
     onStart: _openPilot,
     readings: _readings,
