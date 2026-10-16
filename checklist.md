@@ -353,3 +353,11 @@ DSPy 후속:
 - 공개 배포·실제 계정/RLS·실기기·스크린리더 검증 NOT RUN. Backend/API/DB/알고리즘 변경 없음.
 - PASS: `flutter build apk --debug --no-pub`, assembleDebug 251.4초, `mobile-app/build/app/outputs/flutter-apk/app-debug.apk`. 기본 합성 모드 debug 빌드이며 공개 웹 배포는 포함하지 않는다.
 - 배포 전 PR 검토 보완: 직접 시연 로그인에서 보이는 BackButton 부재를 RED로 재현한 뒤 이전 화면이 있는 로그인에 앱바·뒤로가기를 추가했다. sample_route_scope_test 10/10 재통과(취소 후 재진입 포함). 최종 전체 검증은 GitHub PR/main quality-gates 결과로 확인한다.
+
+## 2026-10-17 합성 시연 중복 로그인 제거
+
+기준 main `2360a21aa0324e8354cd64eb89b80a6db870b36d`의 `fix/sample-start-without-login-20261017` 작업판.
+
+- RED: 합성 시연 준비 화면에 TextField 2개가 존재하여 코드·PIN 입력 부재 회귀 테스트가 의도한 FAIL.
+- PASS: `flutter test --no-pub test/widget_test.dart test/sample_route_scope_test.dart --concurrency=1 --reporter expanded` 35/35. 320px·글자2배에서 대상 선택/시연 시작/프로필 반영, Backend 인증 필드 보존, 시연 취소·복귀와 기존 설정/문진 흐름 포함.
+- 전체 형식·분석·테스트·APK·웹 빌드와 공개 배포는 같은 최종 커밋의 GitHub quality-gates에서 확인한다. 실계정/RLS·실기기·임상 검증은 이번 변경 검증에 포함하지 않는다.

@@ -186,3 +186,7 @@ SampleHome → 기존 WellnessAiPanel의 sample 모드 → wellness-sample Edge 
 ## 합성 시연 진입 경로 (2026-10-16)
 
 ParticipantShell의 주 버튼은 onStart로 바로 연결한다. SamplePilotScope는 기본적으로 격리한 Mock 컨테이너에서 PilotScreen을 직접 연다. 앱의 샘플 기본 홈과 명시적 샘플 홈 메뉴만 showHome=true로 SampleHome을 연다. 계정 홈에서 시연에 들어갈 때 두 번째 ParticipantShell을 쌓지 않는다.
+
+## 합성 시연 시작 화면 (2026-10-17)
+
+격리된 샘플 PilotScreen의 준비 화면은 대상 선택과 시연 시작만 제공한다. 시연 시작은 고정 Mock 계정으로 기존 로컬 세션을 초기화하고 선택된 DemoPersona를 적용한다. Supabase 사용자의 자격증명이나 세션을 복사하지 않는다. Backend API 모드에서만 참여자 코드·PIN 입력과 기존 로그인 동작을 제공한다.
