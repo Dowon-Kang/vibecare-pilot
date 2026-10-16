@@ -18,6 +18,13 @@ abstract final class AppColors {
   static const muted = Color(0xFF6C6C70);
   static const faint = Color(0xFF8E8E93);
   static const background = Color(0xFFF8FCFB);
+  // Warm participant pages are scoped; the device demo retains the cool base.
+  static const warmBackground = Color(0xFFFFF9F1);
+  static const creamSurface = Color(0xFFFFF1DA);
+  static const mealSurface = Color(0xFFFFE8D4);
+  static const mealInk = Color(0xFF7C4324);
+  static const movementSurface = Color(0xFFE4EBD8);
+  static const movementInk = Color(0xFF38523C);
   static const canvas = Color(0xFFFFFFFF);
   static const canvasSoft = Color(0xFFEDF7F4);
   static const field = Color(0xFFEDF7F4);

@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../models/daily_guide.dart';
+export '../models/daily_guide.dart' show ParticipantReading;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/booking_reminder.dart';
@@ -9,20 +11,6 @@ import 'wellness_screen.dart';
 import 'daily_guide_screen.dart';
 import '../theme/app_theme.dart';
 import 'wellness_ai_panel.dart';
-
-class ParticipantReading {
-  const ParticipantReading(this.date, this.muscle, this.weight, this.fat);
-  final DateTime date;
-  final double muscle, weight, fat;
-  bool get valid =>
-      muscle.isFinite &&
-      muscle > 0 &&
-      weight.isFinite &&
-      weight > 0 &&
-      fat.isFinite &&
-      fat >= 0 &&
-      fat <= 100;
-}
 
 class ParticipantShell extends StatefulWidget {
   const ParticipantShell({
@@ -449,6 +437,9 @@ class _ParticipantShellState extends State<ParticipantShell>
                               : '휴대폰 알림 권한을 확인해 주세요.',
                         ),
                         TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.comparisonInk,
+                          ),
                           onPressed: () async {
                             try {
                               await _reminder.requestPermission();
@@ -461,6 +452,9 @@ class _ParticipantShellState extends State<ParticipantShell>
                           child: const Text('알림 권한 요청'),
                         ),
                         TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.comparisonInk,
+                          ),
                           onPressed: () async {
                             try {
                               await _reminder.openSettings();
@@ -486,6 +480,9 @@ class _ParticipantShellState extends State<ParticipantShell>
                         ),
                       if (_settingsError != null)
                         TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.comparisonInk,
+                          ),
                           onPressed: _saving
                               ? null
                               : () async {
@@ -578,7 +575,7 @@ class _ParticipantShellState extends State<ParticipantShell>
         const SizedBox(height: 24),
         _heading('최근 측정'),
         if (readings.isEmpty)
-          _card(const Color(0xFFEDF5F2), [
+          _card(AppColors.creamSurface, [
             const Text('연결된 측정 기록이 없어요.'),
             const SizedBox(height: 8),
             Text(
@@ -588,7 +585,7 @@ class _ParticipantShellState extends State<ParticipantShell>
             ),
           ])
         else
-          _card(const Color(0xFFEDF5F2), [
+          _card(AppColors.creamSurface, [
             const Text('골격근량'),
             Text(
               '${readings.first.muscle.toStringAsFixed(1)} kg',
@@ -600,16 +597,22 @@ class _ParticipantShellState extends State<ParticipantShell>
             ),
             Text(_date(readings.first.date)),
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.comparisonInk,
+              ),
               onPressed: () => _select(0),
               child: const Text('결과 자세히 보기'),
             ),
           ]),
         const SizedBox(height: 16),
-        _card(AppColors.brandSoft, [
+        _card(AppColors.mealSurface, [
           Text('생활 돌보기', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           const Text('식사와 움직임을 내 속도로 돌아봐요.'),
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.comparisonInk,
+            ),
             onPressed: () => _select(2),
             child: const Text('식사·운동 안내 열기'),
           ),
@@ -639,7 +642,7 @@ class _ParticipantShellState extends State<ParticipantShell>
                   _heading('내 몸의 기록'),
                   if (_readings.isEmpty) const Text('연결된 측정 기록이 없습니다.'),
                   for (final reading in _readings) ...[
-                    _card(const Color(0xFFEDF2FA), [
+                    _card(AppColors.creamSurface, [
                       Text(
                         _date(reading.date),
                         style: Theme.of(context).textTheme.titleMedium,
@@ -657,6 +660,9 @@ class _ParticipantShellState extends State<ParticipantShell>
                   ),
                   if (widget.sample)
                     TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.comparisonInk,
+                      ),
                       onPressed: widget.onStart,
                       child: const Text('샘플 연구 결과와 상세 지표 확인'),
                     ),
@@ -677,21 +683,34 @@ class _ParticipantShellState extends State<ParticipantShell>
       ],
     ),
   );
-  void _openGuide(DailyGuideKind kind) => Navigator.of(
-    context,
-  ).push<void>(MaterialPageRoute(builder: (_) => DailyGuideScreen(kind: kind)));
+  void _openGuide(DailyGuideKind kind) => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => DailyGuideScreen(
+        kind: kind,
+        readings: widget.readings,
+        clock: widget.clock,
+        sample: widget.sample,
+        canAccess: () => _allowed,
+        accessChanges: widget.accessChanges,
+      ),
+    ),
+  );
 
   Widget _life() => PageContent(
     children: [
       _heading('오늘의 식사와 운동'),
-      const Text('측정 연결 없이 바로 볼 수 있는 안내예요. 오늘 살펴볼 내용을 골라보세요.'),
+      const Text('내 측정과 관심 항목으로 식사와 움직임을 살펴봐요. 측정이 없어도 전체 안내를 볼 수 있어요.'),
       const SizedBox(height: 20),
-      _card(AppColors.brandSoft, [
-        const Icon(Icons.restaurant_outlined, size: 34, color: AppColors.brand),
+      _card(AppColors.mealSurface, [
+        const Icon(
+          Icons.restaurant_outlined,
+          size: 34,
+          color: AppColors.mealInk,
+        ),
         const SizedBox(height: 12),
         Text('무엇을 먹을지 함께 살펴봐요', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
-        const Text('밥·두부·채소, 생선·나물 한 끼 조합과 준비 방법을 볼 수 있어요.'),
+        const Text('두부·생선·달걀·콩 등 식사 8가지에서 골라요. 관심 항목에 따라 먼저 볼 조합이 달라져요.'),
         const SizedBox(height: 16),
         FilledButton.icon(
           key: const ValueKey('open-food-guide'),
@@ -701,12 +720,16 @@ class _ParticipantShellState extends State<ParticipantShell>
         ),
       ]),
       const SizedBox(height: 16),
-      _card(AppColors.canvas, [
-        const Icon(Icons.directions_walk, size: 34, color: AppColors.brand),
+      _card(AppColors.movementSurface, [
+        const Icon(
+          Icons.directions_walk,
+          size: 34,
+          color: AppColors.movementInk,
+        ),
         const SizedBox(height: 12),
         Text('내 몸에 맞게 천천히 움직여요', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
-        const Text('오늘 몸 상태를 확인하고 의자에서 하는 운동 방법을 살펴봐요.'),
+        const Text('앉는 동작 4가지와 서는 동작 2가지. 오늘 몸 상태를 확인한 뒤 하나씩 살펴봐요.'),
         const SizedBox(height: 16),
         FilledButton.icon(
           key: const ValueKey('open-movement-guide'),
@@ -716,7 +739,7 @@ class _ParticipantShellState extends State<ParticipantShell>
         ),
       ]),
       const SizedBox(height: 20),
-      _card(AppColors.canvas, [
+      _card(AppColors.creamSurface, [
         Text('오늘 실천 기록', style: Theme.of(context).textTheme.titleLarge),
         const Text('내가 한 활동이나 쉬기를 직접 남기는 선택 기능이에요. 안내를 읽는 것만으로 기록되지 않아요.'),
         OutlinedButton.icon(
@@ -767,6 +790,9 @@ class _ParticipantShellState extends State<ParticipantShell>
         Text(widget.sample ? '샘플 참여자 · 실제 계정과 분리' : '로그인한 계정의 참여 기록을 확인합니다.'),
         if (widget.sample)
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.comparisonInk,
+            ),
             onPressed: widget.onStart,
             child: const Text('연구용 프로필 확인·수정'),
           ),
@@ -816,6 +842,7 @@ class _ParticipantShellState extends State<ParticipantShell>
       children: [
         _heading('알림'),
         TextButton(
+          style: TextButton.styleFrom(foregroundColor: AppColors.comparisonInk),
           onPressed: () => setState(
             () => _read.addAll([
               for (final b in upcoming) b.id,
@@ -827,7 +854,7 @@ class _ParticipantShellState extends State<ParticipantShell>
         if (upcoming.isEmpty && widget.notices.isEmpty)
           const Text('새 알림이 없어요. 예약과 운영 안내가 있으면 여기에서 확인할 수 있습니다.'),
         for (final booking in upcoming) ...[
-          _card(const Color(0xFFEDF2FA), [
+          _card(AppColors.creamSurface, [
             const Text('참여 일정'),
             Text(
               '${_date(booking.startsAt)} · ${TimeOfDay.fromDateTime(booking.startsAt).format(context)}',
@@ -835,6 +862,9 @@ class _ParticipantShellState extends State<ParticipantShell>
             ),
             Text(_read.contains(booking.id) ? '읽음' : '읽지 않음'),
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.comparisonInk,
+              ),
               onPressed: () {
                 setState(() => _read.add(booking.id));
                 _select(0, attendance: true);
@@ -850,6 +880,9 @@ class _ParticipantShellState extends State<ParticipantShell>
             const SizedBox(height: 8),
             Text(notice.body),
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.comparisonInk,
+              ),
               onPressed: () => setState(() => _read.add(notice.title)),
               child: Text(_read.contains(notice.title) ? '읽음' : '읽음으로 표시'),
             ),
@@ -869,7 +902,9 @@ class _ParticipantShellState extends State<ParticipantShell>
   Widget build(BuildContext context) {
     final allowed = _allowed;
     return Scaffold(
+      backgroundColor: AppColors.warmBackground,
       appBar: AppBar(
+        backgroundColor: AppColors.warmBackground,
         leading: Navigator.of(context).canPop() ? const BackButton() : null,
         title: const Text('VibeCare'),
         actions: [
@@ -900,6 +935,9 @@ class _ParticipantShellState extends State<ParticipantShell>
                     content: Text(widget.dataError!),
                     actions: [
                       TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.comparisonInk,
+                        ),
                         onPressed: widget.onRefresh,
                         child: const Text('기록 다시 불러오기'),
                       ),
@@ -919,6 +957,7 @@ class _ParticipantShellState extends State<ParticipantShell>
             ),
       bottomNavigationBar: NavigationBar(
         key: const ValueKey('participant-navigation'),
+        backgroundColor: AppColors.warmBackground,
         selectedIndex: _tab,
         onDestinationSelected: allowed ? _select : null,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,

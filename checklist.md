@@ -392,3 +392,15 @@ DSPy 후속:
 - PASS: 초기 관련 3개 suite 35개와 후속 큰 글자 신규 흐름 검사. 최종 전체 Flutter·분석·APK·웹 빌드는 최종 커밋의 CI 결과를 따른다.
 - 콘텐츠: WHO Healthy diet, NHS Sitting exercises를 2026-10-17 직접 확인한 일반 안내. 실시간 AI 생성/실제 측정 기반 개인 처방으로 표시하지 않는다. 신규 공급자 호출·키 등록·데이터 전송·DB 변경 없음. 기존 Gemini 합성 전용 및 OpenAI 유료 실제 데이터 경계를 유지한다.
 - 실제 사용자·스크린리더·임상·물리 장치 검증 NOT RUN. PROHIBITED/SIMULATOR_ONLY 유지.
+
+## 2026-10-17 측정 참고 안내 다양화·색상 범위 교정
+
+기준 main `216562eb8e8a9adfd04f7acd81744774ab6be137`, 작업판 `feat/measurement-guides-colors-20261017`, Windows Flutter 3.47.4.
+
+- RED: 기존 화면의 식사 ChoiceChip이 기대한 8개가 아닌 2개여서 실패함을 재현했다. 추가한 목록은 전체 목록 펼치기 후 8개를 검증한다.
+- PASS: 새 모델/카탈로그 및 화면 회귀. 비교 가능 근육량/체지방률 변화에서 초기 후보가 다름, 출처 불일치·미확인·오래됨·미래·유효하지 않은 최신값 비교 금지, 앉는 동작만 필터, 320px·글자2배 관심 변경→전체 조합 선택→방법으로 스크롤, 안전 문진 보류/해제·새 측정 재문진·계정 접근 상실 시 내용 숨김을 확인했다.
+- 8개 식사와 6개 운동은 WHO Healthy diet와 NHS Sitting/Strength exercises를 2026-10-17 확인해 구성한 일반 교육 후보다. 실제 계정 view에는 비교 조건이 없으므로 수치 변화에 따른 자동 초기 주제 선택을 하지 않으며 관심 항목을 직접 고른다. 섭취량·운동량 처방이나 실시간 AI 생성이 아니다. 신규 API/전송/키/DB 변경 없음.
+- 홈·측정 기록·생활 및 안내 화면에만 크림/살구/세이지 면을 사용한다. 합성 측정·기기 시연 테마와 실제 장치 실행 PROHIBITED / SIMULATOR_ONLY를 유지한다.
+- 최종 전체 Flutter·정적 분석·APK·웹/공개 배포 결과는 해당 커밋의 GitHub quality-gates 및 아래 후속 증거를 따른다. 실제 Android·스크린리더·임상·물리 장치 검증 NOT RUN.
+
+이번 후속 작업의 로컬 검증: `flutter test --no-pub --concurrency=1 --reporter expanded` 145/145 PASS, `flutter analyze --no-pub` No issues found PASS. 최종 소스는 중괄호 린트 정리만 후속 적용했고 동작 변경은 없다. 공개 사이트와 최종 APK/웹 빌드는 아래 CI 배포 증거로 확인한다.
