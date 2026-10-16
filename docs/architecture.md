@@ -198,3 +198,9 @@ SampleHome은 시연을 열 때마다 별도 Mock ProviderContainer를 생성한
 JourneySection은 Material 3 Card 기반의 제목·아이콘·표면·테두리를 공유한다. 측정 결과, 기록 비교, 상세 지표, 추천 설정과 부위 선택은 독립 구획으로 표시한다. HumanBodyMap은 중첩 도형을 합친 실루엣에 선택 영역을 한 번만 칠하고, 어깨는 실루엣 안의 양쪽 삼각근 영역으로 제한한다.
 
 피드백 저장 성공 시 PilotController는 feedbackSession을 비우고 completedSession에 종료된 세션을 보관한다. PilotScreen은 이를 완료 요약으로 표시하며 설정 화면으로 자동 복귀하지 않는다. 저장 실패 시 설문과 응답을 유지한다. 명시적 새 시연 준비만 완료 상태와 현재 안전 문진을 초기화한다. 완료 요약의 수치는 실제 경과 시간이 아닌 종료 세션의 설정값이다. 서버/API 계약, 추천 알고리즘과 물리 실행 경계는 변경하지 않는다.
+
+## 식사·운동 콘텐츠 우선 생활 탭 (2026-10-17)
+
+ParticipantShell의 생활 탭 → DailyGuideScreen은 앱에 포함한 일반 안내를 표시한다. 입력은 food/movement 카테고리뿐이며 계정·측정·체성분·기기 문진이나 API 서비스를 받지 않는다. 식사 조합 선택과 운동 전 현재 상태 응답은 라우트 안의 임시 상태이며 저장·외부 전송하지 않는다. WHO Healthy diet/NHS Sitting exercises의 출처와 확인일을 함께 제공한다.
+
+WellnessAiPanel은 생활 탭 하단의 기본 접힘 ExpansionTile에 두어 사용자가 펼치기 전 생성/연결 요청을 시작하지 않는다. 기존 서버 인증과 동의·취소·늦은 응답 폐기를 재사용한다. WellnessScreen은 별도의 실천 기록 탐색이며 로컬 저장 계약을 유지한다. 관심 체크와 오늘 응답을 구분하고 저장 성공한 응답만 선택 색과 체크로 표시한다.

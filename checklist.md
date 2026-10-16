@@ -382,3 +382,13 @@ DSPy 후속:
 - PASS: `flutter test --no-pub test/widget_test.dart --concurrency=1 --reporter expanded` 26/26. 상세 보기, 시연 대상 반영, 320px·글자2배, 설정·문진·설문 전체 흐름 포함. `flutter analyze --no-pub` No issues found.
 - 연구 등급/계산·비교 주의는 상세 보기로 이동했다. 증가·감소에 관계없이 같은 따뜻한 비교 색상을 사용하며 건강 효과를 주장하지 않는다. 추천 계산·API·실제 기기 경계 변경 없음.
 - 최종 커밋의 전체 테스트·APK·웹 빌드와 공개 배포는 GitHub quality-gates로 확인한다. 실제 사용자 접근성·임상·물리 장치 검증 NOT RUN.
+
+## 2026-10-17 무료 식사·운동 콘텐츠
+
+기준 main `1ff7d3e41bd17a99421c99223e965b41b527f526`의 `feat/food-movement-guide-20261017` 작업판. Windows Flutter 3.47.4.
+
+- RED→GREEN: 생활 탭에 들어갈 때 측정 AI load가 0회여야 하나 1회 실행되는 회귀를 재현했다. 초기 테스트의 잘못된 탐색 키 실패는 기능 RED로 계산하지 않았다. 기본 안내를 먼저 열고 추가 AI를 펼칠 때만 load 1회임을 확인했다.
+- PASS: 식사 조합 전환·방법 표시, 미확인 운동 보류→현재 상태 확인 후 방법 표시→제한 응답 시 즉시 숨김, 측정 없는 추가 AI 상태 표시를 320px/글자1배·2배에서 확인했다. 큰 글자 테스트는 스크롤 후 hit-test 가능한 실제 버튼을 눌러 검증했다.
+- PASS: 초기 관련 3개 suite 35개와 후속 큰 글자 신규 흐름 검사. 최종 전체 Flutter·분석·APK·웹 빌드는 최종 커밋의 CI 결과를 따른다.
+- 콘텐츠: WHO Healthy diet, NHS Sitting exercises를 2026-10-17 직접 확인한 일반 안내. 실시간 AI 생성/실제 측정 기반 개인 처방으로 표시하지 않는다. 신규 공급자 호출·키 등록·데이터 전송·DB 변경 없음. 기존 Gemini 합성 전용 및 OpenAI 유료 실제 데이터 경계를 유지한다.
+- 실제 사용자·스크린리더·임상·물리 장치 검증 NOT RUN. PROHIBITED/SIMULATOR_ONLY 유지.

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
+import 'package:vibecare_pilot/services/wellness_ai_service.dart';
 import 'package:flutter/material.dart';
 import 'package:vibecare_pilot/screens/participant_shell.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -34,8 +36,101 @@ class _FailingBookings implements VisitBookingRepository {
   Future<void> save(String participantId, List<VisitBooking> bookings) async {}
 }
 
+class _MissingMeasurementAi implements WellnessAiService {
+  int loads = 0;
+  @override
+  Future<Map<String, dynamic>> load(CancelToken token) async {
+    loads++;
+    throw const WellnessAiFailure('연결된 측정 기록이 없어요.');
+  }
+
+  @override
+  Future<Map<String, dynamic>> generate(
+    Map<String, dynamic> input,
+    CancelToken token,
+  ) => throw StateError('must not generate');
+}
+
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('측정 없이 식사·운동 진입과 선택적 AI · 글자 $scale', (tester) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      Future<void> tapGuide(Key key) async {
+        await tester.scrollUntilVisible(
+          find.byKey(key).hitTestable(),
+          180,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(key));
+        await tester.pumpAndSettle();
+      }
+
+      final ai = _MissingMeasurementAi();
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(scale)),
+            child: child!,
+          ),
+          home: ParticipantShell(
+            owner: 'account:a',
+            participantId: 'a',
+            sample: false,
+            repository: _MemoryBookings([]),
+            onStart: () {},
+            aiService: ai,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('생활 돌보기').last);
+      await tester.pumpAndSettle();
+      expect(ai.loads, 0);
+      await tapGuide(const ValueKey('open-food-guide'));
+      expect(find.text('밥·두부·채소 한 끼'), findsOneWidget);
+      expect(find.textContaining('두부를 충분히 익혀'), findsOneWidget);
+      await tapGuide(const ValueKey('meal-choice-1'));
+      expect(find.text('밥·생선·나물 한 끼'), findsOneWidget);
+      expect(find.textContaining('잔가시를 꼼꼼히'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tapGuide(const ValueKey('open-movement-guide'));
+      expect(find.byKey(const ValueKey('movement-instructions')), findsNothing);
+      await tester.scrollUntilVisible(
+        find.text('통증·어지럼·활동 제한이 없어요'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('통증·어지럼·활동 제한이 없어요'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('movement-instructions')),
+        findsOneWidget,
+      );
+      await tester.scrollUntilVisible(
+        find.text('통증·어지럼·활동 제한이 있어요'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('통증·어지럼·활동 제한이 있어요'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('movement-instructions')), findsNothing);
+      expect(find.byKey(const ValueKey('movement-hold')), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tapGuide(const ValueKey('optional-measurement-ai'));
+      expect(ai.loads, 1);
+      expect(find.textContaining('연결된 측정 기록이 없어요'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets('each sample home launch starts with a fresh subject selection', (
     tester,
   ) async {

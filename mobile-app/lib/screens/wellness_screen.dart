@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../services/wellness_repository.dart';
 import '../models/models.dart';
 import '../widgets/page_content.dart';
+import '../theme/app_theme.dart';
 
 class WellnessEntryCard extends StatelessWidget {
   const WellnessEntryCard({super.key, required this.onOpen});
@@ -509,12 +510,12 @@ class _WellnessScreenState extends State<WellnessScreen>
     final plan = _plan;
     final locked = !_allowed;
     return Scaffold(
-      appBar: AppBar(title: const Text('오늘의 생활 습관')),
+      appBar: AppBar(title: const Text('오늘 실천 기록')),
       body: PageContent(
         maxWidth: 680,
         children: [
           Text(
-            locked ? '다시 로그인해 주세요' : '작은 선택을 돌아보세요',
+            locked ? '다시 로그인해 주세요' : '오늘의 선택을 남겨요',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),
@@ -528,8 +529,15 @@ class _WellnessScreenState extends State<WellnessScreen>
                   ? '샘플 공간 · 실제 계정의 생활 기록과 분리됩니다.'
                   : '내 생활 기록 · 측정 결과와 별도의 사용자 입력입니다.',
             ),
-            const Text(
-              '이 브라우저·기기에 저장합니다. 기록을 열거나 저장할 때 최근 90일을 남깁니다. 다른 기기와 동기화하거나 담당자에게 공유하지 않습니다. 공용 기기에서는 기록을 지워 주세요.',
+            const Text('관심 항목을 고른 뒤 실천하거나 쉰 날을 직접 기록해요.'),
+            const ExpansionTile(
+              title: Text('기록 저장 안내'),
+              tilePadding: EdgeInsets.zero,
+              children: [
+                Text(
+                  '이 브라우저·기기에 최근 90일을 저장합니다. 다른 기기와 동기화하거나 담당자에게 공유하지 않습니다. 공용 기기에서는 기록을 지워 주세요.',
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             if (_busy)
@@ -549,7 +557,9 @@ class _WellnessScreenState extends State<WellnessScreen>
             ],
             if (plan != null) ...[
               _section('1. 관심 습관 선택', [
-                const Text('원하는 항목만 선택하세요. 해제해도 지난 기록은 남습니다.'),
+                const Text(
+                  '여기서는 기록할 항목만 고릅니다. 오늘 했다는 뜻은 아니에요. 해제해도 지난 기록은 남아요.',
+                ),
                 for (final habit in WellnessHabit.values)
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
@@ -562,7 +572,7 @@ class _WellnessScreenState extends State<WellnessScreen>
               ]),
               const SizedBox(height: 16),
               _section('2. 오늘 돌아보기 · ${now.month}월 ${now.day}일', [
-                const Text('하지 못한 날을 실패로 판단하지 않습니다. 쉬기도 내 선택입니다.'),
+                const Text('실천했어요 또는 쉬었어요를 누르면 저장됩니다. 선택한 버튼에 체크 표시가 생겨요.'),
                 if (plan.selected.isEmpty)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
@@ -579,15 +589,34 @@ class _WellnessScreenState extends State<WellnessScreen>
                     runSpacing: 8,
                     children: [
                       for (final mark in WellnessMark.values)
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(96, 48),
-                          ),
-                          onPressed: _busy
-                              ? null
-                              : () => _save(plan.mark(_now, habit, mark)),
-                          child: Text(
-                            mark == WellnessMark.done ? '실천했어요' : '쉬었어요',
+                        Semantics(
+                          selected: plan.days[wellnessDay(now)]?[habit] == mark,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(96, 48),
+                              backgroundColor:
+                                  plan.days[wellnessDay(now)]?[habit] == mark
+                                  ? AppColors.brandSoft
+                                  : AppColors.canvas,
+                              side: BorderSide(
+                                color:
+                                    plan.days[wellnessDay(now)]?[habit] == mark
+                                    ? AppColors.brand
+                                    : AppColors.hairline,
+                              ),
+                            ),
+                            onPressed: _busy
+                                ? null
+                                : () => _save(plan.mark(_now, habit, mark)),
+                            icon: Icon(
+                              plan.days[wellnessDay(now)]?[habit] == mark
+                                  ? Icons.check_circle_outline
+                                  : Icons.radio_button_unchecked,
+                              size: 20,
+                            ),
+                            label: Text(
+                              mark == WellnessMark.done ? '실천했어요' : '쉬었어요',
+                            ),
                           ),
                         ),
                       if (plan.days[wellnessDay(now)]?[habit] != null)
