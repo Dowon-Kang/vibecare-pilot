@@ -363,3 +363,13 @@ DSPy 후속:
 - 전체 형식·분석·테스트·APK·웹 빌드와 공개 배포는 같은 최종 커밋의 GitHub quality-gates에서 확인한다. 실계정/RLS·실기기·임상 검증은 이번 변경 검증에 포함하지 않는다.
 - 재진입 RED: 샘플 홈에서 첫 시연을 닫고 다시 열면 persona-selector가 없어지는 FAIL 재현. 매 진입을 새 Mock 컨테이너로 분리한 뒤 sample_route_scope_test 11/11 PASS. 높은 근육량 → 홈 복귀 → 중간 근육량으로 새로 시작하는 조작 포함.
 - 최종 보완 로컬 형식·정적 분석 PASS. 첫 PR CI는 테스트의 중복 import 1건으로 FAIL하여 제거했다. 최종 커밋 전체 검증은 후속 CI 결과를 따른다.
+
+## 2026-10-17 시연 구획·어깨·완료 흐름 개선
+
+기준 main `f90dbf5dd5b95cf29e20233fcf91ab1a0cd92f9a`의 `ux/demo-journey-20261017` 작업판. Windows Flutter 3.47.4, 동일 작업판을 임시 V: 경로로 실행했다.
+
+- RED→GREEN: 어깨 선택 시 가슴이 함께 칠해지는 픽셀 회귀와 전신 선택의 중첩 색상 회귀를 재현하고 수정했다. 설문 저장 후 완료 요약 부재도 회귀로 재현했다. 초기 SDK 경로·비동기 캡처 문제는 기능 RED로 계산하지 않았다.
+- PASS: `flutter analyze --no-pub`, No issues found. `flutter test --no-pub --concurrency=1 --reporter expanded` 전체134개. 320px·글자2배 전체 시연, 저장 실패 후 응답 보존/재시도, 명시적 새 시연/안전 문진, 어깨 픽셀 검사 포함. 발견된 큰 글자 설문 제목/양끝 라벨 overflow를 수정한 후 전체 재통과했다.
+- PASS: `flutter build web --release --base-href / --pwa-strategy=none --no-pub`. 기존 웹 의존성의 Wasm dry-run 및 Cupertino font 경고가 있으나 JS 릴리스 빌드 exit0. 기본 합성 모드 로컬 브라우저 배치 확인용이다.
+- 실제 AI: 사용자가 유료 기존 API + 사용 한도를 선택하고 API 크레딧 미충전을 확인했다. 운영 wellness-advice ACTIVE v4/verify_jwt=true와 RPC 정의를 읽기 전용으로 확인했다. quota는 사용자 UTC일3회/전체100회 원자적 제한이다. 키 값·실제 측정값 조회나 공급자 호출은 수행하지 않았다. 크레딧 충전과 실제 계정 종단간 응답 성공은 미검증이다.
+- 최종 커밋의 APK/웹/전체 CI와 공개 배포는 후속 GitHub Actions 결과를 따른다. 실제 Android·스크린리더·임상·물리 장치 검증 NOT RUN. PROHIBITED/SIMULATOR_ONLY 유지.

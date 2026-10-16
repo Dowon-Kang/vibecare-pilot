@@ -32,7 +32,7 @@ class HumanBodyMap extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          height: 200,
+          height: 228,
           decoration: const BoxDecoration(
             color: AppColors.canvasSoft,
             borderRadius: AppRadius.mdBorder,
@@ -68,7 +68,16 @@ class HumanBodyMap extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
+        Text(
+          '선택 부위 · ${_labels[selected]}',
+          key: const ValueKey('body-selected-label'),
+          style: const TextStyle(
+            color: AppColors.brand,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 10),
         LayoutBuilder(
           builder: (context, constraints) {
             final largeText = MediaQuery.textScalerOf(context).scale(16) > 22;
@@ -174,11 +183,16 @@ class _BodyRegion {
 /// regions so the figure can stay anatomically balanced without shrinking the
 /// one-handed interaction targets.
 const _regions = <BodyPart, _BodyRegion>{
-  BodyPart.shoulder: _BodyRegion(touch: [_NormalizedRect(.29, .18, .42, .13)]),
+  BodyPart.shoulder: _BodyRegion(
+    touch: [
+      _NormalizedRect(.32, .19, .12, .14),
+      _NormalizedRect(.56, .19, .12, .14),
+    ],
+  ),
   BodyPart.arm: _BodyRegion(
     touch: [
-      _NormalizedRect(.17, .26, .22, .31),
-      _NormalizedRect(.61, .26, .22, .31),
+      _NormalizedRect(.17, .34, .22, .23),
+      _NormalizedRect(.61, .34, .22, .23),
     ],
   ),
   BodyPart.abdomen: _BodyRegion(touch: [_NormalizedRect(.37, .32, .26, .21)]),
@@ -207,16 +221,6 @@ class _HumanSilhouettePainter extends CustomPainter {
     const outlineColor = AppColors.faint;
     final selectedColor = AppColors.brand.withValues(alpha: .82);
     final wholeBodyColor = AppColors.brand.withValues(alpha: .38);
-
-    Paint fill(BodyPart part) => Paint()
-      ..color = selected == BodyPart.wholeBody
-          ? wholeBodyColor
-          : selected == part
-          ? selectedColor
-          : neutral
-      ..style = PaintingStyle.fill
-      ..strokeJoin = StrokeJoin.round
-      ..strokeCap = StrokeCap.round;
 
     final outline = Paint()
       ..color = outlineColor
@@ -278,13 +282,14 @@ class _HumanSilhouettePainter extends CustomPainter {
         size.height * .215,
       )
       ..close();
-    canvas.drawPath(
-      torso,
-      Paint()
-        ..color = selected == BodyPart.wholeBody ? wholeBodyColor : neutral
-        ..style = PaintingStyle.fill,
-    );
-    canvas.drawPath(torso, outline);
+    var silhouette = torso;
+    final regions = <BodyPart, Path>{};
+    void addRegion(BodyPart part, Path path) {
+      regions[part] = regions.containsKey(part)
+          ? Path.combine(PathOperation.union, regions[part]!, path)
+          : path;
+      silhouette = Path.combine(PathOperation.union, silhouette, path);
+    }
 
     Path arm({required bool left}) {
       final direction = left ? -1.0 : 1.0;
@@ -319,8 +324,7 @@ class _HumanSilhouettePainter extends CustomPainter {
 
     for (final left in [true, false]) {
       final path = arm(left: left);
-      canvas.drawPath(path, fill(BodyPart.arm));
-      canvas.drawPath(path, outline);
+      addRegion(BodyPart.arm, path);
     }
 
     Path legSection({required bool left, required bool thigh}) {
@@ -360,28 +364,36 @@ class _HumanSilhouettePainter extends CustomPainter {
 
     for (final left in [true, false]) {
       final thigh = legSection(left: left, thigh: true);
-      canvas.drawPath(thigh, fill(BodyPart.thigh));
-      canvas.drawPath(thigh, outline);
+      addRegion(BodyPart.thigh, thigh);
       final calf = legSection(left: left, thigh: false);
-      canvas.drawPath(calf, fill(BodyPart.calf));
-      canvas.drawPath(calf, outline);
+      addRegion(BodyPart.calf, calf);
     }
 
-    final shoulderBand = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        size.width * .355,
-        size.height * .215,
-        size.width * .29,
-        size.height * .085,
-      ),
-      const Radius.circular(18),
+    final shoulders = Path()
+      ..addOval(
+        Rect.fromCenter(
+          center: p(.385, .265),
+          width: size.width * .11,
+          height: size.height * .12,
+        ),
+      )
+      ..addOval(
+        Rect.fromCenter(
+          center: p(.615, .265),
+          width: size.width * .11,
+          height: size.height * .12,
+        ),
+      );
+    regions[BodyPart.shoulder] = Path.combine(
+      PathOperation.intersect,
+      silhouette,
+      shoulders,
     );
-    final shoulderColor = selected == BodyPart.shoulder
-        ? selectedColor
-        : selected == BodyPart.wholeBody
-        ? wholeBodyColor
-        : Colors.transparent;
-    canvas.drawRRect(shoulderBand, Paint()..color = shoulderColor);
+    regions[BodyPart.arm] = Path.combine(
+      PathOperation.difference,
+      regions[BodyPart.arm]!,
+      shoulders,
+    );
 
     final abdomen = RRect.fromRectAndRadius(
       Rect.fromLTWH(
@@ -392,8 +404,31 @@ class _HumanSilhouettePainter extends CustomPainter {
       ),
       const Radius.circular(16),
     );
-    if (selected == BodyPart.abdomen) {
-      canvas.drawRRect(abdomen, Paint()..color = selectedColor);
+    regions[BodyPart.abdomen] = Path.combine(
+      PathOperation.intersect,
+      torso,
+      Path()..addRRect(abdomen),
+    );
+    canvas.drawPath(silhouette, Paint()..color = neutral);
+    final highlight = selected == BodyPart.wholeBody
+        ? silhouette
+        : regions[selected]!;
+    canvas.drawPath(
+      highlight,
+      Paint()
+        ..color = selected == BodyPart.wholeBody
+            ? wholeBodyColor
+            : selectedColor,
+    );
+    canvas.drawPath(silhouette, outline);
+    if (selected != BodyPart.wholeBody) {
+      canvas.drawPath(
+        highlight,
+        Paint()
+          ..color = AppColors.brand
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
     }
   }
 

@@ -17,10 +17,10 @@ abstract final class AppColors {
   static const inkSoft = Color(0xFF3A3A3C);
   static const muted = Color(0xFF6C6C70);
   static const faint = Color(0xFF8E8E93);
-  static const background = Color(0xFFF9F9F8);
+  static const background = Color(0xFFF2F5F4);
   static const canvas = Color(0xFFFFFFFF);
-  static const canvasSoft = Color(0xFFF9F9FB);
-  static const field = Color(0xFFF9F9FB);
+  static const canvasSoft = Color(0xFFF0F4F3);
+  static const field = Color(0xFFF0F4F3);
   static const hairlineSoft = Color(0xFFE5E5EA);
   static const hairline = Color(0xFFD1D1D6);
 

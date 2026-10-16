@@ -6,6 +6,7 @@ const _unset = Object();
 class PilotState {
   const PilotState({
     this.feedbackSession,
+    this.completedSession,
     this.feedbackAdjustment = const FeedbackAdjustment(),
     this.profile,
     this.snapshot,
@@ -24,6 +25,7 @@ class PilotState {
   });
 
   final DeviceSession? feedbackSession;
+  final DeviceSession? completedSession;
   final FeedbackAdjustment feedbackAdjustment;
   final ParticipantProfile? profile;
   final MeasurementSnapshot? snapshot;
@@ -48,6 +50,7 @@ class PilotState {
 
   PilotState copyWith({
     Object? feedbackSession = _unset,
+    Object? completedSession = _unset,
     FeedbackAdjustment? feedbackAdjustment,
     Object? profile = _unset,
     Object? snapshot = _unset,
@@ -64,6 +67,9 @@ class PilotState {
     bool? isBusy,
     Object? error = _unset,
   }) => PilotState(
+    completedSession: identical(completedSession, _unset)
+        ? this.completedSession
+        : completedSession as DeviceSession?,
     feedbackSession: identical(feedbackSession, _unset)
         ? this.feedbackSession
         : feedbackSession as DeviceSession?,

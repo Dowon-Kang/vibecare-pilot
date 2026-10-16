@@ -491,17 +491,37 @@ class PilotController extends Notifier<PilotState> {
               earlyStopped: _earlyStops[finished.id] ?? true,
             ),
           );
-      state = _recalculated(
-        state,
-        profile: profile,
-        snapshot: snapshot,
-        safety: const SafetyCheck(),
-        adjustment: adjustment,
-        disconnectDevice: false,
-      ).copyWith(feedbackSession: null, isBusy: false, error: null);
+      state =
+          _recalculated(
+            state,
+            profile: profile,
+            snapshot: snapshot,
+            safety: const SafetyCheck(),
+            adjustment: adjustment,
+            disconnectDevice: false,
+          ).copyWith(
+            feedbackSession: null,
+            completedSession: finished,
+            isBusy: false,
+            error: null,
+          );
     } catch (error) {
       state = state.copyWith(isBusy: false, error: _message(error));
     }
+  }
+
+  void prepareNextSession() {
+    if (state.completedSession == null ||
+        state.isBusy ||
+        state.isRunning ||
+        state.feedbackSession != null) {
+      return;
+    }
+    state = state.copyWith(
+      completedSession: null,
+      safety: const SafetyCheck(),
+      error: null,
+    );
   }
 
   Future<void> onAppBackgrounded() async {

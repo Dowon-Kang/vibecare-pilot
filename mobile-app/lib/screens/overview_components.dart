@@ -107,9 +107,9 @@ class _RecommendationValues extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(child: values[0]),
-                  const VerticalDivider(width: 1),
+                  const SizedBox(width: 8),
                   Expanded(child: values[1]),
-                  const VerticalDivider(width: 1),
+                  const SizedBox(width: 8),
                   Expanded(child: values[2]),
                 ],
               ),
@@ -132,8 +132,15 @@ class _ValueCell extends StatelessWidget {
   final bool emphasized;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 6),
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+    decoration: BoxDecoration(
+      color: emphasized ? AppColors.brandSoft : AppColors.canvas,
+      borderRadius: AppRadius.smBorder,
+      border: Border.all(
+        color: emphasized ? const Color(0xFFA4D1C6) : AppColors.hairlineSoft,
+      ),
+    ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
