@@ -10,17 +10,20 @@ class JourneySection extends StatelessWidget {
     required this.children,
     this.subtitle,
     this.emphasized = false,
+    this.surface,
+    this.accent,
   });
   final String title;
   final String? subtitle;
   final IconData icon;
   final List<Widget> children;
   final bool emphasized;
+  final Color? surface, accent;
 
   @override
   Widget build(BuildContext context) => Card.filled(
     margin: EdgeInsets.zero,
-    color: emphasized ? AppColors.brandSoft : AppColors.canvas,
+    color: surface ?? (emphasized ? AppColors.brandSoft : AppColors.canvas),
     shape: RoundedRectangleBorder(
       borderRadius: AppRadius.mdBorder,
       side: BorderSide(
@@ -38,12 +41,16 @@ class JourneySection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: emphasized ? AppColors.brand : AppColors.brandSoft,
+                  color:
+                      accent ??
+                      (emphasized ? AppColors.brand : AppColors.brandSoft),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   icon,
-                  color: emphasized ? Colors.white : AppColors.brand,
+                  color: accent != null || emphasized
+                      ? Colors.white
+                      : AppColors.brand,
                   size: 23,
                 ),
               ),

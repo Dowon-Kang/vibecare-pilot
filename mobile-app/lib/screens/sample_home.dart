@@ -60,6 +60,14 @@ class _SampleHomeState extends State<SampleHome> {
                 m.values.skeletalMuscleMassKg,
                 m.values.weightKg,
                 m.values.bodyFatPct,
+                comparisonKey:
+                    m.muscleDefinition.name != 'unknown' &&
+                        m.muscleMeasurementMethod != 'UNKNOWN' &&
+                        m.acquisitionProtocolRef != 'UNKNOWN' &&
+                        m.methodEvidenceRef.isNotEmpty &&
+                        m.definitionRef.isNotEmpty
+                    ? '${m.participantId}|${m.deviceId}|${m.muscleDefinition.name}|${m.muscleMeasurementMethod}|${m.methodEvidenceRef}|${m.muscleMassUnit}|${m.definitionRef}|${m.acquisitionProtocolRef}'
+                    : null,
               ),
         ],
       );

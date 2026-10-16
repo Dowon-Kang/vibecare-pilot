@@ -82,3 +82,5 @@ Supabase DB, 백엔드 API와 Android APK의 배포 순서는 [배포 Runbook](d
 `quality-gates`는 백엔드, 실제 로컬 PostgreSQL/Node HTTP, Flutter 검사·debug APK, 웹 빌드를 같은 커밋으로 검사한다. main의 검사 성공 뒤에만 같은 실행의 Pages 산출물을 배포한다. APK·PostgreSQL 시험 로그·검증 요약 artifact 이름에는 검사한 SHA가 들어간다. PR에서는 배포하지 않는다.
 
 새 환경에서 재현하는 명령은 [백엔드 실행 안내](backend-api/README.md), 인수자가 확인할 범위와 운영 결정은 [배포 Runbook](docs/deployment.md)을 따른다. 실제 수행 결과는 [체크리스트](checklist.md)에 기록한다.
+
+생활 돌보기 기본 안내에는 식사 8개·운동 6개가 포함되어 API 비용 없이 이용할 수 있습니다. 측정과 관심 항목으로 먼저 볼 일반 후보를 고르며 비교 조건이 확인되지 않은 측정 이력은 자동 비교하지 않습니다. 안내는 개인별 섭취량·운동량 처방이 아닙니다.

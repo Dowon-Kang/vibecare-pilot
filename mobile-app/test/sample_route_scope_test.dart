@@ -96,6 +96,7 @@ void main() {
       await tapGuide(const ValueKey('open-food-guide'));
       expect(find.text('밥·두부·채소 한 끼'), findsOneWidget);
       expect(find.textContaining('두부를 충분히 익혀'), findsOneWidget);
+      await tapGuide(const ValueKey('meal-library'));
       await tapGuide(const ValueKey('meal-choice-1'));
       expect(find.text('밥·생선·나물 한 끼'), findsOneWidget);
       expect(find.textContaining('잔가시를 꼼꼼히'), findsOneWidget);
@@ -104,10 +105,11 @@ void main() {
       await tapGuide(const ValueKey('open-movement-guide'));
       expect(find.byKey(const ValueKey('movement-instructions')), findsNothing);
       await tester.scrollUntilVisible(
-        find.text('통증·어지럼·활동 제한이 없어요'),
+        find.text('통증·어지럼·활동 제한이 없어요').hitTestable(),
         150,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('통증·어지럼·활동 제한이 없어요'));
       await tester.pumpAndSettle();
       expect(
@@ -115,10 +117,11 @@ void main() {
         findsOneWidget,
       );
       await tester.scrollUntilVisible(
-        find.text('통증·어지럼·활동 제한이 있어요'),
+        find.text('통증·어지럼·활동 제한이 있어요').hitTestable(),
         150,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('통증·어지럼·활동 제한이 있어요'));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('movement-instructions')), findsNothing);
