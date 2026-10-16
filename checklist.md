@@ -373,3 +373,12 @@ DSPy 후속:
 - PASS: `flutter build web --release --base-href / --pwa-strategy=none --no-pub`. 기존 웹 의존성의 Wasm dry-run 및 Cupertino font 경고가 있으나 JS 릴리스 빌드 exit0. 기본 합성 모드 로컬 브라우저 배치 확인용이다.
 - 실제 AI: 사용자가 유료 기존 API + 사용 한도를 선택하고 API 크레딧 미충전을 확인했다. 운영 wellness-advice ACTIVE v4/verify_jwt=true와 RPC 정의를 읽기 전용으로 확인했다. quota는 사용자 UTC일3회/전체100회 원자적 제한이다. 키 값·실제 측정값 조회나 공급자 호출은 수행하지 않았다. 크레딧 충전과 실제 계정 종단간 응답 성공은 미검증이다.
 - 최종 커밋의 APK/웹/전체 CI와 공개 배포는 후속 GitHub Actions 결과를 따른다. 실제 Android·스크린리더·임상·물리 장치 검증 NOT RUN. PROHIBITED/SIMULATOR_ONLY 유지.
+
+## 2026-10-17 측정 결과 문구·따뜻한 색상
+
+기준 main `f1f0708e5134819e06f3828a16b58486a3e48ed9`의 `ux/friendly-measurement-20261017` 작업판, Windows Flutter 3.47.4.
+
+- RED→GREEN: 접힌 상세 보기 밖에 skeletal-muscle-level이 남아 있는 의도한 FAIL 재현. 기본 화면에는 값과 합성 표시만 남기고 등급·지수·한계 설명을 상세 보기에서 확인한 뒤 같은 설정값으로 다음 단계에 진입하는 회귀 통과.
+- PASS: `flutter test --no-pub test/widget_test.dart --concurrency=1 --reporter expanded` 26/26. 상세 보기, 시연 대상 반영, 320px·글자2배, 설정·문진·설문 전체 흐름 포함. `flutter analyze --no-pub` No issues found.
+- 연구 등급/계산·비교 주의는 상세 보기로 이동했다. 증가·감소에 관계없이 같은 따뜻한 비교 색상을 사용하며 건강 효과를 주장하지 않는다. 추천 계산·API·실제 기기 경계 변경 없음.
+- 최종 커밋의 전체 테스트·APK·웹 빌드와 공개 배포는 GitHub quality-gates로 확인한다. 실제 사용자 접근성·임상·물리 장치 검증 NOT RUN.

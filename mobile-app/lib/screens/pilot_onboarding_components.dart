@@ -422,13 +422,6 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
         : delta.abs() < 0.005
         ? '직전 측정과 동일해요.'
         : '직전 측정보다 ${delta > 0 ? '+' : ''}${delta.toStringAsFixed(1)}kg ${delta > 0 ? '증가' : '감소'}했어요.';
-    final levelIndex = assessment.level.index;
-    const levelColors = <Color>[
-      AppColors.levelLow,
-      AppColors.levelNormal,
-      AppColors.levelHigh,
-    ];
-    const levelLabels = <String>['낮음', '중간', '높음'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -440,81 +433,23 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
           emphasized: true,
           children: [
             Text(
-              isSample ? '샘플 · 합성 측정 데이터' : '서버에 저장된 측정 데이터',
+              isSample ? '합성 데이터 · 시연용' : '최근 측정 기록',
               key: const ValueKey('measurement-source'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            if (isSample)
-              Text(
-                '실제 참여자의 측정 결과가 아닙니다.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
             const SizedBox(height: 6),
             Text(
               '${assessment.currentKg.toStringAsFixed(1)}kg',
               key: const ValueKey('current-skeletal-muscle'),
               style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900),
             ),
-            Text(
-              '연구 참고 등급 · $level',
-              key: const ValueKey('skeletal-muscle-level'),
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(color: AppColors.brand),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '이 등급은 연구용 시연 설정을 선택하기 위한 분류입니다. 건강 진단이나 운동·영양 처방 기준이 아닙니다.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '키로 보정한 근육지수 ${assessment.currentIndexKgM2.toStringAsFixed(2)}kg/m²로 판정',
-              key: const ValueKey('muscle-index-explanation'),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                for (var index = 0; index < 3; index++) ...[
-                  Expanded(
-                    child: Container(
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: index == levelIndex
-                            ? levelColors[index]
-                            : levelColors[index].withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  if (index < 2) const SizedBox(width: 6),
-                ],
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                for (var index = 0; index < levelLabels.length; index++)
-                  Expanded(
-                    child: Text(
-                      levelLabels[index],
-                      textAlign: index == 0
-                          ? TextAlign.start
-                          : index == levelLabels.length - 1
-                          ? TextAlign.end
-                          : TextAlign.center,
-                      style: TextStyle(
-                        color: index == levelIndex
-                            ? levelColors[index]
-                            : AppColors.muted,
-                        fontWeight: index == levelIndex
-                            ? FontWeight.w800
-                            : FontWeight.w600,
-                      ),
-                    ),
-                  ),
-              ],
+            const SizedBox(height: 10),
+            const Text(
+              '내 몸의 변화를 차근차근 기록해요.',
+              style: TextStyle(
+                color: AppColors.brand,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -528,20 +463,31 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
               key: const ValueKey('measurement-comparison'),
               padding: const EdgeInsets.all(14),
               decoration: const BoxDecoration(
-                color: AppColors.canvasSoft,
+                color: AppColors.apricotSoft,
                 borderRadius: AppRadius.smBorder,
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.show_chart_rounded),
+                  const Icon(
+                    Icons.timeline_rounded,
+                    color: AppColors.apricotInk,
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(deltaText)),
+                  Expanded(
+                    child: Text(
+                      deltaText,
+                      style: const TextStyle(
+                        color: AppColors.apricotInk,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              '작은 차이는 측정 조건에 따라 달라질 수 있습니다. 한 번의 증가·감소만으로 건강 변화를 판단하지 마세요.',
+              '한 번의 수치보다 꾸준히 쌓인 기록을 함께 살펴봐요.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
 
@@ -564,8 +510,27 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
               ExpansionTile(
                 key: const ValueKey('measurement-details-toggle'),
                 tilePadding: EdgeInsets.zero,
-                title: const Text('상세 지표와 연구 기준 보기'),
+                title: const Text('측정값과 설정 기준 보기'),
                 children: [
+                  Text(
+                    '연구 참고 등급 · $level',
+                    key: const ValueKey('skeletal-muscle-level'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '키로 보정한 근육지수 ${assessment.currentIndexKgM2.toStringAsFixed(2)}kg/m²',
+                    key: const ValueKey('muscle-index-explanation'),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '이 분류는 시연 설정을 위한 참고값이며 건강 진단이나 운동·영양 처방 기준이 아닙니다.',
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '작은 차이는 측정 조건에 따라 달라질 수 있습니다. 한 번의 증가·감소만으로 건강 변화를 판단하지 마세요.',
+                  ),
+                  const SizedBox(height: 12),
                   const Text(
                     '아래 상태는 연구 참고 기준과의 비교입니다. 기준 범위 밖 항목 수는 독립적인 건강 문제의 수가 아닙니다. 체지방률과 체지방량은 같은 체지방 기준을 사용합니다.',
                   ),
