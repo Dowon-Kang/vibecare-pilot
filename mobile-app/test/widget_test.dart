@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibecare_pilot/screens/pilot_screen.dart';
-import 'package:vibecare_pilot/app/app_environment.dart';
 import 'package:vibecare_pilot/theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:vibecare_pilot/controllers/pilot_controller.dart';
