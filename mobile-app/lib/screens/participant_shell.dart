@@ -6,6 +6,8 @@ import '../services/participation_repository.dart';
 import '../widgets/page_content.dart';
 import 'participation_screen.dart';
 import 'wellness_screen.dart';
+import 'daily_guide_screen.dart';
+import '../theme/app_theme.dart';
 import 'wellness_ai_panel.dart';
 
 class ParticipantReading {
@@ -603,13 +605,13 @@ class _ParticipantShellState extends State<ParticipantShell>
             ),
           ]),
         const SizedBox(height: 16),
-        _card(const Color(0xFFFFF0E0), [
+        _card(AppColors.brandSoft, [
           Text('생활 돌보기', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           const Text('식사와 움직임을 내 속도로 돌아봐요.'),
           TextButton(
             onPressed: () => _select(2),
-            child: const Text('오늘의 생활 습관 열기'),
+            child: const Text('식사·운동 안내 열기'),
           ),
         ]),
       ],
@@ -675,60 +677,83 @@ class _ParticipantShellState extends State<ParticipantShell>
       ],
     ),
   );
+  void _openGuide(DailyGuideKind kind) => Navigator.of(
+    context,
+  ).push<void>(MaterialPageRoute(builder: (_) => DailyGuideScreen(kind: kind)));
+
   Widget _life() => PageContent(
     children: [
-      _heading('오늘, 나를 돌보는 방법'),
-      if (widget.aiService != null) ...[
-        WellnessAiPanel(
-          service: widget.aiService!,
-          sample: widget.sample,
-          measurementKey: widget.sample
-              ? 'gemini-fixed-sample-v1'
-              : '${widget.owner}:${_readings.isEmpty ? '' : '${_readings.first.date}:${_readings.first.muscle}:${_readings.first.weight}:${_readings.first.fat}'}',
-        ),
-        const SizedBox(height: 20),
-      ] else
-        const Text('샘플 일반 안내 · 외부 AI 요청 없음'),
-      const Text('일반 생활 안내'),
-      const SizedBox(height: 18),
-      _card(const Color(0xFFFFF0E0), [
-        const Icon(
-          Icons.restaurant_outlined,
-          size: 32,
-          color: Color(0xFF986239),
-        ),
-        const SizedBox(height: 16),
-        Text('다음 식사의 구성을 살펴봐요', style: Theme.of(context).textTheme.titleLarge),
+      _heading('오늘의 식사와 운동'),
+      const Text('측정 연결 없이 바로 볼 수 있는 안내예요. 오늘 살펴볼 내용을 골라보세요.'),
+      const SizedBox(height: 20),
+      _card(AppColors.brandSoft, [
+        const Icon(Icons.restaurant_outlined, size: 34, color: AppColors.brand),
         const SizedBox(height: 12),
-        const Text('평소 식사에 곡류·채소·단백질 식품이 어떻게 들어 있는지 돌아보세요.'),
+        Text('무엇을 먹을지 함께 살펴봐요', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
-        const Text('알레르기·질환별 제한과 의료진의 식사 안내를 우선하세요.'),
+        const Text('밥·두부·채소, 생선·나물 한 끼 조합과 준비 방법을 볼 수 있어요.'),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          key: const ValueKey('open-food-guide'),
+          onPressed: () => _openGuide(DailyGuideKind.food),
+          icon: const Icon(Icons.restaurant_menu),
+          label: const Text('식사 조합 보기'),
+        ),
       ]),
       const SizedBox(height: 16),
-      _card(const Color(0xFFF2F6E9), [
-        const Icon(Icons.directions_walk, size: 32, color: Color(0xFF627948)),
-        const SizedBox(height: 16),
-        Text('익숙한 움직임을 돌아봐요', style: Theme.of(context).textTheme.titleLarge),
+      _card(AppColors.canvas, [
+        const Icon(Icons.directions_walk, size: 34, color: AppColors.brand),
         const SizedBox(height: 12),
-        const Text('걷기나 집안일처럼 평소 움직임을 살펴보세요. 새로운 운동의 시간·강도를 정해드리지 않습니다.'),
+        Text('내 몸에 맞게 천천히 움직여요', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
-        const Text('통증·어지럼·활동 제한이 있으면 담당자에게 먼저 확인하세요.'),
+        const Text('오늘 몸 상태를 확인하고 의자에서 하는 운동 방법을 살펴봐요.'),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          key: const ValueKey('open-movement-guide'),
+          onPressed: () => _openGuide(DailyGuideKind.movement),
+          icon: const Icon(Icons.accessibility_new_rounded),
+          label: const Text('운동 방법 보기'),
+        ),
       ]),
       const SizedBox(height: 20),
-      OutlinedButton(
-        onPressed: () => Navigator.of(context).push<void>(
-          MaterialPageRoute(
-            builder: (_) => WellnessScreen(
-              owner: widget.owner,
-              sample: widget.sample,
-              canAccess: () => _allowed,
-              accessChanges: widget.accessChanges,
+      _card(AppColors.canvas, [
+        Text('오늘 실천 기록', style: Theme.of(context).textTheme.titleLarge),
+        const Text('내가 한 활동이나 쉬기를 직접 남기는 선택 기능이에요. 안내를 읽는 것만으로 기록되지 않아요.'),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).push<void>(
+            MaterialPageRoute(
+              builder: (_) => WellnessScreen(
+                owner: widget.owner,
+                sample: widget.sample,
+                canAccess: () => _allowed,
+                accessChanges: widget.accessChanges,
+              ),
             ),
           ),
+          icon: const Icon(Icons.checklist),
+          label: const Text('실천·쉬기 기록하기'),
         ),
-        child: const Text('공식 출처와 선택한 생활 기록 보기'),
-      ),
-      const Text('생활 기록은 선택사항이며 기기에만 저장됩니다. 측정·안전 판정과는 별도입니다.'),
+      ]),
+      if (widget.aiService != null) ...[
+        const SizedBox(height: 16),
+        ExpansionTile(
+          key: const ValueKey('optional-measurement-ai'),
+          tilePadding: EdgeInsets.zero,
+          title: Text(
+            widget.sample ? '추가 기능 · Gemini 합성 시연' : '추가 기능 · 측정값 기반 AI',
+          ),
+          subtitle: const Text('원할 때 열어 연결 상태와 전송 내용을 확인하세요.'),
+          children: [
+            WellnessAiPanel(
+              service: widget.aiService!,
+              sample: widget.sample,
+              measurementKey: widget.sample
+                  ? 'gemini-fixed-sample-v1'
+                  : '${widget.owner}:${_readings.isEmpty ? '' : '${_readings.first.date}:${_readings.first.muscle}:${_readings.first.weight}:${_readings.first.fat}'}',
+            ),
+          ],
+        ),
+      ],
     ],
   );
   Widget _profile() => PageContent(

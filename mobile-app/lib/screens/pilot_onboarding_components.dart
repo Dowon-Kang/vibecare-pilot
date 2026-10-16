@@ -463,21 +463,21 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
               key: const ValueKey('measurement-comparison'),
               padding: const EdgeInsets.all(14),
               decoration: const BoxDecoration(
-                color: AppColors.apricotSoft,
+                color: AppColors.comparisonSoft,
                 borderRadius: AppRadius.smBorder,
               ),
               child: Row(
                 children: [
                   const Icon(
                     Icons.timeline_rounded,
-                    color: AppColors.apricotInk,
+                    color: AppColors.comparisonInk,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       deltaText,
                       style: const TextStyle(
-                        color: AppColors.apricotInk,
+                        color: AppColors.comparisonInk,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

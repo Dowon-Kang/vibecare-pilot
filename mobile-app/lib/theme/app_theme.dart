@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Design tokens.
 ///
-/// Visual language: the original VibeCare teal on a warm cream canvas.
+/// Visual language: the original VibeCare teal on a white and mint canvas.
 /// Text stays near-black while interactive and selected states use the brand
 /// color, so controls are distinguishable without making every label colorful.
 ///
@@ -17,17 +17,17 @@ abstract final class AppColors {
   static const inkSoft = Color(0xFF3A3A3C);
   static const muted = Color(0xFF6C6C70);
   static const faint = Color(0xFF8E8E93);
-  static const background = Color(0xFFFFFCF6);
+  static const background = Color(0xFFF8FCFB);
   static const canvas = Color(0xFFFFFFFF);
-  static const canvasSoft = Color(0xFFFFF6E8);
-  static const field = Color(0xFFFFF6E8);
+  static const canvasSoft = Color(0xFFEDF7F4);
+  static const field = Color(0xFFEDF7F4);
   static const hairlineSoft = Color(0xFFE5E5EA);
   static const hairline = Color(0xFFD1D1D6);
 
   /// Reserved: one chromatic accent for a single emphasized signal per screen.
   static const accent = brand;
-  static const apricotSoft = Color(0xFFFFEEDB);
-  static const apricotInk = Color(0xFF754728);
+  static const comparisonSoft = Color(0xFFE4F3EE);
+  static const comparisonInk = Color(0xFF145B4D);
   // One hue with ordered lightness: magnitude, not good/bad semantics.
   static const levelLow = Color(0xFF4B9488);
   static const levelNormal = brand;

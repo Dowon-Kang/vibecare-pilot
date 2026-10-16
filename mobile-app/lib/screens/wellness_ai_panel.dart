@@ -405,9 +405,17 @@ class _WellnessAiPanelState extends State<WellnessAiPanel> {
             liveRegion: true,
             child: Text(
               _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              style: TextStyle(
+                color: _measurement == null
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Theme.of(context).colorScheme.error,
+              ),
             ),
           ),
+          if (_measurement == null)
+            const Text(
+              '이 추가 기능은 연결된 측정이 필요해요. 기본 식사·운동 안내는 측정 연결 없이 이용할 수 있어요.',
+            ),
           TextButton(
             onPressed: _busy ? null : _load,
             child: Text(widget.sample ? '시연 연결 다시 확인' : '측정 정보 다시 불러오기'),
@@ -439,7 +447,7 @@ class _WellnessAiPanelState extends State<WellnessAiPanel> {
         _advice(
           '음식 추천 후보',
           'food',
-          const Color(0xFFFFF0E0),
+          const Color(0xFFE7F4F1),
           _answer!['foodHeld'] == true,
           '식사 제한을 먼저 확인해 주세요. 개인 음식 후보는 보류했습니다.',
         ),
@@ -447,7 +455,7 @@ class _WellnessAiPanelState extends State<WellnessAiPanel> {
         _advice(
           '운동·움직임 추천 후보',
           'movement',
-          const Color(0xFFF2F6E9),
+          const Color(0xFFEFF8F5),
           _answer!['movementHeld'] == true,
           '활동 제한과 현재 증상을 먼저 확인해 주세요. 운동 후보는 보류했습니다.',
         ),
