@@ -412,7 +412,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('로그인 후 프로필 주의사항, 골격근량 등급 비교, 장치 설정 순서로 이동한다', (tester) async {
+  testWidgets('측정 요약은 간결하게 보여주고 설정 기준은 상세 보기에서 확인한다', (tester) async {
     _size(tester, const Size(390, 844));
     await _rawLogin(tester);
 
@@ -425,20 +425,26 @@ void main() {
       find.byKey(const ValueKey('skeletal-muscle-measurement-card')),
       findsOneWidget,
     );
-    expect(find.byKey(const ValueKey('skeletal-muscle-level')), findsOneWidget);
+    expect(find.byKey(const ValueKey('skeletal-muscle-level')), findsNothing);
     expect(
       find.byKey(const ValueKey('muscle-index-explanation')),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(find.text('연구 참고 등급 · 낮음'), findsOneWidget);
+    expect(find.text('연구 참고 등급 · 낮음'), findsNothing);
     expect(find.textContaining('직전 측정보다 +0.1kg'), findsOneWidget);
-    expect(find.text('샘플 · 합성 측정 데이터'), findsOneWidget);
-    expect(find.textContaining('건강 진단이나 운동·영양 처방 기준이 아닙니다.'), findsOneWidget);
+    expect(find.text('합성 데이터 · 시연용'), findsOneWidget);
+    expect(find.textContaining('건강 진단이나 운동·영양 처방 기준이 아닙니다.'), findsNothing);
     expect(
       find.byKey(const ValueKey('measurement-step-status-summary')),
       findsNothing,
     );
     await _tap(tester, 'measurement-details-toggle');
+    expect(find.byKey(const ValueKey('skeletal-muscle-level')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('muscle-index-explanation')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('건강 진단이나 운동·영양 처방 기준이 아닙니다.'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('measurement-step-composition-statuses')),
       findsOneWidget,
@@ -495,6 +501,8 @@ void main() {
     expect(find.text('58세 · 여성 · 160cm'), findsOneWidget);
 
     await _tap(tester, 'profile-continue-button');
+    expect(find.text('연구 참고 등급 · 높음'), findsNothing);
+    await _tap(tester, 'measurement-details-toggle');
     expect(find.text('연구 참고 등급 · 높음'), findsOneWidget);
     await _tap(tester, 'device-setup-button');
     expect(find.text('35분'), findsOneWidget);

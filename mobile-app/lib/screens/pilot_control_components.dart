@@ -173,13 +173,13 @@ class _PrimaryActionBar extends ConsumerWidget {
       action = onProfileContinue;
       icon = Icons.arrow_forward_rounded;
       label = '프로필 확인 완료';
-      helper = '다음 화면에서 API 골격근량과 판정 근거를 확인합니다.';
+      helper = '다음 화면에서 골격근량과 이전 기록을 확인해요.';
       buttonKey = const ValueKey('profile-continue-button');
     } else if (step == _PilotStep.measurement) {
       action = onOpenDeviceSetup;
       icon = Icons.accessibility_new_rounded;
       label = '부위별 설정 확인';
-      helper = '골격근량 등급에 맞는 부위별 설정을 확인합니다.';
+      helper = '측정 결과에 맞는 부위별 설정을 확인해요.';
       buttonKey = const ValueKey('device-setup-button');
     } else {
       action = canSend
