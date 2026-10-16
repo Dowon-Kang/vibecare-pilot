@@ -340,3 +340,15 @@ DSPy 후속:
 - PASS: 배포 endpoint의 context200/고정합성/configured=false, 동의 누락400, 임의 체중 필드400. 서버 Secret 등록 전에는 Gemini를 호출하지 않는다.
 - BLOCKED activation: 현재 Supabase 관리 탭 접근이 브라우저 URL 보안 정책으로 차단됐다. 다른 브라우저/토큰 경로로 우회하지 않았다. GEMINI_API_KEY와 GEMINI_SAMPLE_ENABLED=true 서버 Secret 설정이 필요하다. 앱→함수→Gemini 실제 응답, 새 웹/APK 배포는 아직 NOT RUN.
 - 이전 개별 합성 Gemini 호출은 HTTP200/스키마 정상(운영 함수와 앱을 통하지 않은 테스트)이다. 이를 앱 연결 완료로 해석하지 않는다. 실제 사용자 정보·CSV 전송 및 Android 실기기/물리 출력 검증은 NOT RUN. PROHIBITED/SIMULATOR_ONLY 유지.
+
+## 2026-10-16 합성 시연 진입 개선
+
+검사 기준: `feat/gemini-sample-20261015`, HEAD `d9e39aea7c9255fc37d042fd93eb4cb8b2942db8` + 이번 미커밋 변경, Windows Flutter 로컬 환경. 기존 미추적 캡처는 보존했다.
+
+- RED: sample_route_scope_test에서 새 주 버튼 부재 2건과 중복 ParticipantShell 발견 1건으로 의도한 FAIL 재현.
+- PASS: `flutter test --no-pub test/sample_route_scope_test.dart --reporter expanded` 10/10. 직접 진입, 격리 Mock 로그인, 프로필/측정 이력, 원래 호출 화면으로 복귀, 예약 탭 이동, 320px·글자2배 포함.
+- PASS: `flutter pub get`, `dart format --output=none --set-exit-if-changed lib test` 64파일 변경0.
+- PASS: `flutter analyze --no-pub` No issues found. 한글 절대 경로의 LSP 초기 JSON 파싱 실패(code255) 후 같은 폴더를 임시 V: 경로로 분석하여 통과.
+- PASS: `flutter test --no-pub --concurrency=1 --reporter expanded` 128/128.
+- 공개 배포·실제 계정/RLS·실기기·스크린리더 검증 NOT RUN. Backend/API/DB/알고리즘 변경 없음.
+- PASS: `flutter build apk --debug --no-pub`, assembleDebug 251.4초, `mobile-app/build/app/outputs/flutter-apk/app-debug.apk`. 기본 합성 모드 debug 빌드이며 공개 웹 배포는 포함하지 않는다.

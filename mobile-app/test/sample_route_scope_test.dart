@@ -44,39 +44,38 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        tester.getTopLeft(find.text('측정 시작 · 샘플')).dy,
-        lessThan(tester.getTopLeft(find.text('오늘 참여 기록을 확인해요')).dy),
+        tester.getTopLeft(find.text('합성 데이터 시연 시작')).dy,
+        lessThan(tester.getTopLeft(find.text('예약 · 출석체크 · 달력 열기')).dy),
       );
     },
   );
-  testWidgets(
-    'account measurement start opens honest measurement preparation',
-    (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ParticipantShell(
-            owner: 'account:a',
-            participantId: 'a',
-            sample: false,
-            repository: _MemoryBookings([]),
-            onStart: () {},
-          ),
+  testWidgets('account home starts the synthetic demo directly', (
+    tester,
+  ) async {
+    var starts = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ParticipantShell(
+          owner: 'account:a',
+          participantId: 'a',
+          sample: false,
+          repository: _MemoryBookings([]),
+          onStart: () => starts++,
         ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('측정 시작'));
-      await tester.pumpAndSettle();
-      expect(find.text('측정 준비'), findsOneWidget);
-      expect(find.textContaining('담당자'), findsWidgets);
-      expect(find.text('연결된 측정 기록 보기'), findsOneWidget);
-      await tester.tap(find.text('예약·출석 화면 열기'));
-      await tester.pumpAndSettle();
-      expect(
-        DefaultTabController.of(tester.element(find.text('예약·출석'))).index,
-        1,
-      );
-    },
-  );
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('합성 데이터 시연 시작'));
+    await tester.pumpAndSettle();
+    expect(starts, 1);
+    expect(find.text('측정 준비'), findsNothing);
+    await tester.tap(find.text('예약 · 출석체크 · 달력 열기'));
+    await tester.pumpAndSettle();
+    expect(
+      DefaultTabController.of(tester.element(find.text('예약·출석'))).index,
+      1,
+    );
+  });
   testWidgets(
     'mobile shell opens profile and notification settings from tabs',
     (tester) async {
@@ -251,14 +250,8 @@ void main() {
     );
     await tester.tap(find.text('Open sample'));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('측정 시작 · 샘플'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('측정 시작 · 샘플'));
-    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('participant-navigation')), findsNothing);
+    expect(find.text('로그인'), findsOneWidget);
     await tester.tap(find.text('로그인'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('participation-button')), findsOneWidget);
@@ -291,5 +284,9 @@ void main() {
       find.byKey(const ValueKey('current-skeletal-muscle')),
       findsOneWidget,
     );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Open sample'), findsOneWidget);
+    expect(find.byKey(const ValueKey('participant-navigation')), findsNothing);
   });
 }

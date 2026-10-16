@@ -182,3 +182,7 @@ GitHub Pages는 Supabase Auth 이메일 로그인 후 `public.visit_bookings`에
 SampleHome → 기존 WellnessAiPanel의 sample 모드 → wellness-sample Edge Function → 고정 합성 입력으로 Gemini generateContent. 샘플 클라이언트는 사용자 JWT나 측정값을 전송하지 않는다. 새 함수는 publishable apikey를 직접 검증하므로 verify_jwt=false이며 실제 측정용 wellness-advice의 verify_jwt=true는 유지한다. 공개키는 비밀 인증 수단이 아니므로 DB의 원자적 공용 3/min·20/day quota가 비용/요청 폭주를 제한한다. quota RPC는 기존 비공개 RLS usage 테이블의 정해진 샘플 카운터 두 개만 바꾸는 제한적 SECURITY DEFINER 예외이며 익명에게 측정/usage 직접 접근을 주지 않는다. 외부 요청은 동의 후 한 번, 자동 재시도/실제 데이터 fallback/사용자 입력 프롬프트는 없다. 결과는 기존 검토 카탈로그 ID만 허용하고 기기/DB에 답변을 저장하지 않는다.
 
 웹 배포는 CI에서 main.dart.js URL에 배포 커밋 rev를 붙여 캐시 키를 변경한다. 기존 브라우저가 Pages의10분 캐시 때문에 이전 코드를 실행하던 실측 문제를 방지한다. 본문 JS 내용과 소스맵·데이터 계약은 바꾸지 않으며 이후 SHA256SUMS를 생성한다.
+
+## 합성 시연 진입 경로 (2026-10-16)
+
+ParticipantShell의 주 버튼은 onStart로 바로 연결한다. SamplePilotScope는 기본적으로 격리한 Mock 컨테이너에서 PilotScreen을 직접 연다. 앱의 샘플 기본 홈과 명시적 샘플 홈 메뉴만 showHome=true로 SampleHome을 연다. 계정 홈에서 시연에 들어갈 때 두 번째 ParticipantShell을 쌓지 않는다.

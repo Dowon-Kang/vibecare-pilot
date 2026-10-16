@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/app_environment.dart';
 import 'sample_home.dart';
+import 'pilot_screen.dart';
 
 /// A fresh container prevents a connected app session from supplying backend
 /// repositories to the explicitly labeled sample simulator.
 class SamplePilotScope extends StatefulWidget {
-  const SamplePilotScope({super.key});
+  const SamplePilotScope({super.key, this.showHome = false});
+
+  final bool showHome;
 
   @override
   State<SamplePilotScope> createState() => _SamplePilotScopeState();
@@ -31,6 +34,6 @@ class _SamplePilotScopeState extends State<SamplePilotScope> {
   @override
   Widget build(BuildContext context) => UncontrolledProviderScope(
     container: _container,
-    child: const SampleHome(),
+    child: widget.showHome ? const SampleHome() : const PilotScreen(),
   );
 }
