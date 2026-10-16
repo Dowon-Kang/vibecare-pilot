@@ -187,18 +187,30 @@ class _DailyGuideScreenState extends State<DailyGuideScreen> {
           runSpacing: 8,
           children: [
             for (final item in items)
-              ActionChip(
-                key: ValueKey('recommended-${item.id}'),
-                avatar: Icon(
-                  (food ? _meal : _movementId) == item.id
-                      ? Icons.check_circle
-                      : food
-                      ? Icons.restaurant_outlined
-                      : Icons.accessibility_new,
-                  size: 20,
+              Semantics(
+                selected: (food ? _meal : _movementId) == item.id,
+                child: OutlinedButton.icon(
+                  key: ValueKey('recommended-${item.id}'),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: (food ? _meal : _movementId) == item.id
+                        ? AppColors.brandSoft
+                        : AppColors.canvas,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                  ),
+                  icon: Icon(
+                    (food ? _meal : _movementId) == item.id
+                        ? Icons.check_circle
+                        : food
+                        ? Icons.restaurant_outlined
+                        : Icons.accessibility_new,
+                    size: 20,
+                  ),
+                  label: Text(item.label),
+                  onPressed: () => _selectItem(item.id),
                 ),
-                label: Text(item.label),
-                onPressed: () => _selectItem(item.id),
               ),
           ],
         ),
