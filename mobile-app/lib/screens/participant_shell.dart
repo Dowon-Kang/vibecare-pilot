@@ -437,6 +437,9 @@ class _ParticipantShellState extends State<ParticipantShell>
                               : '휴대폰 알림 권한을 확인해 주세요.',
                         ),
                         TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.comparisonInk,
+                          ),
                           onPressed: () async {
                             try {
                               await _reminder.requestPermission();
@@ -449,6 +452,9 @@ class _ParticipantShellState extends State<ParticipantShell>
                           child: const Text('알림 권한 요청'),
                         ),
                         TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.comparisonInk,
+                          ),
                           onPressed: () async {
                             try {
                               await _reminder.openSettings();
@@ -474,6 +480,9 @@ class _ParticipantShellState extends State<ParticipantShell>
                         ),
                       if (_settingsError != null)
                         TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.comparisonInk,
+                          ),
                           onPressed: _saving
                               ? null
                               : () async {
@@ -588,6 +597,9 @@ class _ParticipantShellState extends State<ParticipantShell>
             ),
             Text(_date(readings.first.date)),
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.comparisonInk,
+              ),
               onPressed: () => _select(0),
               child: const Text('결과 자세히 보기'),
             ),
@@ -598,6 +610,9 @@ class _ParticipantShellState extends State<ParticipantShell>
           const SizedBox(height: 8),
           const Text('식사와 움직임을 내 속도로 돌아봐요.'),
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.comparisonInk,
+            ),
             onPressed: () => _select(2),
             child: const Text('식사·운동 안내 열기'),
           ),
@@ -645,6 +660,9 @@ class _ParticipantShellState extends State<ParticipantShell>
                   ),
                   if (widget.sample)
                     TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.comparisonInk,
+                      ),
                       onPressed: widget.onStart,
                       child: const Text('샘플 연구 결과와 상세 지표 확인'),
                     ),
@@ -772,6 +790,9 @@ class _ParticipantShellState extends State<ParticipantShell>
         Text(widget.sample ? '샘플 참여자 · 실제 계정과 분리' : '로그인한 계정의 참여 기록을 확인합니다.'),
         if (widget.sample)
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.comparisonInk,
+            ),
             onPressed: widget.onStart,
             child: const Text('연구용 프로필 확인·수정'),
           ),
@@ -821,6 +842,7 @@ class _ParticipantShellState extends State<ParticipantShell>
       children: [
         _heading('알림'),
         TextButton(
+          style: TextButton.styleFrom(foregroundColor: AppColors.comparisonInk),
           onPressed: () => setState(
             () => _read.addAll([
               for (final b in upcoming) b.id,
@@ -840,6 +862,9 @@ class _ParticipantShellState extends State<ParticipantShell>
             ),
             Text(_read.contains(booking.id) ? '읽음' : '읽지 않음'),
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.comparisonInk,
+              ),
               onPressed: () {
                 setState(() => _read.add(booking.id));
                 _select(0, attendance: true);
@@ -855,6 +880,9 @@ class _ParticipantShellState extends State<ParticipantShell>
             const SizedBox(height: 8),
             Text(notice.body),
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.comparisonInk,
+              ),
               onPressed: () => setState(() => _read.add(notice.title)),
               child: Text(_read.contains(notice.title) ? '읽음' : '읽음으로 표시'),
             ),
@@ -907,6 +935,9 @@ class _ParticipantShellState extends State<ParticipantShell>
                     content: Text(widget.dataError!),
                     actions: [
                       TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.comparisonInk,
+                        ),
                         onPressed: widget.onRefresh,
                         child: const Text('기록 다시 불러오기'),
                       ),

@@ -61,7 +61,18 @@ class _SampleHomeState extends State<SampleHome> {
                 m.values.weightKg,
                 m.values.bodyFatPct,
                 comparisonKey:
-                    m.muscleDefinition.name != 'unknown' &&
+                    m.muscleDefinition.name == 'smm' &&
+                        m.muscleMassUnit == 'kg' &&
+                        [
+                          m.participantId,
+                          m.deviceId,
+                          m.muscleMeasurementMethod,
+                          m.acquisitionProtocolRef,
+                        ].every(
+                          (value) =>
+                              value.trim().isNotEmpty &&
+                              value.trim().toUpperCase() != 'UNKNOWN',
+                        ) &&
                         m.muscleMeasurementMethod != 'UNKNOWN' &&
                         m.acquisitionProtocolRef != 'UNKNOWN' &&
                         m.methodEvidenceRef.isNotEmpty &&

@@ -270,7 +270,12 @@ class _DailyGuideScreenState extends State<DailyGuideScreen> {
                 ),
                 const SizedBox(height: 16),
                 _steps(meal.steps),
-                Text(meal.note, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  meal.note,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.mealInk),
+                ),
               ],
             ),
           ),
