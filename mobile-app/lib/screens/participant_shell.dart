@@ -611,7 +611,7 @@ class _ParticipantShellState extends State<ParticipantShell>
           const Text('식사와 움직임을 내 속도로 돌아봐요.'),
           TextButton(
             onPressed: () => _select(2),
-            child: const Text('오늘의 생활 습관 열기'),
+            child: const Text('식사·운동 안내 열기'),
           ),
         ]),
       ],

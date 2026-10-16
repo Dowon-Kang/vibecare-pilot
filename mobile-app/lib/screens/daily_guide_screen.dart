@@ -81,13 +81,9 @@ class _DailyGuideScreenState extends State<DailyGuideScreen> {
         icon: Icons.restaurant_outlined,
         emphasized: true,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final ingredient in meal.ingredients)
-                Chip(label: Text(ingredient)),
-            ],
+          Text(
+            '한 끼 구성 · ${meal.ingredients.join(' · ')}',
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
           _steps(meal.steps),
