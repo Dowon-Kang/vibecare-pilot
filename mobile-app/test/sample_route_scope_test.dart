@@ -252,6 +252,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('participant-navigation')), findsNothing);
     expect(find.text('로그인'), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('Open sample'), findsOneWidget);
+    await tester.tap(find.text('Open sample'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('로그인'));
     await tester.tap(find.text('로그인'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('participation-button')), findsOneWidget);

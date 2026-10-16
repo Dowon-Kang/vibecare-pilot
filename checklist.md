@@ -352,3 +352,4 @@ DSPy 후속:
 - PASS: `flutter test --no-pub --concurrency=1 --reporter expanded` 128/128.
 - 공개 배포·실제 계정/RLS·실기기·스크린리더 검증 NOT RUN. Backend/API/DB/알고리즘 변경 없음.
 - PASS: `flutter build apk --debug --no-pub`, assembleDebug 251.4초, `mobile-app/build/app/outputs/flutter-apk/app-debug.apk`. 기본 합성 모드 debug 빌드이며 공개 웹 배포는 포함하지 않는다.
+- 배포 전 PR 검토 보완: 직접 시연 로그인에서 보이는 BackButton 부재를 RED로 재현한 뒤 이전 화면이 있는 로그인에 앱바·뒤로가기를 추가했다. sample_route_scope_test 10/10 재통과(취소 후 재진입 포함). 최종 전체 검증은 GitHub PR/main quality-gates 결과로 확인한다.

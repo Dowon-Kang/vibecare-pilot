@@ -89,6 +89,9 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   }
 
   Widget _login(PilotState state) => Scaffold(
+    appBar: Navigator.canPop(context)
+        ? AppBar(leading: const BackButton(), title: const Text('VibeCare'))
+        : null,
     body: SafeArea(
       child: Center(
         child: SingleChildScrollView(
