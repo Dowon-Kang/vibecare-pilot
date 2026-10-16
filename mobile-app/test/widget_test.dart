@@ -45,6 +45,60 @@ class FailFirstStop extends MockDeviceGateway {
 }
 
 void main() {
+  testWidgets('synthetic demo starts without participant credentials', (
+    tester,
+  ) async {
+    _size(tester, const Size(320, 700));
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: const PilotScreen(),
+        ),
+      ),
+    );
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('로그인'), findsNothing);
+    await tester.ensureVisible(find.text('높은 근육량'));
+    await tester.tap(find.text('높은 근육량'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('시연 시작'));
+    await tester.tap(find.text('시연 시작'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('profile-continue-button')),
+      findsOneWidget,
+    );
+    expect(find.text('58세 · 여성 · 160cm'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('backend login still requires participant credentials', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appEnvironmentProvider.overrideWithValue(
+            const AppEnvironment(apiBaseUrl: 'https://example.invalid'),
+          ),
+        ],
+        child: const _ResearchApp(),
+      ),
+    );
+    expect(find.byType(TextField), findsNWidgets(2));
+    expect(find.text('참여자 코드'), findsOneWidget);
+    expect(find.text('6자리 PIN'), findsOneWidget);
+    expect(find.text('로그인'), findsOneWidget);
+    expect(find.text('시연 시작'), findsNothing);
+  });
+
   testWidgets('research result keeps advice in the lifestyle tab', (
     tester,
   ) async {
@@ -71,7 +125,7 @@ void main() {
         child: const _ResearchApp(),
       ),
     );
-    await tester.tap(find.text('로그인'));
+    await tester.tap(find.text('시연 시작'));
     await tester.pumpAndSettle();
     await _tap(tester, 'profile-continue-button');
     await _tap(tester, 'device-setup-button');
@@ -355,7 +409,7 @@ void main() {
     expect(find.byKey(const ValueKey('send-button')), findsOneWidget);
   });
 
-  testWidgets('로그인 페르소나 버튼이 프로필 설문과 골격근량 등급을 함께 채운다', (tester) async {
+  testWidgets('시연 대상 선택이 프로필 설문과 골격근량 등급을 함께 채운다', (tester) async {
     _size(tester, const Size(390, 844));
     await tester.pumpWidget(const ProviderScope(child: _ResearchApp()));
     await tester.ensureVisible(find.text('높은 근육량'));
@@ -363,8 +417,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('58세 · 여성 · 160cm'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('로그인'));
-    await tester.tap(find.text('로그인'));
+    await tester.ensureVisible(find.text('시연 시작'));
+    await tester.tap(find.text('시연 시작'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('profile-sex-selector')), findsOneWidget);
     expect(find.text('58세 · 여성 · 160cm'), findsOneWidget);
@@ -624,7 +678,7 @@ void main() {
       ),
     );
     addTearDown(gateway.dispose);
-    await tester.tap(find.text('로그인'));
+    await tester.tap(find.text('시연 시작'));
     await tester.pumpAndSettle();
     await _tap(tester, 'profile-continue-button');
     await _tap(tester, 'device-setup-button');
@@ -780,8 +834,8 @@ Future<void> _login(WidgetTester tester) async {
 
 Future<void> _rawLogin(WidgetTester tester) async {
   await tester.pumpWidget(const ProviderScope(child: _ResearchApp()));
-  await tester.ensureVisible(find.text('로그인'));
-  await tester.tap(find.text('로그인'));
+  await tester.ensureVisible(find.text('시연 시작'));
+  await tester.tap(find.text('시연 시작'));
   await tester.pumpAndSettle();
 }
 

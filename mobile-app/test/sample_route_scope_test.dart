@@ -36,6 +36,37 @@ class _FailingBookings implements VisitBookingRepository {
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  testWidgets('each sample home launch starts with a fresh subject selection', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(home: SampleHome(repository: _MemoryBookings([]))),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('합성 데이터 시연 시작'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('높은 근육량'));
+    await tester.ensureVisible(find.text('시연 시작'));
+    await tester.tap(find.text('시연 시작'));
+    await tester.pumpAndSettle();
+    expect(find.text('58세 · 여성 · 160cm'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('합성 데이터 시연 시작'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('persona-selector')), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.text('중간 근육량'));
+    await tester.ensureVisible(find.text('시연 시작'));
+    await tester.tap(find.text('시연 시작'));
+    await tester.pumpAndSettle();
+    expect(find.text('65세 · 남성 · 170cm'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'measurement start appears before attendance in the home reading order',
     (tester) async {
@@ -251,15 +282,15 @@ void main() {
     await tester.tap(find.text('Open sample'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('participant-navigation')), findsNothing);
-    expect(find.text('로그인'), findsOneWidget);
+    expect(find.text('시연 시작'), findsOneWidget);
     expect(find.byType(BackButton), findsOneWidget);
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.text('Open sample'), findsOneWidget);
     await tester.tap(find.text('Open sample'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('로그인'));
-    await tester.tap(find.text('로그인'));
+    await tester.ensureVisible(find.text('시연 시작'));
+    await tester.tap(find.text('시연 시작'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('participation-button')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('profile-data-button')));

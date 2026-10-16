@@ -50,13 +50,8 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   @override
   void initState() {
     super.initState();
-    final environment = ref.read(appEnvironmentProvider);
-    _participantCode = TextEditingController(
-      text: environment.usesSampleData ? 'USER-001' : '',
-    );
-    _pin = TextEditingController(
-      text: environment.usesSampleData ? '123456' : '',
-    );
+    _participantCode = TextEditingController();
+    _pin = TextEditingController();
     WidgetsBinding.instance.addObserver(this);
     _reminderTimer = Timer.periodic(
       const Duration(seconds: 20),
@@ -104,7 +99,9 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                 const _BrandMark(),
                 const SizedBox(height: 22),
                 Text(
-                  '오늘의 진동 운동을\n안전하게 시작해요',
+                  ref.watch(appEnvironmentProvider).usesSampleData
+                      ? '시연할 대상을\n선택해요'
+                      : '오늘의 진동 운동을\n안전하게 시작해요',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontSize: 28,
                     height: 1.2,
@@ -112,7 +109,9 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  ref.watch(appEnvironmentProvider).usesDeviceSimulator
+                  ref.watch(appEnvironmentProvider).usesSampleData
+                      ? '합성 데이터로 측정 결과와 연구용 시뮬레이션을 체험합니다.'
+                      : ref.watch(appEnvironmentProvider).usesDeviceSimulator
                       ? '최근 측정값을 확인하고 연구용 시뮬레이터로 전달합니다.'
                       : '최근 측정값을 확인하고 기기 출력 설정을 장치에 전달합니다.',
                   style: Theme.of(context).textTheme.bodyLarge,
@@ -120,7 +119,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                 if (ref.watch(appEnvironmentProvider).usesSampleData) ...[
                   const SizedBox(height: 20),
                   Text(
-                    '임시 페르소나 선택',
+                    '시연 대상 선택',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
@@ -146,28 +145,30 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                   ),
                 ],
                 const SizedBox(height: 24),
-                TextField(
-                  controller: _participantCode,
-                  enabled: !state.isBusy,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: '참여자 코드',
-                    prefixIcon: Icon(Icons.badge_outlined),
+                if (!ref.watch(appEnvironmentProvider).usesSampleData) ...[
+                  TextField(
+                    controller: _participantCode,
+                    enabled: !state.isBusy,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: '참여자 코드',
+                      prefixIcon: Icon(Icons.badge_outlined),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _pin,
-                  enabled: !state.isBusy,
-                  obscureText: true,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  onSubmitted: (_) => _doLogin(),
-                  decoration: const InputDecoration(
-                    labelText: '6자리 PIN',
-                    prefixIcon: Icon(Icons.lock_outline),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _pin,
+                    enabled: !state.isBusy,
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    onSubmitted: (_) => _doLogin(),
+                    decoration: const InputDecoration(
+                      labelText: '6자리 PIN',
+                      prefixIcon: Icon(Icons.lock_outline),
+                    ),
                   ),
-                ),
+                ],
                 if (state.error != null) ...[
                   _ErrorBanner(message: state.error!),
                   const SizedBox(height: 12),
@@ -182,7 +183,11 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                             color: Colors.white,
                           ),
                         )
-                      : const Text('로그인'),
+                      : Text(
+                          ref.watch(appEnvironmentProvider).usesSampleData
+                              ? '시연 시작'
+                              : '로그인',
+                        ),
                 ),
                 const SizedBox(height: 12),
                 if (ref.read(appEnvironmentProvider).usesSampleData)
@@ -195,9 +200,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                     child: const Text('샘플 홈·생활 습관 보기'),
                   ),
                 if (ref.read(appEnvironmentProvider).usesSampleData)
-                  const Text(
-                    '시연용 계정 · USER-001 / 123456\n현재 Mock 모드는 실제 진동을 발생시키지 않습니다.',
-                  ),
+                  const Text('실제 참여자 기록과 분리된 합성 데이터 시연입니다. 실제 진동은 발생하지 않습니다.'),
               ],
             ),
           ),
@@ -207,14 +210,13 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   );
 
   Future<void> _doLogin() async {
+    final sample = ref.read(appEnvironmentProvider).usesSampleData;
     await ref
         .read(pilotControllerProvider.notifier)
         .login(
-          _participantCode.text,
-          _pin.text,
-          persona: ref.read(appEnvironmentProvider).usesSampleData
-              ? _persona
-              : null,
+          sample ? 'USER-001' : _participantCode.text,
+          sample ? '123456' : _pin.text,
+          persona: sample ? _persona : null,
         );
     if (mounted && ref.read(pilotControllerProvider).isLoggedIn) {
       setState(() => _step = _PilotStep.profile);
