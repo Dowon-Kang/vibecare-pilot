@@ -31,7 +31,7 @@ test('daily guide RPC enforces own measurements, bounded history, invalid-latest
     await client.query(await readFile(new URL('./daily-guide-rls.sql', import.meta.url), 'utf8'));
     await client.query(await readFile(new URL('../supabase/migrations/20261017091402_external_measurement_intake.sql', import.meta.url), 'utf8'));
     await client.query(await readFile(new URL('./external-measurement-intake.sql', import.meta.url), 'utf8'));
-    await client.query(await readFile(new URL('../supabase/migrations/20261017100452_account_profiles.sql', import.meta.url), 'utf8'));
+    await client.query(await readFile(new URL('../supabase/migrations/20261017101303_account_profiles.sql', import.meta.url), 'utf8'));
     await client.query(await readFile(new URL('./account-profiles-rls.sql', import.meta.url), 'utf8'));
   } finally {
     await client.query('ROLLBACK');

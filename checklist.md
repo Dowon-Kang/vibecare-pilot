@@ -466,3 +466,6 @@ DSPy 후속:
 - RED PASS(의도한 실패): `flutter test --no-pub test/sample_route_scope_test.dart --name '실계정에서도' --reporter expanded`가 실제 계정의 기본 프로필 부재(기대1/실제0)로 실패했다. 구현 후 관련 20개 GREEN PASS.
 - 편집/저장 실패 재시도/취소/재진입/계정 상실과 늦은 응답 폐기, 320px 글자1/2배를 검증했다. SDK 실제 loopback HTTP upsert/재로그인 조회·계정 변경 거부 2개 PASS. 로컬 analyze PASS, 초기 전체 Flutter 163개 PASS. 새 SDK 검사 포함 최종 전체는 CI로 확인한다.
 - 새 account_profiles는 본인 프로필만 저장하며 연구 참여자/계정 연결/과거 측정을 변경하지 않는다. 최종 CI의 PostgreSQL RLS 검사, 운영 적용/권한 확인 및 Pages 배포는 후속 증거로 확인한다. 운영 개인 프로필을 테스트 목적으로 임의 수정하지 않는다.
+
+- 후속 로컬 최종 Flutter165/165 및 Backend typecheck/109개 PASS. PR16 CI39023959912 PostgreSQL에서 새 RLS/범위/upsert 재조회 검사 PASS. 운영에 같은 SQL 적용(`20261017101303`): profile_rows0/RLS true/본인 SELECT INSERT UPDATE 정책3개/anon 권한 false/인증 DELETE false. 실제 익명 HTTP401(42501) 확인. 운영 사용자 데이터 삽입/수정 없이 권한만 확인했다.
+- 운영 적용 후 advisors 비교에서 새 프로필 테이블 경고 없음. 기존 경고(샘플 quota·섭취 수신의 제한된 definer/deny-all 테이블, 기존 세션 함수 search_path·유출 비밀번호 설정)는 이번 변경 이전과 동일하다. [Supabase linter 근거](https://supabase.com/docs/guides/database/database-linter). 운영 이력과 CLI 생성 파일의 이름을 실제 적용 버전으로 맞췄다. 최종 웹/APK 및 Pages 상태는 최종 CI 링크에서 확인한다.

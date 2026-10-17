@@ -159,4 +159,4 @@ Supabase 서버 Secret에 GEMINI_API_KEY와 GEMINI_SAMPLE_ENABLED=true를 설정
 
 ### 개인 계정 프로필
 
-`supabase/migrations/20261017100452_account_profiles.sql`은 실제 Supabase 계정의 나이·성별·키를 저장한다. authenticated의 비익명 사용자만 자신의 user_id로 SELECT/INSERT/UPDATE할 수 있다. 서버 소유 연구 참여자/과거 측정값은 변경하지 않는다. 외부 앱은 같은 Auth의 본인 JWT로 `account_profiles?user_id=eq.<자신의 id>&select=age,sex,height_cm`를 읽을 수 있고, 미등록 시 임의 값 대신 입력을 요청한다. 개인 프로필을 과거 FITRUS 요청 당시의 신체정보로 간주하지 않는다. `npm run test:daily-guide-rls`에 두 계정 저장/재조회·타인/익명/소유권 변경 차단·값 제약 검증을 포함한다.
+`supabase/migrations/20261017101303_account_profiles.sql`은 실제 Supabase 계정의 나이·성별·키를 저장한다. authenticated의 비익명 사용자만 자신의 user_id로 SELECT/INSERT/UPDATE할 수 있다. 서버 소유 연구 참여자/과거 측정값은 변경하지 않는다. 외부 앱은 같은 Auth의 본인 JWT로 `account_profiles?user_id=eq.<자신의 id>&select=age,sex,height_cm`를 읽을 수 있고, 미등록 시 임의 값 대신 입력을 요청한다. 개인 프로필을 과거 FITRUS 요청 당시의 신체정보로 간주하지 않는다. `npm run test:daily-guide-rls`에 두 계정 저장/재조회·타인/익명/소유권 변경 차단·값 제약 검증을 포함한다.
