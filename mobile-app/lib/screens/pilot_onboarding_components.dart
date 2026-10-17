@@ -50,7 +50,11 @@ class _FirstLoginProfileCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          const Text('기본 정보를 불러왔어요. 변경된 정보가 있을 때만 수정하세요.'),
+          Text(
+            editable
+                ? '기본 정보를 불러왔어요. 변경된 정보가 있을 때만 수정하세요.'
+                : '기본 정보를 불러왔어요. 등록된 정보를 확인해 주세요.',
+          ),
           if (editable)
             ExpansionTile(
               key: const ValueKey('profile-edit-toggle'),
