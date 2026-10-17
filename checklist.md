@@ -404,3 +404,14 @@ DSPy 후속:
 - 최종 전체 Flutter·정적 분석·APK·웹/공개 배포 결과는 해당 커밋의 GitHub quality-gates 및 아래 후속 증거를 따른다. 실제 Android·스크린리더·임상·물리 장치 검증 NOT RUN.
 
 이번 후속 작업의 로컬 검증: `flutter test --no-pub --concurrency=1 --reporter expanded` 145/145 PASS, `flutter analyze --no-pub` No issues found PASS. 최종 소스는 중괄호 린트 정리만 후속 적용했고 동작 변경은 없다. 공개 사이트와 최종 APK/웹 빌드는 아래 CI 배포 증거로 확인한다.
+
+## 2026-10-17 로그인 실제 측정 자동 추천 작업판
+
+기준 main `9b94f91140e27b754b29c7e83c857cf0733ec88e`, 작업판 `feat/automatic-account-guides-20261017`, Windows Flutter 3.47.4.
+
+- RED: 기존 수동 관심 선택 key가 남아 있어 `findsNothing` 기대가 실패함을 320px 글자1/2배에서 재현했다. 초기 한글 경로 실행은 중단했고 임시 V 드라이브에서 의도한 회귀 실패를 확인했다.
+- PASS: 자동 로딩·관심 선택 제거·후보 변화·재시도·새 측정 재추천·계정 변경/늦은 응답 폐기·실계정 빈 응답의 합성 대체 금지 및 기존 안전 흐름. `flutter test --no-pub --concurrency=1 --reporter expanded` 153/153 PASS. Backend `npm run typecheck` 및 `npm test -- --reporter=dot` 102/102 PASS.
+- 환경: C 드라이브 여유 0으로 npm 기본 캐시가 ENOSPC를 반환해 작업 전용 E 드라이브 캐시/임시 경로를 사용했다. 사용자 파일 삭제나 OS 설정 변경 없음. 로컬 Docker 엔진 미실행으로 SQL RLS 회귀는 CI의 disposable PostgreSQL에서 검증한다.
+- 운영 집계: 현재 실제 측정 0건. `daily_guide_context()` 미설치 확인. 운영 DB에 합성 fixture 삽입/함수 생성 후 롤백하는 검증 요청은 자동 승인 검토에서 거절됐으며 실행되지 않았다. 이유는 운영 잠금/실패 시 잔여 상태 위험과 명시적 운영 적용 승인 부재다. 해당 방식은 중단하고 CI SQL 회귀로 대체한다. 운영 함수 적용은 별도 명시 승인 전 수행하지 않는다.
+- 기존 보안 advisors의 quota/RLS/trigger/Auth 경고는 변경 전 상태로 확인했으며 이번 작업에서 임의로 권한이나 인증 설정을 바꾸지 않는다. 신규 함수는 security invoker, 고정 search_path, 익명 실행 거부와 본인 RLS만 사용하도록 작성했다.
+- 실제 원본 위치/연결 계정에 대한 사용자 답변 대기. 실제 계정 자동 추천 성공/운영 배포/실제 Android·스크린리더·임상·물리 장치 검증 NOT RUN. PROHIBITED / SIMULATOR_ONLY 유지. 최종 SQL/앱/빌드 CI 결과와 운영 적용 승인은 후속 증거로 구분한다.

@@ -31,6 +31,7 @@ class ParticipantShell extends StatefulWidget {
     this.clock,
     this.webReminders,
     this.aiService,
+    this.loadGuideReadings,
   });
   final String owner, participantId, identity;
   final String? dataError;
@@ -45,6 +46,7 @@ class ParticipantShell extends StatefulWidget {
   final DateTime Function()? clock;
   final bool? webReminders;
   final WellnessAiService? aiService;
+  final Future<List<ParticipantReading>> Function()? loadGuideReadings;
   @override
   State<ParticipantShell> createState() => _ParticipantShellState();
 }
@@ -687,6 +689,7 @@ class _ParticipantShellState extends State<ParticipantShell>
     MaterialPageRoute(
       builder: (_) => DailyGuideScreen(
         kind: kind,
+        loadReadings: widget.loadGuideReadings,
         readings: widget.readings,
         clock: widget.clock,
         sample: widget.sample,
@@ -699,7 +702,11 @@ class _ParticipantShellState extends State<ParticipantShell>
   Widget _life() => PageContent(
     children: [
       _heading('오늘의 식사와 운동'),
-      const Text('내 측정과 관심 항목으로 식사와 움직임을 살펴봐요. 측정이 없어도 전체 안내를 볼 수 있어요.'),
+      Text(
+        widget.sample
+            ? '샘플 측정으로 식사와 움직임을 자동으로 골라드려요. 실제 참여자 정보와 분리된 시연이에요.'
+            : '로그인한 내 측정으로 식사와 움직임을 자동으로 골라드려요. 측정이 없으면 일반 안내를 볼 수 있어요.',
+      ),
       const SizedBox(height: 20),
       _card(AppColors.mealSurface, [
         const Icon(
@@ -710,7 +717,7 @@ class _ParticipantShellState extends State<ParticipantShell>
         const SizedBox(height: 12),
         Text('무엇을 먹을지 함께 살펴봐요', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
-        const Text('두부·생선·달걀·콩 등 식사 8가지에서 골라요. 관심 항목에 따라 먼저 볼 조합이 달라져요.'),
+        const Text('두부·생선·달걀·콩 등 식사 8가지에서 골라요. 최근 측정을 참고해 먼저 볼 조합을 자동으로 골라요.'),
         const SizedBox(height: 16),
         FilledButton.icon(
           key: const ValueKey('open-food-guide'),

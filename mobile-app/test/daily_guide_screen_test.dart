@@ -25,7 +25,7 @@ void main() {
   }
 
   for (final scale in [1.0, 2.0]) {
-    testWidgets('측정 참고 → 관심 변경 → 전체 메뉴 선택 · 글자 $scale', (tester) async {
+    testWidgets('측정으로 자동 추천 → 전체 메뉴 선택 · 글자 $scale', (tester) async {
       tester.view.physicalSize = const Size(320, 700);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -47,12 +47,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('체지방률과 함께 살펴볼 식사 3가지'), findsOneWidget);
+      expect(find.text('체지방률 변화를 참고한 식사 3가지'), findsOneWidget);
       expect(find.text('콩·잡곡·채소 한 그릇'), findsOneWidget);
-      await tap(tester, find.byKey(const ValueKey('guide-focus-picker')));
-      await tap(tester, find.byKey(const ValueKey('focus-muscle')));
-      expect(find.text('골격근량과 함께 살펴볼 식사 3가지'), findsOneWidget);
-      expect(find.text('밥·두부·채소 한 끼'), findsOneWidget);
+      expect(find.byKey(const ValueKey('guide-focus-picker')), findsNothing);
+      expect(find.byType(FilterChip), findsNothing);
       await tap(tester, find.byKey(const ValueKey('meal-library')));
       expect(find.byType(ChoiceChip), findsNWidgets(8));
       await tap(tester, find.byKey(const ValueKey('meal-choice-7')));
@@ -118,6 +116,92 @@ void main() {
     expect(find.text('계정이 변경됐습니다. 다시 로그인해 주세요.'), findsOneWidget);
   });
 
+  testWidgets('실계정 측정 자동 로딩 → 실패 재시도 → 다른 최신값 재추천', (tester) async {
+    var calls = 0;
+    final initial = Completer<List<ParticipantReading>>();
+    Future<List<ParticipantReading>> load() {
+      calls++;
+      if (calls == 1) return initial.future;
+      if (calls == 2) {
+        return Future.value([
+          ParticipantReading(now, 18, 60, 25, comparisonKey: 'same'),
+          ParticipantReading(
+            now.subtract(const Duration(days: 1)),
+            20,
+            60,
+            25,
+            comparisonKey: 'same',
+          ),
+        ]);
+      }
+      return Future.value(readings);
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DailyGuideScreen(
+          kind: DailyGuideKind.food,
+          loadReadings: load,
+          clock: () => now,
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(calls, 1);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('밥·두부·채소 한 끼'), findsNothing);
+    initial.completeError(StateError('offline'));
+    await tester.pumpAndSettle();
+    await tap(tester, find.byKey(const ValueKey('guide-auto-basis')));
+    expect(find.textContaining('측정을 불러오지 못했어요'), findsOneWidget);
+    await tap(tester, find.byKey(const ValueKey('reload-guide-measurements')));
+    expect(calls, 2);
+    expect(find.text('골격근량 변화를 참고한 식사 3가지'), findsOneWidget);
+    expect(find.text('밥·두부·채소 한 끼'), findsOneWidget);
+    await tap(tester, find.byKey(const ValueKey('reload-guide-measurements')));
+    expect(calls, 3);
+    expect(find.text('체지방률 변화를 참고한 식사 3가지'), findsOneWidget);
+    expect(find.text('콩·잡곡·채소 한 그릇'), findsOneWidget);
+    expect(find.byType(FilterChip), findsNothing);
+  });
+  testWidgets('계정 변경 후 도착한 측정 응답은 폐기', (tester) async {
+    final pending = Completer<List<ParticipantReading>>();
+    final access = StreamController<bool>.broadcast();
+    addTearDown(access.close);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DailyGuideScreen(
+          kind: DailyGuideKind.food,
+          loadReadings: () => pending.future,
+          clock: () => now,
+          accessChanges: access.stream,
+        ),
+      ),
+    );
+    await tester.pump();
+    access.add(false);
+    await tester.pumpAndSettle();
+    pending.complete(readings);
+    await tester.pumpAndSettle();
+    expect(find.text('계정이 변경됐습니다. 다시 로그인해 주세요.'), findsOneWidget);
+    expect(find.text('콩·잡곡·채소 한 그릇'), findsNothing);
+  });
+  testWidgets('실계정 빈 응답을 합성 측정으로 채우지 않음', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DailyGuideScreen(
+          kind: DailyGuideKind.food,
+          readings: readings,
+          loadReadings: () async => [],
+          clock: () => now,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('연결된 측정이 아직 없어요'), findsOneWidget);
+    expect(find.text('일반 안내 식사 3가지'), findsOneWidget);
+    expect(find.text('체지방률 변화를 참고한 식사 3가지'), findsNothing);
+  });
   testWidgets('식사 안내에서 8가지 조합을 바꾸어 볼 수 있다', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: DailyGuideScreen(kind: DailyGuideKind.food)),

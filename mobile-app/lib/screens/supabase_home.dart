@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/auth_input_validation.dart';
+import '../services/daily_guide_repository.dart';
 import '../services/participation_repository.dart';
 import '../widgets/app_menu_button.dart';
 import 'participant_shell.dart';
@@ -371,6 +372,7 @@ class _SupabaseHomeState extends State<SupabaseHome> {
       sample: false,
       repository: SupabaseParticipationRepository(_client),
       aiService: _aiService,
+      loadGuideReadings: SupabaseDailyGuideRepository(_client).load,
       identity: _user!.email ?? '참여자',
       canAccess: () => _client.auth.currentUser?.id == id,
       accessChanges: _client.auth.onAuthStateChange.map(
