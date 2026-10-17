@@ -450,6 +450,17 @@ void main() {
     expect(find.byKey(const ValueKey('skeletal-muscle-level')), findsNothing);
     await _tap(tester, 'measurement-interpretation-toggle');
     expect(find.byKey(const ValueKey('skeletal-muscle-level')), findsOneWidget);
+    final detailLeft = tester
+        .getTopLeft(find.byKey(const ValueKey('measurement-details-card')))
+        .dx;
+    final interpretationLeft = tester
+        .getTopLeft(find.byKey(const ValueKey('skeletal-muscle-level')))
+        .dx;
+    expect(
+      interpretationLeft,
+      closeTo(detailLeft + 20, 1),
+      reason: '해석 문단은 상세 목록과 같은 왼쪽 기준선에 맞춘다',
+    );
     await _tap(tester, 'device-setup-button');
     expect(find.byKey(const ValueKey('send-button')), findsOneWidget);
     expect(tester.takeException(), isNull);
