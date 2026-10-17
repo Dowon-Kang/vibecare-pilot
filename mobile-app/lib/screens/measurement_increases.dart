@@ -1,9 +1,10 @@
 part of 'pilot_screen.dart';
 
 class _IncreasedMeasurements extends StatelessWidget {
-  const _IncreasedMeasurements({required this.snapshot});
+  const _IncreasedMeasurements({required this.snapshot, this.compact = false});
 
   final MeasurementSnapshot snapshot;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +39,12 @@ class _IncreasedMeasurements extends StatelessWidget {
       key: const ValueKey('increased-measurements'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('직전 측정보다 오른 항목', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          '직전 측정보다 오른 항목',
+          style: compact
+              ? const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)
+              : Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 6),
         for (final item in increases)
           Padding(

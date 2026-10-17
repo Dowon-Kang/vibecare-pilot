@@ -234,3 +234,8 @@ ParticipantShell은 홈·측정 기록·생활·예약·출석 목적지를 소�
 ## 실제 계정 프로필 저장 (2026-10-17)
 
 SupabaseHome은 로그인한 사용자 ID에 고정한 SupabaseAccountProfileRepository를 ParticipantShell에 전달한다. 상단 내 프로필의 AccountProfileCard는 매 진입 시 서버를 읽고 미등록은 빈 입력, 등록은 요약과 수정 버튼을 제공한다. 저장은 user_id를 로그인 ID로 고정한 PostgREST upsert+returning으로 수행한다. 요청 전·응답 후 계정을 확인하며 화면 접근 상실 시 입력/요약을 숨긴다. 실패 시 수정값을 보존하고 성공 반환 후에만 저장 요약으로 전환한다. account_profiles는 Auth 사용자 FK/나이·성별·키 제약과 본인 SELECT/INSERT/UPDATE RLS를 사용한다. 익명 사용자·미로그인·타인 조회/쓰기·user_id 재지정·삭제를 허용하지 않는다. 시연 프로필과 서버 소유 연구 참여자/과거 측정은 별도이며 자동 덮어쓰지 않는다. 외부 측정 앱은 본인 JWT로 계정 프로필을 읽어 측정 요청을 구성할 수 있다.
+
+
+## 측정 화면 표시 위계 (2026-10-17)
+
+_JourneyProgress는 현재/다음 단계와 선형 진행 표시만 담당한다. PilotScreen은 측정 결과 단계에서 반복 상태 배너를 생략하고 다른 단계/실행 중 상태 표시는 유지한다. _SkeletalMuscleMeasurementCard는 기존 assessment와 최신 측정값을 표시하며 계산을 소유하지 않는다. 상세 측정 목록과 해석 기준의 두 공개 수준, 하단 전체 이력 링크를 제공한다. ExpansionTile의 expandedCrossAxisAlignment와 내부 Column을 stretch로 설정하여 문단을 왼쪽에 맞춘다. _IncreasedMeasurements의 compact 모드는 측정 화면에서만 작은 제목을 사용한다. _PrimaryActionBar는 측정 단계의 중복 helper만 생략한다. 기존 프로필 저장·조회·예약·추천·인터록 경계는 변경하지 않는다.

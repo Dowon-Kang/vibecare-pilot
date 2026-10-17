@@ -426,6 +426,35 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('측정 결과는 수치와 행동을 우선하고 해석은 따로 펼친다', (tester) async {
+    _size(tester, const Size(390, 844));
+    await _rawLogin(tester);
+    await _tap(tester, 'profile-continue-button');
+    expect(
+      tester.getSize(find.byKey(const ValueKey('journey-progress'))).height,
+      lessThanOrEqualTo(52),
+    );
+    expect(
+      find.byKey(const ValueKey('current-skeletal-muscle')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('device-setup-button')).hitTestable(),
+      findsOneWidget,
+    );
+    await _tap(tester, 'measurement-details-toggle');
+    expect(
+      find.byKey(const ValueKey('measurement-step-composition-statuses')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('skeletal-muscle-level')), findsNothing);
+    await _tap(tester, 'measurement-interpretation-toggle');
+    expect(find.byKey(const ValueKey('skeletal-muscle-level')), findsOneWidget);
+    await _tap(tester, 'device-setup-button');
+    expect(find.byKey(const ValueKey('send-button')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('측정 요약은 간결하게 보여주고 설정 기준은 상세 보기에서 확인한다', (tester) async {
     _size(tester, const Size(390, 844));
     await _rawLogin(tester);
@@ -461,6 +490,8 @@ void main() {
       findsNothing,
     );
     await _tap(tester, 'measurement-details-toggle');
+    expect(find.byKey(const ValueKey('skeletal-muscle-level')), findsNothing);
+    await _tap(tester, 'measurement-interpretation-toggle');
     expect(find.byKey(const ValueKey('skeletal-muscle-level')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('muscle-index-explanation')),
@@ -527,6 +558,7 @@ void main() {
     await _tap(tester, 'profile-continue-button');
     expect(find.text('연구 참고 등급 · 높음'), findsNothing);
     await _tap(tester, 'measurement-details-toggle');
+    await _tap(tester, 'measurement-interpretation-toggle');
     expect(find.text('연구 참고 등급 · 높음'), findsOneWidget);
     await _tap(tester, 'device-setup-button');
     expect(find.text('35분'), findsOneWidget);
