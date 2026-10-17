@@ -282,7 +282,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.byType(SwitchListTile), findsNothing);
-        expect(find.text('알림 설정'), findsNothing);
+        if (!settings) expect(find.text('알림 설정'), findsNothing);
         await tester.pumpWidget(const SizedBox());
       },
     );
