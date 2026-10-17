@@ -447,3 +447,13 @@ DSPy 후속:
 - 운영에 수신 함수와 빈 출처/영수증 테이블만 적용했다(`20261017091402`). 익명 HTTP401/42501, 익명 EXECUTE false/인증 true 확인. 활성 출처0/영수증0/운영 측정0 유지. 운영 합성 사용자/측정 삽입, 공급자 API/AI 호출, 키 등록은 하지 않았다.
 - 권한 검토: 본인 쓰기 전용 definer/auth.uid 및 auth.users.is_anonymous 확인/고정 search_path/서버 소유 대상·출처/익명 거부. registry/receipt는 RLS+클라이언트 직접 권한 없음. 신규 advisory의 의도된 definer/deny-all과 기존 경고는 연동 가이드에 근거를 남겼다.
 - 외부 앱 선정 후 필요: 같은 프로젝트 Auth 연결과 허용 redirect, 본인 참여자 1:1 연결·키 확인, 실제 기기/단위/방법/프로토콜 근거로 source 등록·활성화, 실제 두 계정/기기 종단간 시험. 실제 BLE/실기기 데이터 저장·임상·물리 진동 검증 NOT RUN.
+
+
+## 2026-10-17 작업 중심 탐색·프로필·결과
+
+기준 main `1f931c52676c531cfd50caac6df2ccc2ceb0f582`, 작업판 `ux/focused-journey-20261017`.
+
+- RED PASS(의도한 실패): `flutter test --no-pub test/widget_test.dart test/sample_route_scope_test.dart --name '불러온 프로필|예약은 독립' --reporter expanded`에서 기존 편집 영역과 홈 예약 중복 노출 때문에 두 회귀가 실패했다. 같은 두 검사 GREEN PASS.
+- 홈/측정 기록/생활 돌보기/예약·출석을 분리하고 내 프로필은 상단 route로 이동했다. 시연의 예약은 메뉴에서 접근한다. 불러온 프로필 요약과 필요 시 편집, 핵심 수치/직전 변화/다음 설정 안내와 접힌 상세 흐름을 구현했다.
+- 로컬 `flutter analyze --no-pub` PASS. 초기 전체 `flutter test --no-pub --reporter compact` 157/157 PASS. 최종 계정 잠금 및 다음 행동 가시성 보강은 CI에서 전체 검증한다. 기존 320px·글자2배 검사 포함. 웹/디버그 APK 및 공개 배포는 기존 CI로 확인한다.
+- 실계정 등록정보 읽기 전용 권한, 조회/추천/예약 저장, SIMULATOR_ONLY/실제 출력 금지 유지. 실기기·실제 계정 측정·임상 검증 NOT RUN.

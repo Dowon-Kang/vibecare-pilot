@@ -59,7 +59,7 @@ class _ParticipantShellState extends State<ParticipantShell>
   final Set<String> _shown = {}, _read = {};
   StreamSubscription<bool>? _access;
   Timer? _timer;
-  int _tab = 1, _recordTab = 0, _generation = 0;
+  int _tab = 0, _generation = 0;
   bool _notifications = false,
       _active = true,
       _busy = true,
@@ -117,7 +117,7 @@ class _ParticipantShellState extends State<ParticipantShell>
       _locked = false;
       _shown.clear();
       _read.clear();
-      _tab = 1;
+      _tab = 0;
       _notifications = false;
       _access = widget.accessChanges?.listen((v) {
         if (!v) _lock();
@@ -293,11 +293,10 @@ class _ParticipantShellState extends State<ParticipantShell>
     }
   }
 
-  void _select(int value, {bool attendance = false}) {
+  void _select(int value) {
     if (!_allowed) return;
     setState(() {
       _tab = value;
-      if (value == 0) _recordTab = attendance ? 1 : 0;
       _notifications = false;
     });
   }
@@ -532,9 +531,7 @@ class _ParticipantShellState extends State<ParticipantShell>
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 6),
-        _heading('합성 데이터 시연'),
-        const Text('합성 데이터로 진행하며 실제 참여자 기록과 분리됩니다.'),
-        const SizedBox(height: 16),
+        _heading('오늘의 건강 관리'),
         _card(const Color(0xFF164F47), [
           const Text(
             '합성 데이터로\n측정부터 시뮬레이션까지',
@@ -546,9 +543,9 @@ class _ParticipantShellState extends State<ParticipantShell>
             ),
           ),
           const SizedBox(height: 12),
-          Text(
-            '프로필 확인부터 측정 결과, 부위별 설정까지 차근차근 체험해요.',
-            style: const TextStyle(color: Color(0xFFDCEEE4)),
+          const Text(
+            '프로필을 확인하고 결과에 맞는 시연 설정을 살펴봐요.',
+            style: TextStyle(color: Color(0xFFDCEEE4)),
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
@@ -556,135 +553,107 @@ class _ParticipantShellState extends State<ParticipantShell>
               backgroundColor: Colors.white,
               foregroundColor: const Color(0xFF164F47),
               minimumSize: const Size.fromHeight(56),
-              textStyle: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
             ),
             onPressed: widget.onStart,
             icon: const Icon(Icons.monitor_heart_outlined),
             label: const Text('합성 데이터 시연 시작'),
           ),
+          const SizedBox(height: 12),
+          const Text(
+            '실제 참여자 기록과 분리된 시연 · 실제 진동 없음',
+            style: TextStyle(color: Color(0xFFDCEEE4), fontSize: 14),
+          ),
         ]),
-        const SizedBox(height: 16),
-        const Text('실제 FITRUS 측정과 진동 기기는 연결되지 않습니다.'),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-          onPressed: () => _select(0, attendance: true),
-          icon: const Icon(Icons.event_available_outlined),
-          label: const Text('예약 · 출석체크 · 달력 열기'),
-        ),
         const SizedBox(height: 24),
         _heading('최근 측정'),
-        if (readings.isEmpty)
-          _card(AppColors.creamSurface, [
+        _card(AppColors.creamSurface, [
+          if (readings.isEmpty) ...[
             const Text('연결된 측정 기록이 없어요.'),
             const SizedBox(height: 8),
             Text(
               widget.sample
-                  ? '샘플 측정 흐름을 진행하면 이곳에서 다시 볼 수 있어요.'
-                  : '담당자가 계정과 측정 기록을 연결하면 표시됩니다.',
+                  ? '시연을 마치면 최근 결과를 여기에 보여드려요.'
+                  : '본인 측정이 연결되면 자동으로 반영돼요.',
             ),
-          ])
-        else
-          _card(AppColors.creamSurface, [
-            const Text('골격근량'),
+          ] else ...[
             Text(
-              '${readings.first.muscle.toStringAsFixed(1)} kg',
-              style: const TextStyle(
-                fontSize: 38,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF155747),
-              ),
+              _date(readings.first.date),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
-            Text(_date(readings.first.date)),
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.comparisonInk,
-              ),
-              onPressed: () => _select(0),
-              child: const Text('결과 자세히 보기'),
+            const SizedBox(height: 8),
+            Text(
+              '골격근량 ${readings.first.muscle.toStringAsFixed(1)} kg',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-          ]),
-        const SizedBox(height: 16),
-        _card(AppColors.mealSurface, [
-          Text('생활 돌보기', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          const Text('식사와 움직임을 내 속도로 돌아봐요.'),
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.comparisonInk,
+            const SizedBox(height: 6),
+            Text(
+              '체중 ${readings.first.weight.toStringAsFixed(1)} kg · 체지방률 ${readings.first.fat.toStringAsFixed(1)}%',
             ),
-            onPressed: () => _select(2),
-            child: const Text('식사·운동 안내 열기'),
-          ),
+          ],
         ]),
       ],
     );
   }
 
-  Widget _records() => DefaultTabController(
-    key: ValueKey('record-tab:$_recordTab'),
-    initialIndex: _recordTab,
-    length: 2,
-    child: Column(
-      children: [
-        TabBar(
-          onTap: (index) => _recordTab = index,
-          tabs: const [
-            Tab(text: '측정 기록'),
-            Tab(text: '예약·출석'),
-          ],
+  Widget _records() => PageContent(
+    children: [
+      _heading('내 몸의 기록'),
+      if (_readings.isEmpty) const Text('연결된 측정 기록이 없습니다.'),
+      for (final reading in _readings) ...[
+        _card(AppColors.creamSurface, [
+          Text(
+            _date(reading.date),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 12),
+          Text('골격근량 ${reading.muscle.toStringAsFixed(1)} kg'),
+          Text(
+            '체중 ${reading.weight.toStringAsFixed(1)} kg · 체지방률 ${reading.fat.toStringAsFixed(1)}%',
+          ),
+        ]),
+        const SizedBox(height: 12),
+      ],
+      const Text('측정 조건을 함께 확인하며 기록을 살펴보세요.'),
+      if (widget.sample)
+        TextButton(
+          onPressed: widget.onStart,
+          child: const Text('샘플 연구 결과와 상세 지표 확인'),
         ),
-        Expanded(
-          child: TabBarView(
-            children: [
-              PageContent(
-                children: [
-                  _heading('내 몸의 기록'),
-                  if (_readings.isEmpty) const Text('연결된 측정 기록이 없습니다.'),
-                  for (final reading in _readings) ...[
-                    _card(AppColors.creamSurface, [
-                      Text(
-                        _date(reading.date),
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      Text('골격근량 ${reading.muscle.toStringAsFixed(1)} kg'),
-                      Text(
-                        '체중 ${reading.weight.toStringAsFixed(1)} kg · 체지방률 ${reading.fat.toStringAsFixed(1)}%',
-                      ),
-                    ]),
-                    const SizedBox(height: 12),
-                  ],
-                  const Text(
-                    '수치만으로 건강 개선을 판단하지 않습니다. 서로 다른 측정 조건을 임의로 비교하지 않습니다.',
-                  ),
-                  if (widget.sample)
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.comparisonInk,
-                      ),
-                      onPressed: widget.onStart,
-                      child: const Text('샘플 연구 결과와 상세 지표 확인'),
-                    ),
-                ],
-              ),
-              ParticipationScreen(
-                key: ValueKey('attendance:${widget.owner}'),
-                participantId: widget.participantId,
-                repository: widget.repository,
-                onChanged: () => unawaited(_load()),
-                clock: widget.clock,
-                owner: widget.owner,
-                embedded: true,
-              ),
-            ],
+    ],
+  );
+
+  Widget _bookingsPage() => ParticipationScreen(
+    key: ValueKey('attendance:${widget.owner}'),
+    participantId: widget.participantId,
+    repository: widget.repository,
+    onChanged: () => unawaited(_load()),
+    clock: widget.clock,
+    owner: widget.owner,
+    embedded: true,
+  );
+
+  void _openProfile() {
+    if (!_allowed) return;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => StreamBuilder<bool>(
+          stream: widget.accessChanges,
+          initialData: _allowed,
+          builder: (context, access) => Scaffold(
+            backgroundColor: AppColors.warmBackground,
+            appBar: AppBar(
+              backgroundColor: AppColors.warmBackground,
+              title: const Text('내 프로필'),
+            ),
+            body: !_allowed || access.hasError || access.data == false
+                ? const Center(child: Text('계정이 변경됐습니다. 다시 로그인해 주세요.'))
+                : _profile(),
           ),
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
+
   void _openGuide(DailyGuideKind kind) => Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (_) => DailyGuideScreen(
@@ -788,7 +757,6 @@ class _ParticipantShellState extends State<ParticipantShell>
   );
   Widget _profile() => PageContent(
     children: [
-      _heading('내 프로필'),
       _card(const Color(0xFFE2EEE5), [
         const Icon(Icons.person_outline, size: 40),
         const SizedBox(height: 12),
@@ -874,7 +842,7 @@ class _ParticipantShellState extends State<ParticipantShell>
               ),
               onPressed: () {
                 setState(() => _read.add(booking.id));
-                _select(0, attendance: true);
+                _select(3);
               },
               child: const Text('일정 확인하기'),
             ),
@@ -916,6 +884,12 @@ class _ParticipantShellState extends State<ParticipantShell>
         title: const Text('VibeCare'),
         actions: [
           IconButton(
+            key: const ValueKey('profile-destination'),
+            tooltip: '내 프로필',
+            onPressed: allowed ? _openProfile : null,
+            icon: const Icon(Icons.person_outline),
+          ),
+          IconButton(
             key: const ValueKey('notification-button'),
             tooltip: '알림함',
             onPressed: allowed
@@ -954,10 +928,10 @@ class _ParticipantShellState extends State<ParticipantShell>
                   child: _notifications
                       ? _inbox()
                       : switch (_tab) {
-                          0 => _records(),
-                          1 => _home(),
+                          0 => _home(),
+                          1 => _records(),
                           2 => _life(),
-                          _ => _profile(),
+                          _ => _bookingsPage(),
                         },
                 ),
               ],
@@ -969,20 +943,26 @@ class _ParticipantShellState extends State<ParticipantShell>
         onDestinationSelected: allowed ? _select : null,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.history), label: '측정 기록'),
           NavigationDestination(
+            key: ValueKey('home-destination'),
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: '홈',
           ),
           NavigationDestination(
+            key: ValueKey('measurement-destination'),
+            icon: Icon(Icons.history),
+            label: '측정 기록',
+          ),
+          NavigationDestination(
+            key: ValueKey('life-destination'),
             icon: Icon(Icons.spa_outlined),
             label: '생활 돌보기',
           ),
           NavigationDestination(
-            key: ValueKey('profile-destination'),
-            icon: Icon(Icons.person_outline),
-            label: '내 프로필',
+            key: ValueKey('booking-destination'),
+            icon: Icon(Icons.event_available_outlined),
+            label: '예약·출석',
           ),
         ],
       ),

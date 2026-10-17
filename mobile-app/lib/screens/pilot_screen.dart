@@ -381,15 +381,6 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
                 _SystemStatusStrip(state: state, environment: environment),
                 const SizedBox(height: 16),
               ],
-              if (!ending &&
-                  state.session == null &&
-                  _step == _PilotStep.profile)
-                TextButton.icon(
-                  key: const ValueKey('participation-button'),
-                  onPressed: _openParticipation,
-                  icon: const Icon(Icons.event_available_outlined),
-                  label: const Text('예약과 출석 보기'),
-                ),
               const SizedBox(height: 8),
               if (state.session == null && !ending) ...[
                 _JourneyProgress(current: _step),
@@ -423,6 +414,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
               else if (_step == _PilotStep.profile)
                 _FirstLoginProfileCard(
                   profile: state.profile!,
+                  editable: environment.usesSampleData,
                   onAgeChanged: (value) => ref
                       .read(pilotControllerProvider.notifier)
                       .updateProfile(age: value),

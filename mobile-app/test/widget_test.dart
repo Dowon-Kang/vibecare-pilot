@@ -66,6 +66,20 @@ class FailFirstStop extends MockDeviceGateway {
 }
 
 void main() {
+  testWidgets('불러온 프로필은 요약 먼저, 변경할 때만 편집', (tester) async {
+    _size(tester, const Size(390, 844));
+    await _rawLogin(tester);
+    expect(find.text('72세 · 여성 · 150cm'), findsOneWidget);
+    expect(find.byKey(const ValueKey('age-editor')), findsNothing);
+    expect(find.byKey(const ValueKey('participation-button')), findsNothing);
+    await _tap(tester, 'profile-edit-toggle');
+    expect(find.byKey(const ValueKey('age-editor')), findsOneWidget);
+    await _tap(tester, 'age-editor');
+    await tester.enterText(find.byKey(const ValueKey('age-value-input')), '70');
+    await _tap(tester, 'age-value-apply');
+    expect(find.text('70세 · 여성 · 150cm'), findsOneWidget);
+  });
+
   testWidgets(
     'feedback retry preserves answers and ends at home on a small large-text screen',
     (tester) async {
@@ -422,6 +436,14 @@ void main() {
 
     await _tap(tester, 'profile-continue-button');
     expect(
+      find.byKey(const ValueKey('measurement-next-description')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('device-setup-button')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(
       find.byKey(const ValueKey('skeletal-muscle-measurement-card')),
       findsOneWidget,
     );
@@ -497,8 +519,10 @@ void main() {
     await tester.ensureVisible(find.text('시연 시작'));
     await tester.tap(find.text('시연 시작'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('profile-sex-selector')), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-sex-selector')), findsNothing);
     expect(find.text('58세 · 여성 · 160cm'), findsOneWidget);
+    await _tap(tester, 'profile-edit-toggle');
+    expect(find.byKey(const ValueKey('profile-sex-selector')), findsOneWidget);
 
     await _tap(tester, 'profile-continue-button');
     expect(find.text('연구 참고 등급 · 높음'), findsNothing);
@@ -513,7 +537,7 @@ void main() {
   testWidgets('나이와 키를 편집 창에서 직접 입력해 한 번에 변경한다', (tester) async {
     _size(tester, const Size(390, 844));
     await _rawLogin(tester);
-
+    await _tap(tester, 'profile-edit-toggle');
     await _tap(tester, 'age-editor');
     expect(find.text('나이 변경'), findsOneWidget);
     await tester.enterText(find.byKey(const ValueKey('age-value-input')), '64');
@@ -536,7 +560,7 @@ void main() {
     tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await _rawLogin(tester);
-
+    await _tap(tester, 'profile-edit-toggle');
     await _tap(tester, 'age-editor');
     expect(find.text('나이 변경'), findsOneWidget);
     await tester.ensureVisible(find.byKey(const ValueKey('age-value-apply')));
