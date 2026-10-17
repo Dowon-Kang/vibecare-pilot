@@ -30,10 +30,14 @@ class DailyGuideScreen extends StatefulWidget {
   State<DailyGuideScreen> createState() => _DailyGuideScreenState();
 }
 
-class _DailyGuideScreenState extends State<DailyGuideScreen> {
+class _DailyGuideScreenState extends State<DailyGuideScreen>
+    with WidgetsBindingObserver {
   late DailyGuideKind _kind = widget.kind;
   late GuideContext _context;
   GuideFocus? get _focus => _context.suggestedFocus;
+  Timer? _refreshTimer;
+  bool _active = true, _refreshing = false;
+  String? _readingSignature;
   bool _loading = false;
   String? _loadError;
   int _generation = 0;
@@ -47,6 +51,8 @@ class _DailyGuideScreenState extends State<DailyGuideScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _watchMeasurements();
     _reset();
     if (widget.loadReadings != null) unawaited(_reload());
     _access = widget.accessChanges?.listen((allowed) {
@@ -61,7 +67,38 @@ class _DailyGuideScreenState extends State<DailyGuideScreen> {
     });
   }
 
+  void _watchMeasurements() {
+    _refreshTimer?.cancel();
+    if (widget.loadReadings != null) {
+      _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+        if (_active && (ModalRoute.of(context)?.isCurrent ?? true)) {
+          unawaited(_reload(background: true));
+        }
+      });
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _active = state == AppLifecycleState.resumed;
+    if (_active) unawaited(_reload(background: true));
+  }
+
+  String _signature(List<ParticipantReading> readings) => readings
+      .map(
+        (r) => [
+          r.date.toIso8601String(),
+          r.muscle,
+          r.weight,
+          r.fat,
+          r.comparisonKey,
+          r.recommendationEligible,
+        ].join("|"),
+      )
+      .join(";");
+
   void _reset() {
+    _readingSignature = null;
     _context = GuideContext(
       widget.loadReadings == null ? widget.readings : [],
       (widget.clock ?? DateTime.now)(),
@@ -85,6 +122,9 @@ class _DailyGuideScreenState extends State<DailyGuideScreen> {
     if (!identical(oldWidget.readings, widget.readings) ||
         oldWidget.sample != widget.sample ||
         oldWidget.loadReadings != widget.loadReadings) {
+      ++_generation;
+      _refreshing = false;
+      _watchMeasurements();
       _reset();
       if (widget.loadReadings != null) unawaited(_reload());
     }
@@ -93,23 +133,33 @@ class _DailyGuideScreenState extends State<DailyGuideScreen> {
   @override
   void dispose() {
     _generation++;
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _access?.cancel();
     _scroll.dispose();
     super.dispose();
   }
 
-  Future<void> _reload() async {
+  Future<void> _reload({bool background = false}) async {
     final load = widget.loadReadings;
-    if (load == null || _locked || widget.canAccess?.call() == false) return;
+    if (load == null ||
+        _locked ||
+        _refreshing ||
+        widget.canAccess?.call() == false) {
+      return;
+    }
+    _refreshing = true;
     final generation = ++_generation;
-    setState(() {
-      _loading = true;
-      _loadError = null;
-      _context = GuideContext([], (widget.clock ?? DateTime.now)());
-      _clearToExplore = null;
-      _seatedOnly = true;
-      _chooseDefaults();
-    });
+    if (!background) {
+      setState(() {
+        _loading = true;
+        _loadError = null;
+        _context = GuideContext([], (widget.clock ?? DateTime.now)());
+        _clearToExplore = null;
+        _seatedOnly = true;
+        _chooseDefaults();
+      });
+    }
     try {
       final readings = await load();
       if (!mounted ||
@@ -118,12 +168,24 @@ class _DailyGuideScreenState extends State<DailyGuideScreen> {
           widget.canAccess?.call() == false) {
         return;
       }
+      final signature = _signature(readings);
+      final next = GuideContext(readings, (widget.clock ?? DateTime.now)());
+      if (background &&
+          signature == _readingSignature &&
+          next.readiness == _context.readiness) {
+        return;
+      }
+      _readingSignature = signature;
       setState(() {
-        _context = GuideContext(readings, (widget.clock ?? DateTime.now)());
+        _loadError = null;
+        _clearToExplore = null;
+        _seatedOnly = true;
+        _context = next;
         _loading = false;
         _chooseDefaults();
       });
     } catch (_) {
+      if (background) return;
       if (!mounted ||
           generation != _generation ||
           _locked ||
@@ -134,6 +196,8 @@ class _DailyGuideScreenState extends State<DailyGuideScreen> {
         _loading = false;
         _loadError = '측정을 불러오지 못했어요. 연결 상태를 확인하고 다시 시도해 주세요.';
       });
+    } finally {
+      if (generation == _generation) _refreshing = false;
     }
   }
 
