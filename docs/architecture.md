@@ -229,3 +229,8 @@ GuideContext는 품질/유효 범위와 최근 30일을 확인한다. 비교 가
 ## 작업 중심 탐색과 점진적 공개 (2026-10-17)
 
 ParticipantShell은 홈·측정 기록·생활·예약·출석 목적지를 소유하고 기존 ParticipationScreen을 예약 목적지에 직접 넣는다. 알림의 일정 확인도 같은 목적지를 연다. 프로필은 상단에서 독립 route로 열며 계정 접근 상실 시 내용을 숨긴다. PilotScreen은 예약을 메뉴로 제공한다. _FirstLoginProfileCard는 불러온 요약을 즉시 표시하고 샘플 편집만 접힌 영역에서 허용한다. 실계정 등록정보의 기존 읽기 전용 계약은 유지한다. _SkeletalMuscleMeasurementCard는 핵심 측정과 다음 설정 안내를 한 면에 두고 상세 기준·전체 이력을 ExpansionTile로 공개한다. 데이터 조회·저장·추천 계산·기기 안전 경계는 변경하지 않는다.
+
+
+## 실제 계정 프로필 저장 (2026-10-17)
+
+SupabaseHome은 로그인한 사용자 ID에 고정한 SupabaseAccountProfileRepository를 ParticipantShell에 전달한다. 상단 내 프로필의 AccountProfileCard는 매 진입 시 서버를 읽고 미등록은 빈 입력, 등록은 요약과 수정 버튼을 제공한다. 저장은 user_id를 로그인 ID로 고정한 PostgREST upsert+returning으로 수행한다. 요청 전·응답 후 계정을 확인하며 화면 접근 상실 시 입력/요약을 숨긴다. 실패 시 수정값을 보존하고 성공 반환 후에만 저장 요약으로 전환한다. account_profiles는 Auth 사용자 FK/나이·성별·키 제약과 본인 SELECT/INSERT/UPDATE RLS를 사용한다. 익명 사용자·미로그인·타인 조회/쓰기·user_id 재지정·삭제를 허용하지 않는다. 시연 프로필과 서버 소유 연구 참여자/과거 측정은 별도이며 자동 덮어쓰지 않는다. 외부 측정 앱은 본인 JWT로 계정 프로필을 읽어 측정 요청을 구성할 수 있다.

@@ -22,6 +22,7 @@ test('daily guide RPC enforces own measurements, bounded history, invalid-latest
       create schema if not exists auth;
       create table auth.users(id uuid primary key,is_anonymous boolean not null default false);
       create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+      create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
       grant usage on schema auth to authenticated,anon;
       create table public.visit_bookings(id text primary key,participant_id text not null);
     `);
@@ -30,6 +31,8 @@ test('daily guide RPC enforces own measurements, bounded history, invalid-latest
     await client.query(await readFile(new URL('./daily-guide-rls.sql', import.meta.url), 'utf8'));
     await client.query(await readFile(new URL('../supabase/migrations/20261017091402_external_measurement_intake.sql', import.meta.url), 'utf8'));
     await client.query(await readFile(new URL('./external-measurement-intake.sql', import.meta.url), 'utf8'));
+    await client.query(await readFile(new URL('../supabase/migrations/20261017100452_account_profiles.sql', import.meta.url), 'utf8'));
+    await client.query(await readFile(new URL('./account-profiles-rls.sql', import.meta.url), 'utf8'));
   } finally {
     await client.query('ROLLBACK');
     client.release();

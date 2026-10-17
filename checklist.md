@@ -457,3 +457,12 @@ DSPy 후속:
 - 홈/측정 기록/생활 돌보기/예약·출석을 분리하고 내 프로필은 상단 route로 이동했다. 시연의 예약은 메뉴에서 접근한다. 불러온 프로필 요약과 필요 시 편집, 핵심 수치/직전 변화/다음 설정 안내와 접힌 상세 흐름을 구현했다.
 - 로컬 `flutter analyze --no-pub` PASS. 초기 전체 `flutter test --no-pub --reporter compact` 157/157 PASS. 최종 계정 잠금 및 다음 행동 가시성 보강은 CI에서 전체 검증한다. 기존 320px·글자2배 검사 포함. 웹/디버그 APK 및 공개 배포는 기존 CI로 확인한다.
 - 실계정 등록정보 읽기 전용 권한, 조회/추천/예약 저장, SIMULATOR_ONLY/실제 출력 금지 유지. 실기기·실제 계정 측정·임상 검증 NOT RUN.
+
+
+## 2026-10-17 실계정 프로필 저장 작업판
+
+기준 main `a8b2bab30d857d7b3515ab3ec0320912112ec85b`, `feat/self-profile-save-20261017`.
+
+- RED PASS(의도한 실패): `flutter test --no-pub test/sample_route_scope_test.dart --name '실계정에서도' --reporter expanded`가 실제 계정의 기본 프로필 부재(기대1/실제0)로 실패했다. 구현 후 관련 20개 GREEN PASS.
+- 편집/저장 실패 재시도/취소/재진입/계정 상실과 늦은 응답 폐기, 320px 글자1/2배를 검증했다. SDK 실제 loopback HTTP upsert/재로그인 조회·계정 변경 거부 2개 PASS. 로컬 analyze PASS, 초기 전체 Flutter 163개 PASS. 새 SDK 검사 포함 최종 전체는 CI로 확인한다.
+- 새 account_profiles는 본인 프로필만 저장하며 연구 참여자/계정 연결/과거 측정을 변경하지 않는다. 최종 CI의 PostgreSQL RLS 검사, 운영 적용/권한 확인 및 Pages 배포는 후속 증거로 확인한다. 운영 개인 프로필을 테스트 목적으로 임의 수정하지 않는다.

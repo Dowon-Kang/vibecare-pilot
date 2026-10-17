@@ -1,3 +1,4 @@
+import '../services/account_profile_repository.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -396,6 +397,7 @@ class _SupabaseHomeState extends State<SupabaseHome>
       repository: SupabaseParticipationRepository(_client),
       aiService: _aiService,
       loadGuideReadings: _guideRepository.load,
+      profileRepository: SupabaseAccountProfileRepository(_client, id),
       identity: _user!.email ?? '참여자',
       canAccess: () => _client.auth.currentUser?.id == id,
       accessChanges: _client.auth.onAuthStateChange.map(
