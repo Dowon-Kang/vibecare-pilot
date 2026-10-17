@@ -7,18 +7,23 @@ class ParticipantReading {
     this.weight,
     this.fat, {
     this.comparisonKey,
+    this.recommendationEligible = true,
   });
   final DateTime date;
   final double muscle, weight, fat;
   final String? comparisonKey;
+  final bool recommendationEligible;
   bool get valid =>
       muscle.isFinite &&
       muscle > 0 &&
+      muscle <= weight &&
       weight.isFinite &&
       weight > 0 &&
+      weight <= 500 &&
       fat.isFinite &&
       fat >= 0 &&
-      fat <= 100;
+      fat < 100 &&
+      muscle + weight * fat / 100 <= weight + 0.5;
 }
 
 enum GuideFocus { muscle, weight, fat }
@@ -36,6 +41,8 @@ extension GuideFocusLabel on GuideFocus {
   };
 }
 
+enum GuideReadiness { missing, reviewRequired, stale, ready }
+
 /// Editorial navigation, never a clinical assessment or an exercise dose.
 class GuideContext {
   GuideContext(List<ParticipantReading> readings, DateTime now) {
@@ -43,9 +50,19 @@ class GuideContext {
     final sorted = [...readings]..sort((a, b) => b.date.compareTo(a.date));
     bool fresh(ParticipantReading r) =>
         r.valid &&
+        r.recommendationEligible &&
         !r.date.isAfter(now) &&
         now.difference(r.date) <= const Duration(days: 30);
-    if (sorted.isEmpty || !fresh(sorted.first)) return;
+    if (sorted.isEmpty) return;
+    if (!sorted.first.valid || !sorted.first.recommendationEligible) {
+      readiness = GuideReadiness.reviewRequired;
+      return;
+    }
+    if (!fresh(sorted.first)) {
+      readiness = GuideReadiness.stale;
+      return;
+    }
+    readiness = GuideReadiness.ready;
     latest = sorted.first;
     if (sorted.length < 2 || !fresh(sorted[1])) return;
     final a = sorted.first, b = sorted[1];
@@ -69,13 +86,20 @@ class GuideContext {
     suggestedFocus = GuideFocus.values[index];
     previous = b;
   }
+  GuideReadiness readiness = GuideReadiness.missing;
   ParticipantReading? latest, previous;
   GuideFocus? suggestedFocus;
-  String reason(GuideFocus focus) => suggestedFocus == focus && previous != null
-      ? '같은 조건의 직전 기록과 비교해 상대 변화가 가장 큰 ${focus.label}을 먼저 살펴봐요. 변화의 좋고 나쁨을 뜻하지 않아요.'
-      : latest != null
-      ? '최근 ${focus.label} ${focus.value(latest!)}를 참고해 살펴볼 주제를 골라요. 수치만으로 필요한 식사량이나 운동량을 정하지 않아요.'
-      : '최근 30일 이내의 확인 가능한 측정이 없어 일반 안내를 보여드려요.';
+  String get automaticReason => switch (readiness) {
+    GuideReadiness.missing =>
+      '연결된 측정 기록이 없어 자동 추천을 준비하지 못했어요. 담당자에게 계정과 측정 기록 연결을 확인해 주세요.',
+    GuideReadiness.reviewRequired =>
+      '최신 측정의 품질·정의·조건을 확인해야 해요. 담당자에게 측정 기록 확인을 요청해 주세요.',
+    GuideReadiness.stale => '최근 30일 이내의 측정이 필요해요. 새 측정이 연결되면 자동으로 다시 추천해요.',
+    GuideReadiness.ready =>
+      suggestedFocus != null && previous != null
+          ? '같은 조건의 직전 기록과 비교해 상대 변화가 가장 큰 ${suggestedFocus!.label}(${suggestedFocus!.value(previous!)} → ${suggestedFocus!.value(latest!)})을 참고해 후보를 자동으로 골랐어요. 변화의 좋고 나쁨을 뜻하지 않아요.'
+          : '비교 가능한 변화가 아직 없어 이번 측정과 함께 살펴볼 균형식과 앉는 기본 동작을 자동으로 골랐어요. 수치만으로 섭취량이나 운동 강도를 정하지 않아요.',
+  };
 }
 
 class GuideItem {
@@ -251,12 +275,20 @@ const movementGuides = <GuideItem>[
 /// Related educational topics, not a claim that a value warrants an intervention.
 List<GuideItem> recommendedGuides(
   List<GuideItem> catalog,
-  GuideFocus focus, {
+  GuideFocus? focus, {
   bool seatedOnly = false,
 }) {
   final available = catalog
       .where((item) => !seatedOnly || !item.standing)
       .toList();
+  if (focus == null) {
+    final ids = identical(catalog, mealGuides)
+        ? ['tofu', 'oats', 'bibimbap']
+        : ['march', 'ankle', 'chest'];
+    return [
+      for (final id in ids) available.firstWhere((item) => item.id == id),
+    ];
+  }
   return [
     ...available.where((item) => item.focuses.contains(focus)),
     ...available.where((item) => !item.focuses.contains(focus)),

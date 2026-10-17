@@ -126,4 +126,29 @@ void main() {
       }
     },
   );
+  test('첫 기록과 변화 없음은 관심 선택 없이 다양한 기본 조합을 자동 제공', () {
+    for (final data in [
+      [point(20, 60, 25)],
+      [point(20, 60, 25), point(20, 60, 25, days: 1)],
+    ]) {
+      final context = GuideContext(data, now);
+      expect(context.readiness, GuideReadiness.ready);
+      expect(context.suggestedFocus, isNull);
+      expect(
+        recommendedGuides(
+          mealGuides,
+          context.suggestedFocus,
+        ).map((item) => item.id),
+        ['tofu', 'oats', 'bibimbap'],
+      );
+      expect(
+        recommendedGuides(
+          movementGuides,
+          context.suggestedFocus,
+          seatedOnly: true,
+        ).every((item) => !item.standing),
+        true,
+      );
+    }
+  });
 }

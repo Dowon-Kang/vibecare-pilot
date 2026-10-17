@@ -9,6 +9,7 @@
     "db:seed:postgres": "tsx src/storage/seed-development.ts",
     "test": "vitest run",
     "test:postgres": "node --import tsx --test test/postgres.integration.ts",
+    "test:daily-guide-rls": "node --import tsx --test test/daily-guide-rls.integration.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
