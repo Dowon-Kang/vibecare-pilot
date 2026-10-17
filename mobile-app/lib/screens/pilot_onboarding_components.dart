@@ -454,102 +454,207 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        JourneySection(
+        Container(
           key: const ValueKey('skeletal-muscle-measurement-card'),
-          title: '골격근량 결과',
-          icon: Icons.monitor_heart_outlined,
-          emphasized: true,
-          children: [
-            Text(
-              isSample ? '합성 데이터 · 시연용' : '최근 측정 기록',
-              key: const ValueKey('measurement-source'),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${assessment.currentKg.toStringAsFixed(1)}kg',
-              key: const ValueKey('current-skeletal-muscle'),
-              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900),
-            ),
-            if (latestMeasurement != null) ...[
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.canvas,
+            borderRadius: AppRadius.mdBorder,
+            border: Border.all(color: AppColors.hairlineSoft),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                '골격근량',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.inkSoft,
+                ),
+              ),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 20,
-                runSpacing: 8,
-                children: [
-                  Text(
-                    '체중 ${latestMeasurement.values.weightKg.toStringAsFixed(1)} kg',
-                  ),
-                  Text(
-                    '체지방률 ${latestMeasurement.values.bodyFatPct.toStringAsFixed(1)}%',
-                  ),
-                ],
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: assessment.currentKg.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 52,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
+                        letterSpacing: -1.5,
+                      ),
+                    ),
+                    const TextSpan(
+                      text: ' kg',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
+                key: const ValueKey('current-skeletal-muscle'),
+                style: const TextStyle(color: AppColors.ink),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                deltaText,
+                key: const ValueKey('measurement-comparison'),
+                style: const TextStyle(fontSize: 15, color: AppColors.inkSoft),
+              ),
+              if (latestMeasurement != null) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  child: Divider(height: 1),
+                ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final values = [
+                      _MeasurementSummaryValue(
+                        label: '체중',
+                        value:
+                            '${latestMeasurement.values.weightKg.toStringAsFixed(1)} kg',
+                      ),
+                      _MeasurementSummaryValue(
+                        label: '체지방률',
+                        value:
+                            '${latestMeasurement.values.bodyFatPct.toStringAsFixed(1)}%',
+                      ),
+                    ];
+                    return MediaQuery.textScalerOf(context).scale(16) > 24
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              values[0],
+                              const SizedBox(height: 16),
+                              values[1],
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(child: values[0]),
+                              const SizedBox(width: 16),
+                              Expanded(child: values[1]),
+                            ],
+                          );
+                  },
+                ),
+              ],
+              const SizedBox(height: 20),
+              Text(
+                isSample ? '합성 데이터 · 시연용' : '최근 측정 기록',
+                key: const ValueKey('measurement-source'),
+                style: const TextStyle(fontSize: 13, color: AppColors.muted),
               ),
             ],
-            const SizedBox(height: 12),
-            Text(
-              deltaText,
-              key: const ValueKey('measurement-comparison'),
-              style: const TextStyle(
-                color: AppColors.comparisonInk,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              '이 측정값으로 부위별 시연 설정을 확인해요.',
-              key: ValueKey('measurement-next-description'),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 12),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(4, 16, 4, 16),
+          child: Text(
+            '다음은 이 측정값에 맞는 부위별 시연 설정을 확인해요.',
+            key: ValueKey('measurement-next-description'),
+            style: TextStyle(fontSize: 15, color: AppColors.inkSoft),
+          ),
+        ),
         if (latestMeasurement != null)
           Card(
             key: const ValueKey('measurement-details-card'),
+            margin: EdgeInsets.zero,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: ExpansionTile(
                 key: const ValueKey('measurement-details-toggle'),
                 tilePadding: EdgeInsets.zero,
-                title: const Text('측정값과 설정 기준 보기'),
+                childrenPadding: const EdgeInsets.only(bottom: 12),
+                expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+                title: const Text(
+                  '상세 측정값',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
                 children: [
-                  OutlinedButton.icon(
-                    key: const ValueKey('measurement-history-button'),
-                    onPressed: onDetails,
-                    icon: const Icon(Icons.history),
-                    label: const Text('전체 측정 기록 보기'),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '연구 참고 등급 · $level',
-                    key: const ValueKey('skeletal-muscle-level'),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '키로 보정한 근육지수 ${assessment.currentIndexKgM2.toStringAsFixed(2)}kg/m²',
-                    key: const ValueKey('muscle-index-explanation'),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '이 분류는 시연 설정을 위한 참고값이며 건강 진단이나 운동·영양 처방 기준이 아닙니다.',
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '작은 차이는 측정 조건에 따라 달라질 수 있습니다. 한 번의 증가·감소만으로 건강 변화를 판단하지 마세요.',
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    '아래 상태는 연구 참고 기준과의 비교입니다. 기준 범위 밖 항목 수는 독립적인 건강 문제의 수가 아닙니다. 체지방률과 체지방량은 같은 체지방 기준을 사용합니다.',
-                  ),
-                  const SizedBox(height: 12),
                   _MeasurementStepStatusPanel(
                     profile: profile,
                     ruleSet: snapshot.ruleSet,
                     values: latestMeasurement.values,
                   ),
-                  const SizedBox(height: 12),
-                  _IncreasedMeasurements(snapshot: snapshot),
+                  const SizedBox(height: 16),
+                  ExpansionTile(
+                    key: const ValueKey('measurement-interpretation-toggle'),
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(top: 8, bottom: 16),
+                    expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+                    title: const Text(
+                      '수치 해석과 설정 참고 기준',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    children: [
+                      DefaultTextStyle.merge(
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: AppColors.inkSoft,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              '연구 참고 등급 · $level',
+                              key: const ValueKey('skeletal-muscle-level'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '키로 보정한 근육지수 ${assessment.currentIndexKgM2.toStringAsFixed(2)}kg/m²',
+                              key: const ValueKey('muscle-index-explanation'),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              '이 분류는 시연 설정을 위한 참고값이며 건강 진단이나 운동·영양 처방 기준이 아닙니다.',
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              '작은 차이는 측정 조건에 따라 달라질 수 있습니다. 한 번의 증가·감소만으로 건강 변화를 판단하지 마세요.',
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              '표시된 상태는 연구 참고 기준과의 비교입니다. 기준 범위 밖 항목 수는 독립적인 건강 문제의 수가 아닙니다. 체지방률과 체지방량은 같은 체지방 기준을 사용합니다.',
+                            ),
+                            const SizedBox(height: 16),
+                            _IncreasedMeasurements(
+                              snapshot: snapshot,
+                              compact: true,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 1),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: const ValueKey('measurement-history-button'),
+                      onPressed: onDetails,
+                      icon: const Icon(Icons.history, size: 18),
+                      label: const Text('전체 측정 기록 보기'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.inkSoft,
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -557,6 +662,27 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
       ],
     );
   }
+}
+
+class _MeasurementSummaryValue extends StatelessWidget {
+  const _MeasurementSummaryValue({required this.label, required this.value});
+  final String label, value;
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+      const SizedBox(height: 4),
+      Text(
+        value,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: AppColors.ink,
+        ),
+      ),
+    ],
+  );
 }
 
 class _MeasurementStepStatusPanel extends StatelessWidget {
@@ -598,75 +724,31 @@ class _MeasurementStepStatusPanel extends StatelessWidget {
         .where((key) => statuses[key]!.tone != _MetricStatusTone.normal)
         .length;
 
-    return Container(
+    return Column(
       key: const ValueKey('measurement-step-composition-statuses'),
-      decoration: const BoxDecoration(
-        color: AppColors.canvasSoft,
-        borderRadius: AppRadius.mdBorder,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '체성분 상태',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 3),
-                const Text(
-                  '골격근량과 같은 최신 측정 결과입니다.',
-                  style: TextStyle(color: AppColors.muted),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  outsideCount == 0 ? '모두 중간' : '기준 범위 밖 $outsideCount개',
-                  key: const ValueKey('measurement-step-status-summary'),
-                  style: const TextStyle(
-                    color: AppColors.brand,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        const Text(
+          '체성분 상태',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          outsideCount == 0 ? '모두 중간' : '기준 범위 밖 $outsideCount개',
+          key: const ValueKey('measurement-step-status-summary'),
+          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+        ),
+        const SizedBox(height: 12),
+        for (final metric in visibleKeys) ...[
           const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final columns =
-                    constraints.maxWidth >= 280 &&
-                        MediaQuery.textScalerOf(context).scale(16) <= 22
-                    ? 2
-                    : 1;
-                final width =
-                    (constraints.maxWidth - (columns - 1) * 10) / columns;
-                return Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    for (final metric in visibleKeys)
-                      SizedBox(
-                        width: width,
-                        child: _HighlightedCompositionMetric(
-                          metricKey: metric,
-                          value: metrics[metric]!,
-                          status: statuses[metric]!,
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
+          _HighlightedCompositionMetric(
+            metricKey: metric,
+            value: metrics[metric]!,
+            status: statuses[metric]!,
           ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -697,7 +779,11 @@ class _HighlightedCompositionMetric extends StatelessWidget {
         Text(
           status.label,
           key: ValueKey('metric-status-measurement-step-$metricKey'),
-          style: TextStyle(color: color, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
@@ -713,21 +799,19 @@ class _HighlightedCompositionMetric extends StatelessWidget {
           '${_number(value)} ${_metricUnit(metricKey)}'.trim(),
           style: Theme.of(
             context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
       ],
     );
-    return Container(
+    return Padding(
       key: ValueKey('highlighted-status-$metricKey'),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.canvas,
-        borderRadius: AppRadius.smBorder,
-        border: Border.all(color: AppColors.hairlineSoft),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [metric, const SizedBox(height: 8), statusIndicator],
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Expanded(child: metric),
+          const SizedBox(width: 12),
+          statusIndicator,
+        ],
       ),
     );
   }

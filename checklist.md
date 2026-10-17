@@ -469,3 +469,11 @@ DSPy 후속:
 
 - 후속 로컬 최종 Flutter165/165 및 Backend typecheck/109개 PASS. PR16 CI39023959912 PostgreSQL에서 새 RLS/범위/upsert 재조회 검사 PASS. 운영에 같은 SQL 적용(`20261017101303`): profile_rows0/RLS true/본인 SELECT INSERT UPDATE 정책3개/anon 권한 false/인증 DELETE false. 실제 익명 HTTP401(42501) 확인. 운영 사용자 데이터 삽입/수정 없이 권한만 확인했다.
 - 운영 적용 후 advisors 비교에서 새 프로필 테이블 경고 없음. 기존 경고(샘플 quota·섭취 수신의 제한된 definer/deny-all 테이블, 기존 세션 함수 search_path·유출 비밀번호 설정)는 이번 변경 이전과 동일하다. [Supabase linter 근거](https://supabase.com/docs/guides/database/database-linter). 운영 이력과 CLI 생성 파일의 이름을 실제 적용 버전으로 맞췄다. 최종 웹/APK 및 Pages 상태는 최종 CI 링크에서 확인한다.
+
+
+## 2026-10-17 측정 결과 위계 개선
+
+기준 main `f9553db57dee3852bfaf75fde9a233670b698f27`, 작업판 `ux/measurement-hierarchy-20261017`.
+
+- RED PASS(의도한 실패): `flutter test --no-pub test/widget_test.dart --name '수치와 행동을 우선' --reporter expanded`에서 기존 단계 영역 높이가82px(기대52px 이하)여서 실패했다. 새 회귀는 핵심 수치/CTA 가시성, 상세 측정/접힌 해석/다음 설정 이동도 검사한다.
+- 관련 Flutter44개 GREEN PASS(320px·글자1/2배 포함). 최종 전체 테스트·analyze·브라우저 렌더·APK/웹 및 Pages는 기존 CI와 공개 화면으로 확인한다. 계정/프로필 저장·계산·예약·기기 안전 경계는 변경하지 않았다.

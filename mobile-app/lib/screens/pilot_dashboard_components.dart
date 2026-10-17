@@ -83,67 +83,40 @@ class _JourneyProgress extends StatelessWidget {
     return Semantics(
       container: true,
       label: '진행 단계 ${current.index + 1}/3, ${labels[current.index]}',
-      child: Row(
+      child: Column(
         key: const ValueKey('journey-progress'),
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (var index = 0; index < labels.length; index++)
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: index == current.index
-                      ? AppColors.brandSoft
-                      : Colors.transparent,
-                  borderRadius: AppRadius.smBorder,
-                  border: Border.all(
-                    color: index == current.index
-                        ? const Color(0xFFB6DAD1)
-                        : Colors.transparent,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 15,
-                      backgroundColor: index <= current.index
-                          ? AppColors.brand
-                          : AppColors.hairlineSoft,
-                      foregroundColor: index <= current.index
-                          ? Colors.white
-                          : AppColors.muted,
-                      child: index < current.index
-                          ? const Icon(Icons.check_rounded, size: 18)
-                          : Text(
-                              '${index + 1}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      labels[index],
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: index == current.index
-                            ? FontWeight.w800
-                            : FontWeight.w500,
-                        color: index == current.index
-                            ? AppColors.brand
-                            : AppColors.muted,
-                      ),
-                    ),
-                  ],
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 16,
+            runSpacing: 4,
+            children: [
+              Text(
+                '${current.index + 1} / 3  ·  ${labels[current.index]}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.inkSoft,
                 ),
               ),
+              if (current.index < labels.length - 1)
+                Text(
+                  '다음 · ${labels[current.index + 1]}',
+                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ExcludeSemantics(
+            child: LinearProgressIndicator(
+              value: (current.index + 1) / labels.length,
+              minHeight: 3,
+              borderRadius: BorderRadius.circular(2),
+              backgroundColor: AppColors.hairlineSoft,
+              color: AppColors.brand,
             ),
+          ),
         ],
       ),
     );

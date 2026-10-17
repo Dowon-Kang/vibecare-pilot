@@ -377,11 +377,12 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (!ending) ...[
+              if (!ending &&
+                  (_step != _PilotStep.measurement ||
+                      state.session != null)) ...[
                 _SystemStatusStrip(state: state, environment: environment),
                 const SizedBox(height: 16),
               ],
-              const SizedBox(height: 8),
               if (state.session == null && !ending) ...[
                 _JourneyProgress(current: _step),
                 const SizedBox(height: 20),

@@ -179,7 +179,7 @@ class _PrimaryActionBar extends ConsumerWidget {
       action = onOpenDeviceSetup;
       icon = Icons.accessibility_new_rounded;
       label = '부위별 설정 확인';
-      helper = '측정 결과에 맞는 부위별 설정을 확인해요.';
+      helper = '';
       buttonKey = const ValueKey('device-setup-button');
     } else {
       action = canSend
@@ -215,15 +215,17 @@ class _PrimaryActionBar extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Semantics(
-                liveRegion: true,
-                child: Text(
-                  helper,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall,
+              if (helper.isNotEmpty) ...[
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    helper,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
+                const SizedBox(height: 6),
+              ],
               FilledButton.icon(
                 key: state.isRunning
                     ? const ValueKey('stop-button')
