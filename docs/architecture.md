@@ -221,3 +221,6 @@ GuideContext는 품질/유효 범위와 최근 30일을 확인한다. 비교 가
 
 
 2026-10-17 본인 측정 갱신: SupabaseHome과 DailyGuideScreen이 활성/현재 화면에서 30초 간격 및 앱 복귀 시 기존 본인 읽기 경로를 재호출한다. 새 기록/검증 상태에만 추천과 운동 확인을 초기화하고 동일 데이터는 선택 상태를 유지한다. 센서 수신/공급사 전용 앱에서 운영 저장소로의 쓰기 연결을 구현한 것으로 해석하지 않는다.
+
+
+2026-10-17 외부 앱 측정 수신: 별도 BLE 앱 → 같은 프로젝트의 Supabase Auth JWT → `public.submit_external_measurement(p_payload)` → 서버 본인 연결/등록 출처/검증/중복·quota → 수신 envelope와 canonical BIA의 원자적 저장 → 기존 본인 조회 및 30초 자동 안내 갱신. 기존 Hono PIN 토큰과 혼용하지 않는다. 이 수신 RPC만 좁은 security definer로 쓰며 client에게 canonical/private table 쓰기 권한을 열지 않는다. 외부 앱 선정/정의 확인 전 등록 출처는 비활성이다. 상세 계약은 `docs/external-measurement-integration.md`와 `shared-contracts/external-measurement.openapi.yaml`을 따른다.

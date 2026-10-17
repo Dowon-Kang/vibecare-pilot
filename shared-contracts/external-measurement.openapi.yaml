@@ -1,0 +1,54 @@
+openapi: 3.1.0
+info:
+  title: VibeCare External Measurement Intake
+  version: 1.0.0
+  description: External app result submission; BLE and provider calls are outside this API. No production source is enabled by default.
+servers:
+  - url: https://jaekmjiupbsufxaevosf.supabase.co
+security:
+  - supabaseJwt: []
+    publishableKey: []
+paths:
+  /rest/v1/rpc/submit_external_measurement:
+    post:
+      operationId: submitExternalMeasurement
+      summary: Atomically append the authenticated account's external measurement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [p_payload]
+              properties:
+                p_payload:
+                  $ref: './external-measurement.schema.json'
+      responses:
+        '200':
+          description: Stored or same account/event/payload already stored
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [measurementId, duplicate, status]
+                properties:
+                  measurementId: { type: string }
+                  duplicate: { type: boolean }
+                  status: { const: stored }
+        '400': { description: Invalid payload, values or measurement time }
+        '401': { description: Authentication required or JWT invalid/expired }
+        '403': { description: Anonymous or missing privileges }
+        '409': { description: Account/profile link review required or event conflict }
+        '429': { description: Account upload limit reached }
+        '503': { description: Measurement source not registered and enabled }
+components:
+  securitySchemes:
+    supabaseJwt:
+      type: http
+      scheme: bearer
+      bearerFormat: Supabase Auth JWT
+    publishableKey:
+      type: apiKey
+      in: header
+      name: apikey

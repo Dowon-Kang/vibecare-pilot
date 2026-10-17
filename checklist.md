@@ -435,3 +435,15 @@ DSPy 후속:
 - 홈은 본인 측정 최대 50건을 30초 간격/앱 복귀 시 다시 읽고, 안내는 본인 RPC 최대 10건을 사용한다. 중복 조회 방지·timeout·계정 변경 후 응답 폐기를 유지한다. 실시간 push가 아닌 활성 화면의 주기적 확인이다.
 - 초기 로컬 전체 Flutter 154/154 PASS. 최종 변경 전체 검사와 APK/웹 빌드는 최종 CI로 별도 확인한다.
 - 실제 센서 → 계정 저장 연결은 미완료다. 현재 공개 앱에 BLE/FITRUS SDK 수신 코드가 없고 제공된 ML 명세에는 BLE UUID/패킷·전용 앱 계정별 이력 조회 경로가 없다. 사용자에게 측정 경로를 질문했으며 답변에 따라 수신 경계를 확정한다. 기기 측정·실제 계정 저장/추천 성공·임상/물리 장치 검증 NOT RUN. 새 키/외부 데이터 전송/DB 쓰기/실제 진동 실행 없음.
+
+
+## 2026-10-17 외부 블루투스 앱 수신 준비
+
+기준 main `6bc3f71b109c9eca4dced955e208c7ac82ada6b1`, 작업판 `feat/external-measurement-intake-20261017`.
+
+- RED PASS(의도한 실패): CI39019735286의 PostgreSQL job이 `external measurement authenticated intake RPC is missing`로 실패했다. 다른 배포용 빌드는 중단했다.
+- GREEN: CI39020193472 PostgreSQL job에서 본인 저장/타인 분리/익명·미연결·다중 연결·공유 참여자 차단/이벤트 재전송·충돌/입력·시각·출처 거부/쓰기 실패 전체 rollback/최신 조회·분당 quota를 통과했다. 이 시험은 별도 DB에서 BEGIN/ROLLBACK으로 수행했다.
+- 로컬 Backend typecheck 및 전체109개 PASS. SDK는 측정 시작 계정 고정·전송 전 계정 변경 차단·응답 후 변경 폐기·중복 영수증·출처 오류·취소·안전 오류 표시를 합성 fetch로 검증했다. 최종 docs/migration 버전 정합성 커밋의 전체 품질 결과는 CI로 확인한다.
+- 운영에 수신 함수와 빈 출처/영수증 테이블만 적용했다(`20261017091402`). 익명 HTTP401/42501, 익명 EXECUTE false/인증 true 확인. 활성 출처0/영수증0/운영 측정0 유지. 운영 합성 사용자/측정 삽입, 공급자 API/AI 호출, 키 등록은 하지 않았다.
+- 권한 검토: 본인 쓰기 전용 definer/auth.uid 및 auth.users.is_anonymous 확인/고정 search_path/서버 소유 대상·출처/익명 거부. registry/receipt는 RLS+클라이언트 직접 권한 없음. 신규 advisory의 의도된 definer/deny-all과 기존 경고는 연동 가이드에 근거를 남겼다.
+- 외부 앱 선정 후 필요: 같은 프로젝트 Auth 연결과 허용 redirect, 본인 참여자 1:1 연결·키 확인, 실제 기기/단위/방법/프로토콜 근거로 source 등록·활성화, 실제 두 계정/기기 종단간 시험. 실제 BLE/실기기 데이터 저장·임상·물리 진동 검증 NOT RUN.
