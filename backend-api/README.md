@@ -155,3 +155,8 @@ FITRUS 요청은 `measure-api-guide.md`의 엔드포인트별 필드를 서버�
 Supabase 서버 Secret에 GEMINI_API_KEY와 GEMINI_SAMPLE_ENABLED=true를 설정하고 `20261015142131_wellness_sample_quota.sql` 및 함수를 배포한다. 무료 Gemini에는 실제 건강정보를 전송하지 않는다. 운영 실제 측정용 OpenAI 경로와 물리 출력 금지는 유지한다. 키는 Flutter/Git/로그에 넣지 않는다.
 
 근거(2026-10-15): https://ai.google.dev/gemini-api/terms , https://ai.google.dev/api/generate-content , https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite .
+
+
+### 개인 계정 프로필
+
+`supabase/migrations/20261017101303_account_profiles.sql`은 실제 Supabase 계정의 나이·성별·키를 저장한다. authenticated의 비익명 사용자만 자신의 user_id로 SELECT/INSERT/UPDATE할 수 있다. 서버 소유 연구 참여자/과거 측정값은 변경하지 않는다. 외부 앱은 같은 Auth의 본인 JWT로 `account_profiles?user_id=eq.<자신의 id>&select=age,sex,height_cm`를 읽을 수 있고, 미등록 시 임의 값 대신 입력을 요청한다. 개인 프로필을 과거 FITRUS 요청 당시의 신체정보로 간주하지 않는다. `npm run test:daily-guide-rls`에 두 계정 저장/재조회·타인/익명/소유권 변경 차단·값 제약 검증을 포함한다.

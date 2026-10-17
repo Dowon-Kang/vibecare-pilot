@@ -1,3 +1,4 @@
+import 'package:vibecare_pilot/services/account_profile_repository.dart';
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:vibecare_pilot/services/wellness_ai_service.dart';
@@ -11,6 +12,14 @@ import 'package:vibecare_pilot/screens/sample_pilot_scope.dart';
 import 'package:vibecare_pilot/screens/sample_home.dart';
 import 'package:vibecare_pilot/services/participation_repository.dart';
 import 'package:vibecare_pilot/main.dart';
+
+class _ProfileMemory implements AccountProfileRepository {
+  AccountProfile? value;
+  @override
+  Future<AccountProfile?> load() async => value;
+  @override
+  Future<AccountProfile> save(AccountProfile profile) async => value = profile;
+}
 
 class _MemoryBookings implements VisitBookingRepository {
   _MemoryBookings(this.bookings);
@@ -72,6 +81,25 @@ void main() {
     expect(find.byKey(const ValueKey('book-visit-button')), findsNothing);
     expect(find.text('내 몸의 기록'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('실계정에서도 기본 프로필을 수정할 수 있다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ParticipantShell(
+          owner: 'account:a',
+          participantId: 'a',
+          sample: false,
+          repository: _MemoryBookings([]),
+          onStart: () {},
+          profileRepository: _ProfileMemory(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('profile-destination')));
+    await tester.pumpAndSettle();
+    expect(find.text('기본 프로필'), findsOneWidget);
   });
 
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));

@@ -1,3 +1,5 @@
+import '../services/account_profile_repository.dart';
+import '../widgets/account_profile_card.dart';
 import 'dart:async';
 import '../models/daily_guide.dart';
 export '../models/daily_guide.dart' show ParticipantReading;
@@ -32,7 +34,9 @@ class ParticipantShell extends StatefulWidget {
     this.webReminders,
     this.aiService,
     this.loadGuideReadings,
+    this.profileRepository,
   });
+  final AccountProfileRepository? profileRepository;
   final String owner, participantId, identity;
   final String? dataError;
   final bool sample;
@@ -757,6 +761,15 @@ class _ParticipantShellState extends State<ParticipantShell>
   );
   Widget _profile() => PageContent(
     children: [
+      if (!widget.sample && widget.profileRepository != null) ...[
+        AccountProfileCard(
+          key: ValueKey('account-profile:${widget.owner}'),
+          repository: widget.profileRepository!,
+          canAccess: () => _allowed,
+          accessChanges: widget.accessChanges,
+        ),
+        const SizedBox(height: 18),
+      ],
       _card(const Color(0xFFE2EEE5), [
         const Icon(Icons.person_outline, size: 40),
         const SizedBox(height: 12),

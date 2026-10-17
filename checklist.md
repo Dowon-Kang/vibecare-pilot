@@ -457,3 +457,15 @@ DSPy 후속:
 - 홈/측정 기록/생활 돌보기/예약·출석을 분리하고 내 프로필은 상단 route로 이동했다. 시연의 예약은 메뉴에서 접근한다. 불러온 프로필 요약과 필요 시 편집, 핵심 수치/직전 변화/다음 설정 안내와 접힌 상세 흐름을 구현했다.
 - 로컬 `flutter analyze --no-pub` PASS. 초기 전체 `flutter test --no-pub --reporter compact` 157/157 PASS. 최종 계정 잠금 및 다음 행동 가시성 보강은 CI에서 전체 검증한다. 기존 320px·글자2배 검사 포함. 웹/디버그 APK 및 공개 배포는 기존 CI로 확인한다.
 - 실계정 등록정보 읽기 전용 권한, 조회/추천/예약 저장, SIMULATOR_ONLY/실제 출력 금지 유지. 실기기·실제 계정 측정·임상 검증 NOT RUN.
+
+
+## 2026-10-17 실계정 프로필 저장 작업판
+
+기준 main `a8b2bab30d857d7b3515ab3ec0320912112ec85b`, `feat/self-profile-save-20261017`.
+
+- RED PASS(의도한 실패): `flutter test --no-pub test/sample_route_scope_test.dart --name '실계정에서도' --reporter expanded`가 실제 계정의 기본 프로필 부재(기대1/실제0)로 실패했다. 구현 후 관련 20개 GREEN PASS.
+- 편집/저장 실패 재시도/취소/재진입/계정 상실과 늦은 응답 폐기, 320px 글자1/2배를 검증했다. SDK 실제 loopback HTTP upsert/재로그인 조회·계정 변경 거부 2개 PASS. 로컬 analyze PASS, 초기 전체 Flutter 163개 PASS. 새 SDK 검사 포함 최종 전체는 CI로 확인한다.
+- 새 account_profiles는 본인 프로필만 저장하며 연구 참여자/계정 연결/과거 측정을 변경하지 않는다. 최종 CI의 PostgreSQL RLS 검사, 운영 적용/권한 확인 및 Pages 배포는 후속 증거로 확인한다. 운영 개인 프로필을 테스트 목적으로 임의 수정하지 않는다.
+
+- 후속 로컬 최종 Flutter165/165 및 Backend typecheck/109개 PASS. PR16 CI39023959912 PostgreSQL에서 새 RLS/범위/upsert 재조회 검사 PASS. 운영에 같은 SQL 적용(`20261017101303`): profile_rows0/RLS true/본인 SELECT INSERT UPDATE 정책3개/anon 권한 false/인증 DELETE false. 실제 익명 HTTP401(42501) 확인. 운영 사용자 데이터 삽입/수정 없이 권한만 확인했다.
+- 운영 적용 후 advisors 비교에서 새 프로필 테이블 경고 없음. 기존 경고(샘플 quota·섭취 수신의 제한된 definer/deny-all 테이블, 기존 세션 함수 search_path·유출 비밀번호 설정)는 이번 변경 이전과 동일하다. [Supabase linter 근거](https://supabase.com/docs/guides/database/database-linter). 운영 이력과 CLI 생성 파일의 이름을 실제 적용 버전으로 맞췄다. 최종 웹/APK 및 Pages 상태는 최종 CI 링크에서 확인한다.
