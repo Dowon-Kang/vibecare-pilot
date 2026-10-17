@@ -52,6 +52,28 @@ class _MissingMeasurementAi implements WellnessAiService {
 }
 
 void main() {
+  testWidgets('예약은 독립 목적지이고 측정 기록에는 섞이지 않는다', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(home: SampleHome(repository: _MemoryBookings([]))),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('예약 · 출석체크 · 달력 열기'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('measurement-destination')));
+    await tester.pumpAndSettle();
+    expect(find.byType(TabBar), findsNothing);
+    expect(find.text('내 몸의 기록'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('booking-destination')));
+    await tester.pumpAndSettle();
+    expect(find.text('내 몸의 기록'), findsNothing);
+    expect(find.byType(TabBar), findsNothing);
+    expect(find.byKey(const ValueKey('book-visit-button')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('measurement-destination')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('book-visit-button')), findsNothing);
+    expect(find.text('내 몸의 기록'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   for (final scale in [1.0, 2.0]) {
     testWidgets('측정 없이 식사·운동 진입과 선택적 AI · 글자 $scale', (tester) async {
@@ -165,19 +187,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
-  testWidgets(
-    'measurement start appears before attendance in the home reading order',
-    (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(home: SampleHome(repository: _MemoryBookings([]))),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        tester.getTopLeft(find.text('합성 데이터 시연 시작')).dy,
-        lessThan(tester.getTopLeft(find.text('예약 · 출석체크 · 달력 열기')).dy),
-      );
-    },
-  );
+  testWidgets('home has one main action and no duplicate destination menu', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(home: SampleHome(repository: _MemoryBookings([]))),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('합성 데이터 시연 시작'), findsOneWidget);
+    expect(find.text('예약 · 출석체크 · 달력 열기'), findsNothing);
+    expect(find.text('식사·운동 안내 열기'), findsNothing);
+    expect(find.byKey(const ValueKey('booking-destination')), findsOneWidget);
+  });
   testWidgets('account home starts the synthetic demo directly', (
     tester,
   ) async {
@@ -198,15 +219,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(starts, 1);
     expect(find.text('측정 준비'), findsNothing);
-    await tester.tap(find.text('예약 · 출석체크 · 달력 열기'));
+    await tester.tap(find.byKey(const ValueKey('booking-destination')));
     await tester.pumpAndSettle();
-    expect(
-      DefaultTabController.of(tester.element(find.text('예약·출석'))).index,
-      1,
-    );
+    expect(find.byType(TabBar), findsNothing);
+    expect(find.byKey(const ValueKey('attendance:account:a')), findsOneWidget);
   });
   testWidgets(
-    'mobile shell opens profile and notification settings from tabs',
+    'mobile shell opens profile and notification settings from the top menu',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(home: SampleHome(repository: _MemoryBookings([]))),
@@ -224,35 +243,50 @@ void main() {
       expect(find.text('예약 알림'), findsOneWidget);
     },
   );
-  testWidgets('account loss locks open notification settings', (tester) async {
-    final changes = StreamController<bool>.broadcast();
-    addTearDown(changes.close);
-    var allowed = true;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ParticipantShell(
-          owner: 'account:a',
-          participantId: 'a',
-          sample: false,
-          repository: _MemoryBookings([]),
-          onStart: () {},
-          canAccess: () => allowed,
-          accessChanges: changes.stream,
-        ),
-      ),
+  for (final settings in [false, true]) {
+    testWidgets(
+      'account loss locks open ${settings ? "settings" : "profile"}',
+      (tester) async {
+        final changes = StreamController<bool>.broadcast();
+        addTearDown(changes.close);
+        var allowed = true;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ParticipantShell(
+              owner: 'account:a',
+              participantId: 'a',
+              sample: false,
+              repository: _MemoryBookings([]),
+              onStart: () {},
+              canAccess: () => allowed,
+              accessChanges: changes.stream,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('profile-destination')));
+        await tester.pumpAndSettle();
+        if (settings) {
+          await tester.tap(find.text('알림 설정'));
+          await tester.pumpAndSettle();
+        }
+        allowed = false;
+        changes.add(false);
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            settings
+                ? '계정이 변경됐습니다. 설정을 닫고 다시 로그인해 주세요.'
+                : '계정이 변경됐습니다. 다시 로그인해 주세요.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.byType(SwitchListTile), findsNothing);
+        expect(find.text('알림 설정'), findsNothing);
+        await tester.pumpWidget(const SizedBox());
+      },
     );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('profile-destination')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('알림 설정'));
-    await tester.pumpAndSettle();
-    allowed = false;
-    changes.add(false);
-    await tester.pumpAndSettle();
-    expect(find.text('계정이 변경됐습니다. 설정을 닫고 다시 로그인해 주세요.'), findsOneWidget);
-    expect(find.byType(SwitchListTile), findsNothing);
-    await tester.pumpWidget(const SizedBox());
-  });
+  }
   testWidgets('standalone sample app can reach the health management home', (
     tester,
   ) async {
@@ -390,7 +424,7 @@ void main() {
     await tester.ensureVisible(find.text('시연 시작'));
     await tester.tap(find.text('시연 시작'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('participation-button')), findsOneWidget);
+    expect(find.byKey(const ValueKey('participation-button')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('profile-data-button')));
     await tester.pumpAndSettle();
     expect(
@@ -404,6 +438,11 @@ void main() {
       find.byKey(const ValueKey('profile-continue-button')),
     );
     await tester.tap(find.byKey(const ValueKey('profile-continue-button')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('measurement-details-toggle')),
+    );
+    await tester.tap(find.byKey(const ValueKey('measurement-details-toggle')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(
       find.byKey(const ValueKey('measurement-history-button')),

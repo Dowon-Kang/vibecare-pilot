@@ -224,3 +224,8 @@ GuideContext는 품질/유효 범위와 최근 30일을 확인한다. 비교 가
 
 
 2026-10-17 외부 앱 측정 수신: 별도 BLE 앱 → 같은 프로젝트의 Supabase Auth JWT → `public.submit_external_measurement(p_payload)` → 서버 본인 연결/등록 출처/검증/중복·quota → 수신 envelope와 canonical BIA의 원자적 저장 → 기존 본인 조회 및 30초 자동 안내 갱신. 기존 Hono PIN 토큰과 혼용하지 않는다. 이 수신 RPC만 좁은 security definer로 쓰며 client에게 canonical/private table 쓰기 권한을 열지 않는다. 외부 앱 선정/정의 확인 전 등록 출처는 비활성이다. 상세 계약은 `docs/external-measurement-integration.md`와 `shared-contracts/external-measurement.openapi.yaml`을 따른다.
+
+
+## 작업 중심 탐색과 점진적 공개 (2026-10-17)
+
+ParticipantShell은 홈·측정 기록·생활·예약·출석 목적지를 소유하고 기존 ParticipationScreen을 예약 목적지에 직접 넣는다. 알림의 일정 확인도 같은 목적지를 연다. 프로필은 상단에서 독립 route로 열며 계정 접근 상실 시 내용을 숨긴다. PilotScreen은 예약을 메뉴로 제공한다. _FirstLoginProfileCard는 불러온 요약을 즉시 표시하고 샘플 편집만 접힌 영역에서 허용한다. 실계정 등록정보의 기존 읽기 전용 계약은 유지한다. _SkeletalMuscleMeasurementCard는 핵심 측정과 다음 설정 안내를 한 면에 두고 상세 기준·전체 이력을 ExpansionTile로 공개한다. 데이터 조회·저장·추천 계산·기기 안전 경계는 변경하지 않는다.

@@ -6,9 +6,11 @@ class _FirstLoginProfileCard extends StatelessWidget {
     required this.onAgeChanged,
     required this.onSexChanged,
     required this.onHeightChanged,
+    required this.editable,
   });
 
   final ParticipantProfile profile;
+  final bool editable;
   final ValueChanged<int> onAgeChanged;
   final ValueChanged<ParticipantSex> onSexChanged;
   final ValueChanged<double> onHeightChanged;
@@ -48,63 +50,85 @@ class _FirstLoginProfileCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          Text('프로필 설문', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _SurveyStepper(
-                  editorKey: 'age-editor',
-                  label: '나이',
-                  value: '${profile.age}세',
-                  onMinus: () => onAgeChanged(profile.age - 1),
-                  onPlus: () => onAgeChanged(profile.age + 1),
-                  onEdit: () => _showProfileValueEditor(
-                    context: context,
-                    fieldKey: 'age',
-                    label: '나이',
-                    suffix: '세',
-                    currentValue: profile.age,
-                    minimum: 18,
-                    maximum: 100,
-                    presets: const [20, 40, 60, 80],
-                    onChanged: onAgeChanged,
-                  ),
+          const Text('기본 정보를 불러왔어요. 변경된 정보가 있을 때만 수정하세요.'),
+          if (editable)
+            ExpansionTile(
+              key: const ValueKey('profile-edit-toggle'),
+              tilePadding: EdgeInsets.zero,
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('프로필 수정'),
+              children: [
+                Text('변경할 정보', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SurveyStepper(
+                        editorKey: 'age-editor',
+                        label: '나이',
+                        value: '${profile.age}세',
+                        onMinus: () => onAgeChanged(profile.age - 1),
+                        onPlus: () => onAgeChanged(profile.age + 1),
+                        onEdit: () => _showProfileValueEditor(
+                          context: context,
+                          fieldKey: 'age',
+                          label: '나이',
+                          suffix: '세',
+                          currentValue: profile.age,
+                          minimum: 18,
+                          maximum: 100,
+                          presets: const [20, 40, 60, 80],
+                          onChanged: onAgeChanged,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _SurveyStepper(
+                        editorKey: 'height-editor',
+                        label: '키',
+                        value: '${profile.heightCm.toStringAsFixed(0)}cm',
+                        onMinus: () => onHeightChanged(profile.heightCm - 1),
+                        onPlus: () => onHeightChanged(profile.heightCm + 1),
+                        onEdit: () => _showProfileValueEditor(
+                          context: context,
+                          fieldKey: 'height',
+                          label: '키',
+                          suffix: 'cm',
+                          currentValue: profile.heightCm.round(),
+                          minimum: 120,
+                          maximum: 220,
+                          presets: const [150, 160, 170, 180],
+                          onChanged: (value) =>
+                              onHeightChanged(value.toDouble()),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _SurveyStepper(
-                  editorKey: 'height-editor',
-                  label: '키',
-                  value: '${profile.heightCm.toStringAsFixed(0)}cm',
-                  onMinus: () => onHeightChanged(profile.heightCm - 1),
-                  onPlus: () => onHeightChanged(profile.heightCm + 1),
-                  onEdit: () => _showProfileValueEditor(
-                    context: context,
-                    fieldKey: 'height',
-                    label: '키',
-                    suffix: 'cm',
-                    currentValue: profile.heightCm.round(),
-                    minimum: 120,
-                    maximum: 220,
-                    presets: const [150, 160, 170, 180],
-                    onChanged: (value) => onHeightChanged(value.toDouble()),
-                  ),
+                const SizedBox(height: 10),
+                SegmentedButton<ParticipantSex>(
+                  key: const ValueKey('profile-sex-selector'),
+                  segments: const [
+                    ButtonSegment(
+                      value: ParticipantSex.female,
+                      label: Text('여성'),
+                    ),
+                    ButtonSegment(
+                      value: ParticipantSex.male,
+                      label: Text('남성'),
+                    ),
+                  ],
+                  selected: {profile.sex},
+                  onSelectionChanged: (value) => onSexChanged(value.first),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          SegmentedButton<ParticipantSex>(
-            key: const ValueKey('profile-sex-selector'),
-            segments: const [
-              ButtonSegment(value: ParticipantSex.female, label: Text('여성')),
-              ButtonSegment(value: ParticipantSex.male, label: Text('남성')),
-            ],
-            selected: {profile.sex},
-            onSelectionChanged: (value) => onSexChanged(value.first),
-          ),
+              ],
+            )
+          else
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text('등록 정보가 다르면 담당자에게 변경을 요청해 주세요.'),
+            ),
           const SizedBox(height: 18),
           Container(
             key: const ValueKey('research-cautions'),
@@ -443,75 +467,55 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
               key: const ValueKey('current-skeletal-muscle'),
               style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900),
             ),
-            const SizedBox(height: 10),
-            const Text(
-              '내 몸의 변화를 차근차근 기록해요.',
-              style: TextStyle(
-                color: AppColors.brand,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        JourneySection(
-          key: const ValueKey('measurement-comparison-card'),
-          title: '직전 기록과 비교',
-          icon: Icons.show_chart_rounded,
-          children: [
-            Container(
-              key: const ValueKey('measurement-comparison'),
-              padding: const EdgeInsets.all(14),
-              decoration: const BoxDecoration(
-                color: AppColors.comparisonSoft,
-                borderRadius: AppRadius.smBorder,
-              ),
-              child: Row(
+            if (latestMeasurement != null) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 20,
+                runSpacing: 8,
                 children: [
-                  const Icon(
-                    Icons.timeline_rounded,
-                    color: AppColors.comparisonInk,
+                  Text(
+                    '체중 ${latestMeasurement.values.weightKg.toStringAsFixed(1)} kg',
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      deltaText,
-                      style: const TextStyle(
-                        color: AppColors.comparisonInk,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                  Text(
+                    '체지방률 ${latestMeasurement.values.bodyFatPct.toStringAsFixed(1)}%',
                   ),
                 ],
               ),
-            ),
+            ],
             const SizedBox(height: 12),
             Text(
-              '한 번의 수치보다 꾸준히 쌓인 기록을 함께 살펴봐요.',
-              style: Theme.of(context).textTheme.bodySmall,
+              deltaText,
+              key: const ValueKey('measurement-comparison'),
+              style: const TextStyle(
+                color: AppColors.comparisonInk,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-
-            OutlinedButton.icon(
-              key: const ValueKey('measurement-history-button'),
-              onPressed: onDetails,
-              icon: const Icon(Icons.history),
-              label: const Text('전체 측정 기록 보기'),
+            const SizedBox(height: 12),
+            const Text(
+              '이 측정값으로 부위별 시연 설정을 확인해요.',
+              key: ValueKey('measurement-next-description'),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        JourneySection(
-          key: const ValueKey('measurement-details-card'),
-          title: '상세 측정 지표',
-          icon: Icons.analytics_outlined,
-          subtitle: '필요한 항목을 펼쳐서 확인하세요.',
-          children: [
-            if (latestMeasurement != null)
-              ExpansionTile(
+        const SizedBox(height: 12),
+        if (latestMeasurement != null)
+          Card(
+            key: const ValueKey('measurement-details-card'),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ExpansionTile(
                 key: const ValueKey('measurement-details-toggle'),
                 tilePadding: EdgeInsets.zero,
                 title: const Text('측정값과 설정 기준 보기'),
                 children: [
+                  OutlinedButton.icon(
+                    key: const ValueKey('measurement-history-button'),
+                    onPressed: onDetails,
+                    icon: const Icon(Icons.history),
+                    label: const Text('전체 측정 기록 보기'),
+                  ),
+                  const SizedBox(height: 12),
                   Text(
                     '연구 참고 등급 · $level',
                     key: const ValueKey('skeletal-muscle-level'),
@@ -544,8 +548,8 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
                   _IncreasedMeasurements(snapshot: snapshot),
                 ],
               ),
-          ],
-        ),
+            ),
+          ),
       ],
     );
   }
