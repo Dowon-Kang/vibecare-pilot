@@ -49,13 +49,18 @@ class SupabaseHome extends StatefulWidget {
   State<SupabaseHome> createState() => _SupabaseHomeState();
 }
 
-class _SupabaseHomeState extends State<SupabaseHome> {
+class _SupabaseHomeState extends State<SupabaseHome>
+    with WidgetsBindingObserver {
   late final SupabaseClient _client = widget.client ?? Supabase.instance.client;
   late final _aiService = SupabaseWellnessAiService(
     client: _client,
     endpoint: '$supabaseUrl/functions/v1/wellness-advice',
     publishableKey: supabasePublishableKey,
   );
+  late final _guideRepository = SupabaseDailyGuideRepository(_client);
+  Timer? _measurementTimer;
+  bool _active = true;
+  String? _loadingOwner;
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
@@ -72,6 +77,12 @@ class _SupabaseHomeState extends State<SupabaseHome> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _measurementTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (_active && (ModalRoute.of(context)?.isCurrent ?? true)) {
+        unawaited(_reload());
+      }
+    });
     _user = _client.auth.currentUser;
     _authSubscription = _client.auth.onAuthStateChange.listen(
       (event) {
@@ -122,7 +133,15 @@ class _SupabaseHomeState extends State<SupabaseHome> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _active = state == AppLifecycleState.resumed;
+    if (_active) unawaited(_reload());
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _measurementTimer?.cancel();
     _authSubscription?.cancel();
     _email.dispose();
     _password.dispose();
@@ -203,7 +222,8 @@ class _SupabaseHomeState extends State<SupabaseHome> {
 
   Future<void> _reload() async {
     final id = _client.auth.currentUser?.id;
-    if (id == null) return;
+    if (id == null || _loadingOwner == id) return;
+    _loadingOwner = id;
     try {
       final results = await Future.wait<dynamic>([
         _client
@@ -211,13 +231,14 @@ class _SupabaseHomeState extends State<SupabaseHome> {
             .select(
               'measured_at, weight_kg, skeletal_muscle_mass_kg, body_fat_pct',
             )
-            .order('measured_at', ascending: false),
+            .order('measured_at', ascending: false)
+            .limit(50),
         _client
             .from('announcements')
             .select('title, body')
             .order('published_at', ascending: false)
             .limit(5),
-      ]);
+      ]).timeout(const Duration(seconds: 15));
       if (!mounted || _client.auth.currentUser?.id != id) return;
       setState(() {
         _measurements = [
@@ -234,6 +255,8 @@ class _SupabaseHomeState extends State<SupabaseHome> {
       if (mounted && _client.auth.currentUser?.id == id) {
         setState(() => _message = 'Supabase 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
       }
+    } finally {
+      if (_loadingOwner == id) _loadingOwner = null;
     }
   }
 
@@ -372,7 +395,7 @@ class _SupabaseHomeState extends State<SupabaseHome> {
       sample: false,
       repository: SupabaseParticipationRepository(_client),
       aiService: _aiService,
-      loadGuideReadings: SupabaseDailyGuideRepository(_client).load,
+      loadGuideReadings: _guideRepository.load,
       identity: _user!.email ?? '참여자',
       canAccess: () => _client.auth.currentUser?.id == id,
       accessChanges: _client.auth.onAuthStateChange.map(

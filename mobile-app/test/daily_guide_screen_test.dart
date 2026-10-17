@@ -26,6 +26,7 @@ void main() {
 
   for (final scale in [1.0, 2.0]) {
     testWidgets('측정으로 자동 추천 → 전체 메뉴 선택 · 글자 $scale', (tester) async {
+      addTearDown(() => tester.pumpWidget(const SizedBox()));
       tester.view.physicalSize = const Size(320, 700);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -59,6 +60,7 @@ void main() {
     });
   }
   testWidgets('서는 동작은 직접 해제 후 선택, 증상과 새 측정은 운동을 다시 보류', (tester) async {
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
     Widget app(List<ParticipantReading> data) => MaterialApp(
       home: DailyGuideScreen(
         kind: DailyGuideKind.movement,
@@ -96,6 +98,7 @@ void main() {
     expect(find.byKey(const ValueKey('movement-hold')), findsOneWidget);
   });
   testWidgets('계정 연결이 끊기면 열려 있는 측정과 안내를 숨긴다', (tester) async {
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
     final access = StreamController<bool>.broadcast();
     addTearDown(access.close);
     await tester.pumpWidget(
@@ -117,6 +120,7 @@ void main() {
   });
 
   testWidgets('실계정 측정 자동 로딩 → 실패 재시도 → 다른 최신값 재추천', (tester) async {
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
     var calls = 0;
     final initial = Completer<List<ParticipantReading>>();
     Future<List<ParticipantReading>> load() {
@@ -165,6 +169,7 @@ void main() {
     expect(find.byType(FilterChip), findsNothing);
   });
   testWidgets('계정 변경 후 도착한 측정 응답은 폐기', (tester) async {
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
     final pending = Completer<List<ParticipantReading>>();
     final access = StreamController<bool>.broadcast();
     addTearDown(access.close);
@@ -187,6 +192,7 @@ void main() {
     expect(find.text('콩·잡곡·채소 한 그릇'), findsNothing);
   });
   testWidgets('실계정 빈 응답을 합성 측정으로 채우지 않음', (tester) async {
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
     await tester.pumpWidget(
       MaterialApp(
         home: DailyGuideScreen(
@@ -203,6 +209,7 @@ void main() {
     expect(find.text('체지방률 변화를 참고한 식사 3가지'), findsNothing);
   });
   testWidgets('식사 안내에서 8가지 조합을 바꾸어 볼 수 있다', (tester) async {
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
     await tester.pumpWidget(
       const MaterialApp(home: DailyGuideScreen(kind: DailyGuideKind.food)),
     );
@@ -215,5 +222,72 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('meal-library')));
     await tester.pumpAndSettle();
     expect(find.byType(ChoiceChip), findsNWidgets(8));
+  });
+  testWidgets('열린 안내도 새 측정은 자동 반영하고 같은 응답은 상태 확인을 유지', (tester) async {
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
+    var calls = 0;
+    var latest = readings;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DailyGuideScreen(
+          kind: DailyGuideKind.movement,
+          clock: () => now,
+          loadReadings: () async {
+            calls++;
+            return latest;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tap(tester, find.text('통증·어지럼·활동 제한이 없어요'));
+    expect(find.byKey(const ValueKey('movement-instructions')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pumpAndSettle();
+    expect(calls, 2);
+    expect(find.byKey(const ValueKey('movement-instructions')), findsOneWidget);
+    latest = [
+      ParticipantReading(now, 18, 60, 25, comparisonKey: 'same'),
+      ParticipantReading(
+        now.subtract(const Duration(days: 1)),
+        20,
+        60,
+        25,
+        comparisonKey: 'same',
+      ),
+    ];
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pumpAndSettle();
+    expect(calls, 3);
+    expect(find.byKey(const ValueKey('movement-instructions')), findsNothing);
+    await tester.scrollUntilVisible(find.text('식사'), -300);
+    await tap(tester, find.text('식사'));
+    expect(find.text('골격근량 변화를 참고한 식사 3가지'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 30));
+    expect(calls, 3);
+  });
+  testWidgets('앱이 비활성일 때는 조회를 멈추고 복귀 시 최신 측정을 확인', (tester) async {
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
+    var calls = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DailyGuideScreen(
+          kind: DailyGuideKind.food,
+          clock: () => now,
+          loadReadings: () async {
+            calls++;
+            return readings;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump(const Duration(seconds: 60));
+    expect(calls, 1);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(calls, 2);
   });
 }

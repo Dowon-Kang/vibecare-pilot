@@ -7,6 +7,7 @@ void main() {
   testWidgets(
     'auth refresh stream failure clears access and remains recoverable',
     (tester) async {
+      addTearDown(() => tester.pumpWidget(const SizedBox()));
       final client = SupabaseClient(
         'https://example.supabase.co',
         'sb_publishable_test',
