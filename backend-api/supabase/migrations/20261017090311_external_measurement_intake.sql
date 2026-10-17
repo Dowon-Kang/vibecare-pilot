@@ -30,7 +30,7 @@ create function public.submit_external_measurement(p_payload jsonb)
 returns jsonb language plpgsql volatile security definer set search_path = '' as $$
 declare
   owner_id uuid := auth.uid();
-  event_id uuid;
+  v_event_id uuid;
   participant text;
   links integer;
   height double precision;
@@ -52,7 +52,7 @@ begin
     or p_payload - array['schemaVersion','eventId','sourceId','deviceId','measuredAt','values'] <> '{}'::jsonb
     or p_payload->'schemaVersion' is distinct from '1'::jsonb
     or jsonb_typeof(p_payload->'values') is distinct from 'object'
-    or p_payload->'values' - array['weightKg','bodyFatPct','fatMassKg','muscleKg'] <> '{}'::jsonb then
+    or (p_payload->'values') - array['weightKg','bodyFatPct','fatMassKg','muscleKg'] <> '{}'::jsonb then
     raise sqlstate 'PT400' using message='INVALID_PAYLOAD';
   end if;
   foreach field in array array['eventId','sourceId','deviceId','measuredAt'] loop
@@ -67,11 +67,11 @@ begin
     or (p_payload->>'measuredAt') !~ '(Z|[+-][0-9]{2}:[0-9]{2})$' then
     raise sqlstate 'PT400' using message='INVALID_PAYLOAD';
   end if;
-  event_id := (p_payload->>'eventId')::uuid;
+  v_event_id := (p_payload->>'eventId')::uuid;
   -- Per-owner lock makes retries, quota and all writes atomic under concurrency.
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(owner_id::text, 917));
   select * into receipt from vibecare.external_measurement_receipts r
-    where r.auth_user_id=owner_id and r.event_id=event_id;
+    where r.auth_user_id=owner_id and r.event_id=v_event_id;
   if found then
     if receipt.payload <> p_payload then raise sqlstate 'PT409' using message='EVENT_CONFLICT'; end if;
     return jsonb_build_object('measurementId',receipt.measurement_id,'duplicate',true,'status','stored');
@@ -117,14 +117,14 @@ begin
       and r.received_at>=date_trunc('day',now() at time zone 'UTC') at time zone 'UTC')>=100 then
     raise sqlstate 'PT429' using message='UPLOAD_LIMIT';
   end if;
-  measurement := 'EXT-'||owner_id::text||'-'||event_id::text;
+  measurement := 'EXT-'||owner_id::text||'-'||v_event_id::text;
   normalized := p_payload;
   insert into vibecare.bia_measurements(id,participant_id,device_id,measured_at,quality_passed,weight_kg,bmi,body_fat_pct,fat_mass_kg,
     skeletal_muscle_mass_kg,raw_json,muscle_definition,muscle_definition_ref,muscle_measurement_method,muscle_method_evidence_ref,muscle_mass_unit,acquisition_protocol)
   values(measurement,participant,(p_payload->>'sourceId')||':'||(p_payload->>'deviceId'),measured::text,1,weight,weight/((height/100)^2),fat_pct,fat_mass,muscle,normalized::text,
     'SMM',source.muscle_definition_ref,source.muscle_measurement_method,source.muscle_method_evidence_ref,'kg',source.acquisition_protocol);
   insert into vibecare.external_measurement_receipts(auth_user_id,event_id,measurement_id,payload)
-    values(owner_id,event_id,measurement,p_payload);
+    values(owner_id,v_event_id,measurement,p_payload);
   return jsonb_build_object('measurementId',measurement,'duplicate',false,'status','stored');
 end;
 $$;
