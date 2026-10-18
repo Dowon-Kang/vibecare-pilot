@@ -614,34 +614,38 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   }
 
   void _showSettings() {
+    final container = ProviderScope.containerOf(context);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.82,
-        minChildSize: 0.55,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Consumer(
-          builder: (context, ref, _) {
-            final state = ref.watch(pilotControllerProvider);
-            return ListView(
-              controller: scrollController,
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
-              children: [
-                Text(
-                  '기기 출력과 참여자 정보',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 18),
-                _IntensityControlCard(state: state),
-                const SizedBox(height: 16),
-                _ProfileSettings(state: state),
-              ],
-            );
-          },
+      builder: (_) => UncontrolledProviderScope(
+        container: container,
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.82,
+          minChildSize: 0.55,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) => Consumer(
+            builder: (context, ref, _) {
+              final state = ref.watch(pilotControllerProvider);
+              return ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+                children: [
+                  Text(
+                    '기기 출력과 참여자 정보',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 18),
+                  _IntensityControlCard(state: state),
+                  const SizedBox(height: 16),
+                  _ProfileSettings(state: state),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

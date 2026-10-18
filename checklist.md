@@ -484,3 +484,5 @@ DSPy 후속:
 - PASS: 순서 회귀 RED가 기존 추천 우선 배치로 실패한 뒤 GREEN. 어깨 선택의 15Hz/20분/64%, 수동 조정, 전신 재선택의 69% 복원을 검증했다.
 - PASS: `flutter test --no-pub --reporter compact` 167개, `flutter analyze --no-pub`, `dart format --output=none --set-exit-if-changed lib test` 76파일. 로컬 Flutter3.47.4, 320px/글자2배 포함.
 - 공개 배포/CI 및 브라우저 증거는 PR과 Actions에서 확인한다. 물리 기기 검증 NOT RUN; SIMULATOR_ONLY 경계 유지.
+
+- 브라우저에서 별도 시연 scope의 조정 창이 루트 상태를 읽는 기존 오류(0%/빈 프로필)를 확인했다. 별도 scope 회귀 RED(64% 기대, 0% 실제) 후 동일 ProviderContainer를 조정 창에 전달했다. 집중 회귀 PASS: 어깨64% → 낮추기63% → 본문63% 반영. 최종 전체 검증은 아래 PR 최신 SHA와 Actions에 연결한다.

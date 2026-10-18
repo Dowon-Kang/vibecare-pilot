@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibecare_pilot/screens/pilot_screen.dart';
+import 'package:vibecare_pilot/screens/sample_pilot_scope.dart';
 import 'package:vibecare_pilot/theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:vibecare_pilot/controllers/pilot_controller.dart';
@@ -10,7 +11,8 @@ import 'package:vibecare_pilot/services/feedback_repository.dart';
 import 'package:vibecare_pilot/services/mock_device_gateway.dart';
 
 class _ResearchApp extends StatelessWidget {
-  const _ResearchApp({this.textScale = 1});
+  const _ResearchApp({this.textScale = 1, this.scopedSample = false});
+  final bool scopedSample;
   final double textScale;
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -28,7 +30,7 @@ class _ResearchApp extends StatelessWidget {
       GlobalWidgetsLocalizations.delegate,
       GlobalCupertinoLocalizations.delegate,
     ],
-    home: const PilotScreen(),
+    home: scopedSample ? const SamplePilotScope() : const PilotScreen(),
   );
 }
 
@@ -684,6 +686,38 @@ void main() {
           .onPressed,
       isNull,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('별도 시연 계정에서도 선택 부위의 추천 출력을 실제로 조정한다', (tester) async {
+    _size(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      const ProviderScope(child: _ResearchApp(scopedSample: true)),
+    );
+    await tester.ensureVisible(find.text('시연 시작'));
+    await tester.tap(find.text('시연 시작'));
+    await tester.pumpAndSettle();
+    await _tap(tester, 'profile-continue-button');
+    await _tap(tester, 'device-setup-button');
+    await _tap(tester, 'body-map-shoulder');
+    await _tap(tester, 'settings-button');
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('selected-intensity')))
+          .data,
+      '64%',
+    );
+    await _tap(tester, 'intensity-minus');
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('selected-intensity')))
+          .data,
+      '63%',
+    );
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('63%'), findsWidgets);
+    expect(find.text('추천값에서 직접 조정됨 · 자동 추천 이하'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
