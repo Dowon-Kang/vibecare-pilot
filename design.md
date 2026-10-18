@@ -246,3 +246,6 @@ BIA 4건 ─┼─→ 4건 검증/저장 ─→ 최신 근육지수 등급/고�
 
 2026-10-18 기록 탭: 지표 선택 → 강조된 수치와 기준 시각 → 기간 선택 → 시간축 그래프/선택 기록 → 세 지표 함께 보기 → 접힌 날짜별 목록. 골격근량은 청록, 체중은 차분한 파랑, 체지방률은 갈색으로 구별하되 이름·단위를 항상 함께 표시한다. fl_chart 터치 표시와 Syncfusion trackball의 선택 지점 패턴을 참고하고 추가 패키지 없이 기존 Flutter Canvas로 구현한다. 축 범위와 불러온 건수를 명시하며 비교 조건 불명은 점만 표시한다. 결과 카드는 민트→흰색 그라데이션과 중성 증감 배지를 사용하고 상세 해석은 계속 접는다.
 참고: https://github.com/imaNNeo/fl_chart/blob/main/repo_files/documentations/handle_touches.md 및 https://help.syncfusion.com/flutter/cartesian-charts/trackball-crosshair
+
+
+2026-10-18 결과 가독성: 결과 카드만 #103F39→#176454 짙은 청록 그라데이션, 골격근량 제목18px/흰색, 수치60px(큰 글자에서는 기본52px에서 배율 적용), 단위24px. 밝은 증감 배지16px·600, 보조 수치22px·700과 밝은 출처를 사용한다. 증가/감소는 동일한 색이며 건강 개선 의미를 부여하지 않는다. 상세 설명·고정 CTA와 다른 화면 팔레트는 유지한다.
