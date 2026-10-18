@@ -242,3 +242,7 @@ BIA 4건 ─┼─→ 4건 검증/저장 ─→ 최신 근육지수 등급/고�
 
 
 2026-10-18 부위별 설정 순서: 부위 선택(지도와 이름) → 선택한 부위의 추천 설정(주파수·시간·출력) → 추천값 조정/설정 근거 → 안전 문진. 선택 카드 안내는 아래 추천 설정으로 연결하며 기존 선택 표시와 수동 조정 상태를 유지한다.
+
+
+2026-10-18 기록 탭: 지표 선택 → 강조된 수치와 기준 시각 → 기간 선택 → 시간축 그래프/선택 기록 → 세 지표 함께 보기 → 접힌 날짜별 목록. 골격근량은 청록, 체중은 차분한 파랑, 체지방률은 갈색으로 구별하되 이름·단위를 항상 함께 표시한다. fl_chart 터치 표시와 Syncfusion trackball의 선택 지점 패턴을 참고하고 추가 패키지 없이 기존 Flutter Canvas로 구현한다. 축 범위와 불러온 건수를 명시하며 비교 조건 불명은 점만 표시한다. 결과 카드는 민트→흰색 그라데이션과 중성 증감 배지를 사용하고 상세 해석은 계속 접는다.
+참고: https://github.com/imaNNeo/fl_chart/blob/main/repo_files/documentations/handle_touches.md 및 https://help.syncfusion.com/flutter/cartesian-charts/trackball-crosshair

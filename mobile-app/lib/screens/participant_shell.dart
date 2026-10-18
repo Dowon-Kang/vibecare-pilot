@@ -1,5 +1,6 @@
 import '../services/account_profile_repository.dart';
 import '../widgets/account_profile_card.dart';
+import '../widgets/measurement_dashboard.dart';
 import 'dart:async';
 import '../models/daily_guide.dart';
 export '../models/daily_guide.dart' show ParticipantReading;
@@ -601,23 +602,14 @@ class _ParticipantShellState extends State<ParticipantShell>
 
   Widget _records() => PageContent(
     children: [
-      _heading('내 몸의 기록'),
-      if (_readings.isEmpty) const Text('연결된 측정 기록이 없습니다.'),
-      for (final reading in _readings) ...[
-        _card(AppColors.creamSurface, [
-          Text(
-            _date(reading.date),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          Text('골격근량 ${reading.muscle.toStringAsFixed(1)} kg'),
-          Text(
-            '체중 ${reading.weight.toStringAsFixed(1)} kg · 체지방률 ${reading.fat.toStringAsFixed(1)}%',
-          ),
-        ]),
-        const SizedBox(height: 12),
-      ],
-      const Text('측정 조건을 함께 확인하며 기록을 살펴보세요.'),
+      Text('내 몸의 기록', style: Theme.of(context).textTheme.headlineSmall),
+      const SizedBox(height: 8),
+      MeasurementDashboard(
+        key: ValueKey('records:${widget.owner}'),
+        readings: _readings,
+        now: _now,
+        sample: widget.sample,
+      ),
       if (widget.sample)
         TextButton(
           onPressed: widget.onStart,
