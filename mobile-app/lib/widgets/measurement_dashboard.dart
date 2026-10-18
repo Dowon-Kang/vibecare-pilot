@@ -89,8 +89,8 @@ class _MeasurementDashboardState extends State<MeasurementDashboard> {
     final differenceText = difference == null
         ? null
         : difference.abs() < .05
-        ? '기간 내 첫 기록과 같아요'
-        : '기간 내 첫 기록 대비 ${difference > 0 ? '+' : ''}${difference.toStringAsFixed(1)} $deltaUnit';
+        ? '기간의 처음과 최근 기록이 같아요'
+        : '기간 변화 · 처음 → 최근 ${difference > 0 ? '+' : ''}${difference.toStringAsFixed(1)} $deltaUnit';
     Widget surface(List<Widget> children, {bool emphasized = false}) =>
         Container(
           padding: const EdgeInsets.all(20),
@@ -133,7 +133,11 @@ class _MeasurementDashboardState extends State<MeasurementDashboard> {
             for (final metric in _Metric.values)
               ChoiceChip(
                 key: ValueKey('records-metric-${metric.name}'),
-                avatar: Icon(metric.icon, size: 18, color: metric.color),
+                avatar: Icon(
+                  metric.icon,
+                  size: 18,
+                  color: metric == _metric ? AppColors.canvas : metric.color,
+                ),
                 label: Text(metric.label),
                 selected: metric == _metric,
                 showCheckmark: false,
