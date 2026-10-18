@@ -687,6 +687,34 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('부위를 먼저 선택한 뒤 추천값을 확인하고 조정할 수 있다', (tester) async {
+    _size(tester, const Size(390, 844));
+    await _login(tester);
+    final body = find.byKey(const ValueKey('body-selection-section'));
+    final recommendation = find.byKey(const ValueKey('recommendation-section'));
+    expect(
+      tester.getRect(body).bottom,
+      lessThan(tester.getRect(recommendation).top),
+      reason: '부위 선택을 마친 다음 추천 설정이 나타나야 한다',
+    );
+    await _tap(tester, 'body-map-shoulder');
+    expect(find.text('어깨 추천 설정'), findsOneWidget);
+    expect(find.text('15Hz'), findsOneWidget);
+    expect(find.text('20분'), findsOneWidget);
+    expect(find.text('64%'), findsWidgets);
+    await _tap(tester, 'settings-button');
+    await _tap(tester, 'intensity-minus');
+    expect(find.text('자동값 복원'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('추천값에서 직접 조정됨 · 자동 추천 이하'), findsOneWidget);
+    await _tap(tester, 'body-map-wholeBody');
+    expect(find.text('전신 추천 설정'), findsOneWidget);
+    expect(find.text('69%'), findsWidgets);
+    expect(find.text('추천값에서 직접 조정됨 · 자동 추천 이하'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('인체 지도에서 부위를 선택하면 해당 골격근량 등급 고정값으로 바뀐다', (tester) async {
     _size(tester, const Size(390, 844));
     await _login(tester);

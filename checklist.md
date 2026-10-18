@@ -477,3 +477,10 @@ DSPy 후속:
 
 - RED PASS(의도한 실패): `flutter test --no-pub test/widget_test.dart --name '수치와 행동을 우선' --reporter expanded`에서 기존 단계 영역 높이가82px(기대52px 이하)여서 실패했다. 새 회귀는 핵심 수치/CTA 가시성, 상세 측정/접힌 해석/다음 설정 이동도 검사한다.
 - 관련 Flutter44개 GREEN PASS(320px·글자1/2배 포함). 최종 전체 테스트·analyze·브라우저 렌더·APK/웹 및 Pages는 기존 CI와 공개 화면으로 확인한다. 계정/프로필 저장·계산·예약·기기 안전 경계는 변경하지 않았다.
+
+
+## 2026-10-18 부위 선택 우선
+
+- PASS: 순서 회귀 RED가 기존 추천 우선 배치로 실패한 뒤 GREEN. 어깨 선택의 15Hz/20분/64%, 수동 조정, 전신 재선택의 69% 복원을 검증했다.
+- PASS: `flutter test --no-pub --reporter compact` 167개, `flutter analyze --no-pub`, `dart format --output=none --set-exit-if-changed lib test` 76파일. 로컬 Flutter3.47.4, 320px/글자2배 포함.
+- 공개 배포/CI 및 브라우저 증거는 PR과 Actions에서 확인한다. 물리 기기 검증 NOT RUN; SIMULATOR_ONLY 경계 유지.
