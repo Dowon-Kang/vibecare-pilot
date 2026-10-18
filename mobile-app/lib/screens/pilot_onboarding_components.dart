@@ -456,149 +456,154 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
       children: [
         Container(
           key: const ValueKey('skeletal-muscle-measurement-card'),
-          padding: const EdgeInsets.all(24),
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF103F39), Color(0xFF176454)],
-            ),
+            color: AppColors.canvas,
             borderRadius: AppRadius.mdBorder,
-            border: Border.all(color: const Color(0xFF176454)),
+            border: Border.all(color: const Color(0xFFD5E3DA)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Row(
-                children: [
-                  Icon(
-                    Icons.monitor_heart_outlined,
-                    size: 26,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '골격근량',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: assessment.currentKg.toStringAsFixed(1),
-                      style: TextStyle(
-                        fontSize:
-                            MediaQuery.textScalerOf(context).scale(16) > 24
-                            ? 52
-                            : 60,
-                        fontWeight: FontWeight.w800,
-                        height: 1.15,
-                        letterSpacing: -1.5,
-                      ),
-                    ),
-                    const TextSpan(
-                      text: ' kg',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ],
-                ),
-                key: const ValueKey('current-skeletal-muscle'),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 10),
               Container(
-                key: const ValueKey('measurement-change-badge'),
+                color: const Color(0xFFE9F5EF),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+                  horizontal: 24,
+                  vertical: 18,
                 ),
-                decoration: const BoxDecoration(
-                  color: AppColors.comparisonSoft,
-                  borderRadius: AppRadius.smBorder,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: const Row(
                   children: [
                     Icon(
-                      delta == null || delta.abs() < .005
-                          ? Icons.horizontal_rule
-                          : delta > 0
-                          ? Icons.trending_up
-                          : Icons.trending_down,
-                      size: 20,
-                      color: AppColors.comparisonInk,
+                      Icons.monitor_heart_outlined,
+                      size: 22,
+                      color: Color(0xFF126653),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        deltaText,
-                        key: const ValueKey('measurement-comparison'),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.comparisonInk,
+                        '골격근량',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF126653),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              if (latestMeasurement != null) ...[
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 18),
-                  child: Divider(height: 1),
-                ),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final values = [
-                      _MeasurementSummaryValue(
-                        label: '체중',
-                        value:
-                            '${latestMeasurement.values.weightKg.toStringAsFixed(1)} kg',
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: assessment.currentKg.toStringAsFixed(1),
+                            style: TextStyle(
+                              fontSize:
+                                  MediaQuery.textScalerOf(context).scale(16) >
+                                      24
+                                  ? 52
+                                  : 60,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                              letterSpacing: -1.5,
+                            ),
+                          ),
+                          const TextSpan(
+                            text: ' kg',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                        ],
                       ),
-                      _MeasurementSummaryValue(
-                        label: '체지방률',
-                        value:
-                            '${latestMeasurement.values.bodyFatPct.toStringAsFixed(1)}%',
+                      key: const ValueKey('current-skeletal-muscle'),
+                      style: const TextStyle(color: Color(0xFF21342F)),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      key: const ValueKey('measurement-change-badge'),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          delta == null || delta.abs() < .005
+                              ? Icons.horizontal_rule
+                              : delta > 0
+                              ? Icons.trending_up
+                              : Icons.trending_down,
+                          size: 20,
+                          color: const Color(0xFF126653),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            deltaText,
+                            key: const ValueKey('measurement-comparison'),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF126653),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (latestMeasurement != null) ...[
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        child: Divider(height: 1, color: Color(0xFFDCE7E0)),
                       ),
-                    ];
-                    return MediaQuery.textScalerOf(context).scale(16) > 24
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              values[0],
-                              const SizedBox(height: 16),
-                              values[1],
-                            ],
-                          )
-                        : Row(
-                            children: [
-                              Expanded(child: values[0]),
-                              const SizedBox(width: 16),
-                              Expanded(child: values[1]),
-                            ],
-                          );
-                  },
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final values = [
+                            _MeasurementSummaryValue(
+                              label: '체중',
+                              value:
+                                  '${latestMeasurement.values.weightKg.toStringAsFixed(1)} kg',
+                            ),
+                            _MeasurementSummaryValue(
+                              label: '체지방률',
+                              value:
+                                  '${latestMeasurement.values.bodyFatPct.toStringAsFixed(1)}%',
+                            ),
+                          ];
+                          return MediaQuery.textScalerOf(context).scale(16) > 24
+                              ? Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    values[0],
+                                    const SizedBox(height: 16),
+                                    values[1],
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Expanded(child: values[0]),
+                                    const SizedBox(width: 16),
+                                    Expanded(child: values[1]),
+                                  ],
+                                );
+                        },
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    Text(
+                      isSample ? '합성 데이터 · 시연용' : '최근 측정 기록',
+                      key: const ValueKey('measurement-source'),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF64736C),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-              const SizedBox(height: 20),
-              Text(
-                isSample ? '합성 데이터 · 시연용' : '최근 측정 기록',
-                key: const ValueKey('measurement-source'),
-                style: const TextStyle(fontSize: 13, color: Color(0xFFD6E9E3)),
               ),
             ],
           ),
@@ -724,7 +729,7 @@ class _MeasurementSummaryValue extends StatelessWidget {
     children: [
       Text(
         label,
-        style: const TextStyle(fontSize: 14, color: Color(0xFFD6E9E3)),
+        style: const TextStyle(fontSize: 14, color: Color(0xFF57685F)),
       ),
       const SizedBox(height: 4),
       Text(
@@ -732,7 +737,7 @@ class _MeasurementSummaryValue extends StatelessWidget {
         style: const TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w700,
-          color: Colors.white,
+          color: Color(0xFF21342F),
         ),
       ),
     ],
