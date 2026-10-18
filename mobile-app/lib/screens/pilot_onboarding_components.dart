@@ -598,7 +598,7 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
               Text(
                 isSample ? '합성 데이터 · 시연용' : '최근 측정 기록',
                 key: const ValueKey('measurement-source'),
-                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                style: const TextStyle(fontSize: 13, color: Color(0xFFD6E9E3)),
               ),
             ],
           ),
