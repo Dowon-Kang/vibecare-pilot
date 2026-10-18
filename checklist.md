@@ -499,3 +499,10 @@ DSPy 후속:
 
 - PASS: `flutter test --no-pub --reporter compact` 173개(320px/글자2배, 결과→상세→다음 행동 포함), `flutter analyze --no-pub`, format78파일. 색/크기/굵기만 조정했으며 동작 계약 변경이나 신규 구현 모사 테스트는 없다.
 - 계산 대비: 흰 수치/#176454 =7.03:1, 밝은 출처/#176454 =5.56:1, 증감 텍스트/밝은 배지 =6.97:1. 로컬 Flutter3.47.4, 웹/CI/공개 화면은 PR의 최신 SHA와 Actions에서 확인한다. 실제 기기 검증은 NOT RUN, 실제 출력 금지 유지.
+
+
+## 2026-10-18 선택한 민트 헤더
+
+- HTML 비교의 민트 헤더 선택을 결과 카드에 적용했다. 제목 띠만 #E9F5EF, 흰 본문과 짙은 수치/청록 증감 행으로 변경했다.
+- PASS: 로컬 Flutter3.47.4 `flutter test --no-pub --reporter compact` 173개, 최종 행 구성 변경 후 결과→해석→다음 행동 집중 회귀1개, `flutter analyze --no-pub`, format78파일. 기존320px/글자2배 회귀 포함. 표현만 조정했으며 기기/계정/추천 계산은 유지한다.
+- 웹·APK·공개 배포와 실제 화면 증거는 PR/Actions의 최종 SHA에 연결한다. 실제 기기 검증 NOT RUN.
