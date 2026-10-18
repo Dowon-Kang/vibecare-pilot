@@ -8,7 +8,7 @@ import '../widgets/journey_section.dart';
 
 part 'overview_components.dart';
 
-/// Shows the recommendation and the four measurements that explain it.
+/// Select a body part before reviewing and adjusting its recommendation.
 /// Full source records and less-frequent controls stay in sheets.
 class OverviewCard extends StatelessWidget {
   const OverviewCard({
@@ -36,6 +36,20 @@ class OverviewCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         JourneySection(
+          key: const ValueKey('body-selection-section'),
+          title: '부위 선택',
+          icon: Icons.accessibility_new_rounded,
+          subtitle: '그림이나 부위 이름을 선택한 뒤 아래 추천 설정을 확인하세요.',
+          children: [
+            HumanBodyMap(
+              results: state.partResults,
+              selected: state.bodyPart,
+              onSelected: onBodyPartChanged,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        JourneySection(
           key: const ValueKey('recommendation-section'),
           title: '$partLabel 추천 설정',
           icon: Icons.tune_rounded,
@@ -62,20 +76,6 @@ class OverviewCard extends StatelessWidget {
               state: state,
               onSettings: onSettings,
               onCommand: onCommand,
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        JourneySection(
-          key: const ValueKey('body-selection-section'),
-          title: '부위 선택',
-          icon: Icons.accessibility_new_rounded,
-          subtitle: '그림이나 부위 이름을 누르면 설정이 바뀝니다.',
-          children: [
-            HumanBodyMap(
-              results: state.partResults,
-              selected: state.bodyPart,
-              onSelected: onBodyPartChanged,
             ),
           ],
         ),
