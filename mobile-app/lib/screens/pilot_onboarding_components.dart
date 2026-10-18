@@ -461,10 +461,10 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [AppColors.brandSoft, AppColors.canvas],
+              colors: [Color(0xFF103F39), Color(0xFF176454)],
             ),
             borderRadius: AppRadius.mdBorder,
-            border: Border.all(color: const Color(0xFFB4DCD1)),
+            border: Border.all(color: const Color(0xFF176454)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -473,17 +473,17 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
                 children: [
                   Icon(
                     Icons.monitor_heart_outlined,
-                    size: 22,
-                    color: AppColors.brand,
+                    size: 26,
+                    color: Colors.white,
                   ),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       '골격근량',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.comparisonInk,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -495,8 +495,11 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
                   children: [
                     TextSpan(
                       text: assessment.currentKg.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontSize: 52,
+                      style: TextStyle(
+                        fontSize:
+                            MediaQuery.textScalerOf(context).scale(16) > 24
+                            ? 52
+                            : 60,
                         fontWeight: FontWeight.w800,
                         height: 1.15,
                         letterSpacing: -1.5,
@@ -505,15 +508,15 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
                     const TextSpan(
                       text: ' kg',
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
                         letterSpacing: 0,
                       ),
                     ),
                   ],
                 ),
                 key: const ValueKey('current-skeletal-muscle'),
-                style: const TextStyle(color: AppColors.ink),
+                style: const TextStyle(color: Colors.white),
               ),
               const SizedBox(height: 10),
               Container(
@@ -544,7 +547,8 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
                         deltaText,
                         key: const ValueKey('measurement-comparison'),
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                           color: AppColors.comparisonInk,
                         ),
                       ),
@@ -718,14 +722,17 @@ class _MeasurementSummaryValue extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+      Text(
+        label,
+        style: const TextStyle(fontSize: 14, color: Color(0xFFD6E9E3)),
+      ),
       const SizedBox(height: 4),
       Text(
         value,
         style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: AppColors.ink,
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
         ),
       ),
     ],
