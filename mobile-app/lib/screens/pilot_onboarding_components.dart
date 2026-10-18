@@ -458,20 +458,36 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
           key: const ValueKey('skeletal-muscle-measurement-card'),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: AppColors.canvas,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.brandSoft, AppColors.canvas],
+            ),
             borderRadius: AppRadius.mdBorder,
-            border: Border.all(color: AppColors.hairlineSoft),
+            border: Border.all(color: const Color(0xFFB4DCD1)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                '골격근량',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.inkSoft,
-                ),
+              const Row(
+                children: [
+                  Icon(
+                    Icons.monitor_heart_outlined,
+                    size: 22,
+                    color: AppColors.brand,
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '골격근량',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.comparisonInk,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Text.rich(
@@ -500,10 +516,41 @@ class _SkeletalMuscleMeasurementCard extends ConsumerWidget {
                 style: const TextStyle(color: AppColors.ink),
               ),
               const SizedBox(height: 10),
-              Text(
-                deltaText,
-                key: const ValueKey('measurement-comparison'),
-                style: const TextStyle(fontSize: 15, color: AppColors.inkSoft),
+              Container(
+                key: const ValueKey('measurement-change-badge'),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: const BoxDecoration(
+                  color: AppColors.comparisonSoft,
+                  borderRadius: AppRadius.smBorder,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      delta == null || delta.abs() < .005
+                          ? Icons.horizontal_rule
+                          : delta > 0
+                          ? Icons.trending_up
+                          : Icons.trending_down,
+                      size: 20,
+                      color: AppColors.comparisonInk,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        deltaText,
+                        key: const ValueKey('measurement-comparison'),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: AppColors.comparisonInk,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               if (latestMeasurement != null) ...[
                 const Padding(

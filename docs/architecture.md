@@ -239,3 +239,8 @@ SupabaseHome은 로그인한 사용자 ID에 고정한 SupabaseAccountProfileRep
 ## 측정 화면 표시 위계 (2026-10-17)
 
 _JourneyProgress는 현재/다음 단계와 선형 진행 표시만 담당한다. PilotScreen은 측정 결과 단계에서 반복 상태 배너를 생략하고 다른 단계/실행 중 상태 표시는 유지한다. _SkeletalMuscleMeasurementCard는 기존 assessment와 최신 측정값을 표시하며 계산을 소유하지 않는다. 상세 측정 목록과 해석 기준의 두 공개 수준, 하단 전체 이력 링크를 제공한다. ExpansionTile의 expandedCrossAxisAlignment와 내부 Column을 stretch로 설정하여 문단을 왼쪽에 맞춘다. _IncreasedMeasurements의 compact 모드는 측정 화면에서만 작은 제목을 사용한다. _PrimaryActionBar는 측정 단계의 중복 helper만 생략한다. 기존 프로필 저장·조회·예약·추천·인터록 경계는 변경하지 않는다.
+
+
+## 측정 기록 시각화 (2026-10-18)
+
+ParticipantShell의 하단 기록 목적지는 MeasurementDashboard에 현재 계정에서 이미 읽은 ParticipantReading만 전달한다. Dashboard는 유효성/미래 제외, 기간/지표/선택 상태와 시간축 그래프를 담당하며 DB조회나 건강 판정을 하지 않는다. 비교 키·측정 적합성과 시간 순서가 확인된 이웃만 연결하고 기간 증감도 같은 조건으로 제한한다. 계정 키로 상태를 분리한다. 프로필의 원본/통계 상세는 기존 화면을 유지한다. 결과 카드의 그라데이션/변화 배지는 표현만 바꾸고 assessment 계산과 안전 인터록을 유지한다.
