@@ -68,6 +68,70 @@ class FailFirstStop extends MockDeviceGateway {
 }
 
 void main() {
+  testWidgets('측정 시연은 320px 큰 글자에서도 취소할 수 있고 뒤로가면 완료하지 않는다', (tester) async {
+    _size(tester, const Size(320, 568));
+    await tester.pumpWidget(
+      const ProviderScope(child: _ResearchApp(textScale: 2)),
+    );
+    await tester.ensureVisible(find.text('시연 시작'));
+    await tester.tap(find.text('시연 시작'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('profile-continue-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      find.byKey(const ValueKey('measurement-progress-cancel')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.byKey(const ValueKey('first-login-profile')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('skeletal-muscle-measurement-card')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('프로필 뒤 측정 시연을 거쳐 결과로 이동하고 취소하면 프로필을 유지한다', (tester) async {
+    _size(tester, const Size(320, 568));
+    await _rawLogin(tester);
+    await tester.tap(find.byKey(const ValueKey('profile-continue-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      find.byKey(const ValueKey('measurement-progress-screen')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('skeletal-muscle-measurement-card')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(milliseconds: 2400));
+    await tester.tap(find.byKey(const ValueKey('measurement-progress-cancel')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('first-login-profile')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+    expect(
+      find.byKey(const ValueKey('skeletal-muscle-measurement-card')),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const ValueKey('profile-continue-button')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('skeletal-muscle-measurement-card')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('measurement-progress-screen')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('불러온 프로필은 요약 먼저, 변경할 때만 편집', (tester) async {
     _size(tester, const Size(390, 844));
     await _rawLogin(tester);

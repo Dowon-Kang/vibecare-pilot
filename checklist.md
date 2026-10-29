@@ -506,3 +506,9 @@ DSPy 후속:
 - HTML 비교의 민트 헤더 선택을 결과 카드에 적용했다. 제목 띠만 #E9F5EF, 흰 본문과 짙은 수치/청록 증감 행으로 변경했다.
 - PASS: 로컬 Flutter3.47.4 `flutter test --no-pub --reporter compact` 173개, 최종 행 구성 변경 후 결과→해석→다음 행동 집중 회귀1개, `flutter analyze --no-pub`, format78파일. 기존320px/글자2배 회귀 포함. 표현만 조정했으며 기기/계정/추천 계산은 유지한다.
 - 웹·APK·공개 배포와 실제 화면 증거는 PR/Actions의 최종 SHA에 연결한다. 실제 기기 검증 NOT RUN.
+
+## 2026-10-30 프로필 이후 측정 시연
+- RED: 진행 화면 부재로 새 흐름 회귀 실패 확인 (measurement-progress-red.log).
+- PASS: Flutter 전체 175개 테스트, 최종 취소/뒤로가기/320px 글자2배 회귀 2개, 최종 analyze, format, diff check. 웹 release 빌드 PASS.
+- 브라우저 결과 자동 전환 확인. 브라우저 캡처 기능 실패로 시각 캡처 NOT RUN. 실제 센서 측정 NOT RUN.
+- 로컬 APK 빌드는 장시간 대기해 중단, CI에서 다시 검증한다. 공개 배포 여부는 최종 Actions 증거로 확인한다.
