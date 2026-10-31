@@ -512,3 +512,8 @@ DSPy 후속:
 - PASS: Flutter 전체 175개 테스트, 최종 취소/뒤로가기/320px 글자2배 회귀 2개, 최종 analyze, format, diff check. 웹 release 빌드 PASS.
 - 브라우저 결과 자동 전환 확인. 브라우저 캡처 기능 실패로 시각 캡처 NOT RUN. 실제 센서 측정 NOT RUN.
 - 로컬 APK 빌드는 장시간 대기해 중단, CI에서 다시 검증한다. 공개 배포 여부는 최종 Actions 증거로 확인한다.
+
+## 2026-10-31 배포 차단 보안 감사 수정
+- RED: 기존 npm audit --omit=dev는 high1/moderate2로 실패. GHSA-mrhx-c7xc-m3w5, GHSA-5r4p-p66f-jhc7, GHSA-rmxm-3fg6-px4f 권고 확인.
+- zod4.6.7/hono4.13.14/@hono/node-server2.1.5로 같은 major 내 갱신. 운영 의존성 audit 0건 PASS (security-audit-after.json). 개발 도구 의존성은 이번 운영 감사 수정의 범위 밖이다.
+- 이전 PR22의 Flutter175테스트·정적 분석·APK/DB CI PASS. 갱신된 의존성의 서버·PostgreSQL/Flutter/Web 전체 CI 및 Pages 배포는 이 revision의 Actions 증거로 확인한다. 검사를 끄거나 임계값을 낮추지 않는다.
