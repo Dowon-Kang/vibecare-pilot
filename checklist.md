@@ -506,3 +506,14 @@ DSPy 후속:
 - HTML 비교의 민트 헤더 선택을 결과 카드에 적용했다. 제목 띠만 #E9F5EF, 흰 본문과 짙은 수치/청록 증감 행으로 변경했다.
 - PASS: 로컬 Flutter3.47.4 `flutter test --no-pub --reporter compact` 173개, 최종 행 구성 변경 후 결과→해석→다음 행동 집중 회귀1개, `flutter analyze --no-pub`, format78파일. 기존320px/글자2배 회귀 포함. 표현만 조정했으며 기기/계정/추천 계산은 유지한다.
 - 웹·APK·공개 배포와 실제 화면 증거는 PR/Actions의 최종 SHA에 연결한다. 실제 기기 검증 NOT RUN.
+
+## 2026-10-30 프로필 이후 측정 시연
+- RED: 진행 화면 부재로 새 흐름 회귀 실패 확인 (measurement-progress-red.log).
+- PASS: Flutter 전체 175개 테스트, 최종 취소/뒤로가기/320px 글자2배 회귀 2개, 최종 analyze, format, diff check. 웹 release 빌드 PASS.
+- 브라우저 결과 자동 전환 확인. 브라우저 캡처 기능 실패로 시각 캡처 NOT RUN. 실제 센서 측정 NOT RUN.
+- 로컬 APK 빌드는 장시간 대기해 중단, CI에서 다시 검증한다. 공개 배포 여부는 최종 Actions 증거로 확인한다.
+
+## 2026-10-31 배포 차단 보안 감사 수정
+- RED: 기존 npm audit --omit=dev는 high1/moderate2로 실패. GHSA-mrhx-c7xc-m3w5, GHSA-5r4p-p66f-jhc7, GHSA-rmxm-3fg6-px4f 권고 확인.
+- zod4.6.7/hono4.13.14/@hono/node-server2.1.5로 같은 major 내 갱신. 운영 의존성 audit 0건 PASS (security-audit-after.json). 개발 도구 의존성은 이번 운영 감사 수정의 범위 밖이다.
+- 이전 PR22의 Flutter175테스트·정적 분석·APK/DB CI PASS. 갱신된 의존성의 서버·PostgreSQL/Flutter/Web 전체 CI 및 Pages 배포는 이 revision의 Actions 증거로 확인한다. 검사를 끄거나 임계값을 낮추지 않는다.

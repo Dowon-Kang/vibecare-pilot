@@ -1,5 +1,164 @@
 part of 'pilot_screen.dart';
 
+class _MeasurementProgressScreen extends StatefulWidget {
+  const _MeasurementProgressScreen();
+
+  @override
+  State<_MeasurementProgressScreen> createState() =>
+      _MeasurementProgressScreenState();
+}
+
+class _MeasurementProgressScreenState extends State<_MeasurementProgressScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    _progress =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(seconds: 3),
+          animationBehavior: AnimationBehavior.preserve,
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed && mounted) {
+            Navigator.of(context).pop(true);
+          }
+        });
+    _progress.forward();
+  }
+
+  @override
+  void dispose() {
+    _progress.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope<bool>(
+    onPopInvokedWithResult: (didPop, _) {
+      if (didPop) _progress.stop();
+    },
+    child: Scaffold(
+      key: const ValueKey('measurement-progress-screen'),
+      appBar: AppBar(title: const Text('신체 측정 시연')),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Center(
+                    child: CircleAvatar(
+                      radius: 52,
+                      backgroundColor: AppColors.brandSoft,
+                      foregroundColor: AppColors.brand,
+                      child: Icon(Icons.accessibility_new_rounded, size: 56),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  Text(
+                    '신체 측정 과정을\n살펴보고 있어요',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    '합성 데이터로 진행하는 측정 시연입니다.\n실제 기기에 연결하거나 측정하지 않아요.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 28),
+                  AnimatedBuilder(
+                    animation: _progress,
+                    builder: (context, _) {
+                      final stage = _progress.value < .35
+                          ? 0
+                          : _progress.value < .75
+                          ? 1
+                          : 2;
+                      const labels = ['프로필 확인', '체성분 측정 시연', '결과 준비'];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          LinearProgressIndicator(
+                            value: _progress.value,
+                            minHeight: 8,
+                            borderRadius: AppRadius.fullBorder,
+                            semanticsLabel: '측정 시연 진행',
+                          ),
+                          const SizedBox(height: 20),
+                          Semantics(
+                            liveRegion: true,
+                            label: labels[stage],
+                            child: ExcludeSemantics(
+                              child: Column(
+                                children: [
+                                  for (var i = 0; i < labels.length; i++)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            i < stage
+                                                ? Icons.check_circle
+                                                : i == stage
+                                                ? Icons.radio_button_checked
+                                                : Icons.radio_button_unchecked,
+                                            color: i <= stage
+                                                ? AppColors.brand
+                                                : AppColors.muted,
+                                            size: 22,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              labels[i],
+                                              style: TextStyle(
+                                                fontWeight: i == stage
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w400,
+                                                color: i <= stage
+                                                    ? AppColors.ink
+                                                    : AppColors.muted,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+          child: OutlinedButton(
+            key: const ValueKey('measurement-progress-cancel'),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소하고 프로필로 돌아가기'),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class _FirstLoginProfileCard extends StatelessWidget {
   const _FirstLoginProfileCard({
     required this.profile,

@@ -40,6 +40,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   late final TextEditingController _participantCode;
   late final TextEditingController _pin;
   _PilotStep _step = _PilotStep.profile;
+  bool _openingMeasurement = false;
   final _pageScroll = ScrollController();
   DemoPersona _persona = DemoPersona.low;
   final _participationRepository = const ParticipationRepository();
@@ -101,6 +102,26 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
   void _goTo(_PilotStep step) {
     setState(() => _step = step);
     _scrollToTop();
+  }
+
+  Future<void> _continueToMeasurement() async {
+    if (_openingMeasurement) return;
+    final profile = ref.read(pilotControllerProvider).profile;
+    if (profile == null) return;
+    if (!ref.read(appEnvironmentProvider).usesSampleData) {
+      _goTo(_PilotStep.measurement);
+      return;
+    }
+    _openingMeasurement = true;
+    final completed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const _MeasurementProgressScreen()),
+    );
+    if (!mounted) return;
+    _openingMeasurement = false;
+    if (completed == true &&
+        ref.read(pilotControllerProvider).profile?.id == profile.id) {
+      _goTo(_PilotStep.measurement);
+    }
   }
 
   Widget _login(PilotState state) => Scaffold(
@@ -458,7 +479,7 @@ class _PilotScreenState extends ConsumerState<PilotScreen>
           : _PrimaryActionBar(
               state: state,
               step: _step,
-              onProfileContinue: () => _goTo(_PilotStep.measurement),
+              onProfileContinue: _continueToMeasurement,
               onOpenDeviceSetup: () => _goTo(_PilotStep.device),
             ),
     );
